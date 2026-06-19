@@ -994,3 +994,44 @@ h1 {
   min-height: 480px;
   margin: auto;
 }
+
+
+/* v7 direct CPX button */
+.survey-button-box {
+  margin-top: 24px;
+  padding: 30px;
+  min-height: 180px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(240,178,50,0.12), transparent 45%),
+    rgba(255,255,255,0.035);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.reward-card.rarity-consumer .reward-art { color: #b0c3d9; }
+.reward-card.rarity-industrial .reward-art { color: #5e98d9; }
+.reward-card.rarity-milspec .reward-art { color: #4b69ff; }
+.reward-card.rarity-restricted .reward-art { color: #8847ff; }
+.reward-card.rarity-classified .reward-art { color: #d32ce6; }
+.reward-card.rarity-covert .reward-art { color: #eb4b4b; }
+
+.rarity-badge {
+  display: inline-flex;
+  width: fit-content;
+  padding: 6px 9px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 950;
+  border: 1px solid currentColor;
+  background: rgba(255,255,255,0.045);
+}
+
+.rarity-consumer .rarity-badge { color: #b0c3d9; }
+.rarity-industrial .rarity-badge { color: #5e98d9; }
+.rarity-milspec .rarity-badge { color: #4b69ff; }
+.rarity-restricted .rarity-badge { color: #8847ff; }
+.rarity-classified .rarity-badge { color: #d32ce6; }
+.rarity-covert .rarity-badge { color: #eb4b4b; }

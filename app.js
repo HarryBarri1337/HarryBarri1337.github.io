@@ -100,58 +100,6 @@ async function initOfferwall() {
   button.href = `https://offers.cpx-research.com/index.php?app_id=33831&ext_user_id=${encodeURIComponent(user.id)}`;
 }
 
-  const user = await getSessionUser();
-
-  if (!user) {
-    wall.innerHTML = `
-      <div class="empty-state">
-        <strong>Login required</strong><br>
-        Create an account or sign in before opening surveys.
-      </div>
-    `;
-    return;
-  }
-
-  const script1 = {
-    div_id: "fullscreen",
-    theme_style: 3,
-    display_mode: 1,
-    order_by: 2
-  };
-
-  const config = {
-    general_config: {
-      app_id: 33831,
-      ext_user_id: user.id,
-      email: user.email || "",
-      username: user.email ? user.email.split("@")[0] : user.id.slice(0, 8),
-      secure_hash: "",
-      subid_1: "skinquest",
-      subid_2: ""
-    },
-    style_config: {
-      text_color: "#f4f7fb",
-      survey_box: {
-        topbar_background_color: "#f0b232",
-        box_background_color: "#101624",
-        rounded_borders: true,
-        stars_filled: "#ffcf66"
-      }
-    },
-    script_config: [script1],
-    debug: false,
-    useIFrame: true,
-    iFramePosition: 1
-  };
-
-  window.config = config;
-
-  const cpxScript = document.createElement("script");
-  cpxScript.type = "text/javascript";
-  cpxScript.src = "https://cdn.cpx-research.com/assets/js/script_tag_v2.0.js";
-  document.body.appendChild(cpxScript);
-}
-
 async function loadRewards() {
   const { data, error } = await sb
     .from("reward_items")
@@ -191,9 +139,10 @@ function renderRewards() {
     }
 
     grid.innerHTML = filtered.map((item) => `
-      <article class="reward-card">
+      <article class="reward-card ${rarityClass(item)}">
         <div class="reward-art">${shortSkinName(item.name)}</div>
         <div class="reward-info">
+          <span class="rarity-badge">${getRewardRarity(item).label}</span>
           <h2>${escapeHtml(item.name)}</h2>
           <p class="muted">CS2 reward</p>
           <div class="reward-meta">
@@ -214,6 +163,24 @@ function renderRewards() {
   search?.addEventListener("input", apply);
   filter?.addEventListener("change", apply);
   apply();
+}
+
+
+function getRewardRarity(item) {
+  const name = (item.name || "").toLowerCase();
+
+  if (name.includes("sand dune")) return { key: "consumer", label: "Consumer" };
+  if (name.includes("moonrise")) return { key: "restricted", label: "Restricted" };
+  if (name.includes("ticket to hell")) return { key: "restricted", label: "Restricted" };
+  if (name.includes("slate")) return { key: "restricted", label: "Restricted" };
+  if (name.includes("night terror")) return { key: "restricted", label: "Restricted" };
+  if (name.includes("atheris")) return { key: "restricted", label: "Restricted" };
+
+  return { key: "milspec", label: "Mil-Spec" };
+}
+
+function rarityClass(item) {
+  return `rarity-${getRewardRarity(item).key}`;
 }
 
 function shortSkinName(name) {
@@ -249,26 +216,49 @@ async function requestRedeem(rewardId) {
     return;
   }
 
-  // This creates a pending request only.
-  // A real backend/admin process should verify balance and deduct coins server-side.
-  const { error } = await sb.from("redemption_requests").insert({
+  const confirmRedeem = confirm(`Redeem ${reward.name} for ${reward.points_cost} coins? Coins will be deducted immediately while the request is pending.`);
+  if (!confirmRedeem) return;
+
+  const newBalance = profile.points_balance - reward.points_cost;
+
+  const { error: updateError } = await sb
+    .from("profiles")
+    .update({ points_balance: newBalance })
+    .eq("id", user.id);
+
+  if (updateError) {
+    showMessage(updateError.message);
+    return;
+  }
+
+  const { error: redeemError } = await sb.from("redemption_requests").insert({
     user_id: user.id,
     reward_item_id: reward.id,
     reward_name: reward.name,
     points_cost: reward.points_cost,
-    steam_trade_url: profile.steam_trade_url
+    steam_trade_url: profile.steam_trade_url,
+    status: "pending"
   });
 
-  if (error) {
-    showMessage(error.message);
+  if (redeemError) {
+    // Refund coins if request creation fails.
+    await sb
+      .from("profiles")
+      .update({ points_balance: profile.points_balance })
+      .eq("id", user.id);
+
+    showMessage(redeemError.message);
     return;
   }
 
-  showMessage("Redeem request created. It now needs manual review.");
+  await sb.from("coin_adjustments").insert({
+    user_id: user.id,
+    amount: -reward.points_cost,
+    reason: `Redeem pending / ${reward.name}`
+  });
+
+  showMessage("Redeem request created. Coins were deducted and the request is now pending review.");
 }
-
-
-let authModalModeSetter = null;
 
 function openAuthModal(mode = "signup") {
   const modal = qs("#authModal");
