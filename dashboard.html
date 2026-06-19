@@ -13,6 +13,7 @@
     <span class="loader-line"></span>
   </div>
 </div>
+</div>
 <header class="site-header">
   <a class="brand" href="index.html">
     <span class="brand-mark">SQ</span>
@@ -23,6 +24,7 @@
     <a href="dashboard.html">Dashboard</a>
     <a href="earn.html">Earn</a>
     <a href="rewards.html">Rewards</a>
+    <a href="admin.html">Admin</a>
     <a href="how-it-works.html">How it works</a>
   </nav>
   <div class="nav-actions" id="navAuthActions">
@@ -73,10 +75,24 @@
         <p>Requests waiting for manual review.</p>
       </div>
       <div class="stat-card">
+        <span>Total earned</span>
+        <strong id="totalEarnedDisplay">0</strong>
+        <p>Lifetime positive coin adjustments.</p>
+      </div>
+      <div class="stat-card">
         <span>Level</span>
         <strong id="levelDisplay">1</strong>
         <p><span id="xpDisplay">0 XP</span> earned from confirmed activity.</p>
       </div>
+    </section>
+
+    <section class="panel xp-panel">
+      <h2>Level progress</h2>
+      <div class="xp-row">
+        <span id="levelText">Level 1</span>
+        <span id="nextLevelText">Next level</span>
+      </div>
+      <div class="xp-bar"><span id="xpBarFill"></span></div>
     </section>
 
     <section class="panel">
@@ -142,7 +158,7 @@
       <button class="button button-primary" type="submit">Sign in</button>
     </form>
 
-    <p class="fine-auth">By continuing, you agree to truthful survey answers and anti-fraud checks.</p>
+    <p class="fine-auth">Rewards require verified completions. Do not use VPNs, bots, or fake survey answers.</p>
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>

@@ -13,6 +13,7 @@
     <span class="loader-line"></span>
   </div>
 </div>
+</div>
 <header class="site-header">
   <a class="brand" href="index.html">
     <span class="brand-mark">SQ</span>
@@ -23,6 +24,7 @@
     <a href="dashboard.html">Dashboard</a>
     <a href="earn.html">Earn</a>
     <a href="rewards.html">Rewards</a>
+    <a href="admin.html">Admin</a>
     <a href="how-it-works.html">How it works</a>
   </nav>
   <div class="nav-actions" id="navAuthActions">
@@ -34,38 +36,64 @@
 <main class="page">
   <section class="page-heading">
     <span class="pill">Earn coins</span>
-    <h1>Complete verified partner tasks</h1>
+    <h1>Choose a survey provider</h1>
     <p>
-      Connect BitLabs, CPX Research, Pollfish, or another provider here. Users should only receive coins after the provider confirms completion through a backend postback.
+      Start with CPX Research now. BitLabs and another major offerwall are prepared for later once you add their links.
     </p>
   </section>
 
-  <section class="earn-layout">
-    <div class="panel earn-main-panel">
-      <h2>Available surveys</h2>
-      <p class="muted">
-        Surveys are shown by CPX Research. You must be logged in so completions can be linked to your SkinQuest account.
-      </p>
-      <div class="survey-button-box">
-        <a class="button button-primary button-large" id="openCpxWall" href="#" target="_blank" rel="noopener">
-          Open CPX surveys
-        </a>
+  <section class="provider-grid">
+    <article class="provider-card featured">
+      <div class="provider-head">
+        <span class="provider-logo">CPX</span>
+        <span class="provider-status live">Live</span>
       </div>
-      <p class="small">
-        Coins are not added by this page directly. Real coin rewards require CPX postback verification.
-      </p>
-    </div>
-
-    <div class="panel checklist">
-      <h2>How earning will work</h2>
+      <h2>CPX Research</h2>
+      <p>Complete surveys through CPX. Coins are added through verified postbacks.</p>
       <ul>
-        <li>Log in to SkinQuest.</li>
-        <li>Open and complete a CPX survey.</li>
-        <li>CPX verifies the completion.</li>
-        <li>SkinQuest receives a postback later.</li>
-        <li>Coins are added after verification.</li>
+        <li>Connected to your account ID</li>
+        <li>Postback tested</li>
+        <li>Reversals supported</li>
       </ul>
-    </div>
+      <button class="button button-primary button-large" id="openCpxWall">Open CPX surveys</button>
+    </article>
+
+    <article class="provider-card">
+      <div class="provider-head">
+        <span class="provider-logo">BL</span>
+        <span class="provider-status soon">Soon</span>
+      </div>
+      <h2>BitLabs</h2>
+      <p>Add your BitLabs link later for a second survey source.</p>
+      <ul>
+        <li>Good backup provider</li>
+        <li>Prepared button</li>
+        <li>Not connected yet</li>
+      </ul>
+      <a class="button button-ghost button-large" id="openBitlabsWall" href="#" target="_blank" rel="noopener">BitLabs coming soon</a>
+    </article>
+
+    <article class="provider-card">
+      <div class="provider-head">
+        <span class="provider-logo">AD</span>
+        <span class="provider-status soon">Soon</span>
+      </div>
+      <h2>Adscend Media</h2>
+      <p>A well-known reward/offer provider slot for later.</p>
+      <ul>
+        <li>Surveys and offers</li>
+        <li>Good long-term candidate</li>
+        <li>Not connected yet</li>
+      </ul>
+      <a class="button button-ghost button-large" id="openExtraWall" href="#" target="_blank" rel="noopener">Adscend coming soon</a>
+    </article>
+  </section>
+
+  <section class="notice">
+    <h2>How coins are credited</h2>
+    <p>
+      The button opens the provider wall. When a completion is verified, the provider calls SkinQuest's postback endpoint. The frontend never adds coins by itself.
+    </p>
   </section>
 </main>
 
@@ -113,7 +141,7 @@
       <button class="button button-primary" type="submit">Sign in</button>
     </form>
 
-    <p class="fine-auth">By continuing, you agree to truthful survey answers and anti-fraud checks.</p>
+    <p class="fine-auth">Rewards require verified completions. Do not use VPNs, bots, or fake survey answers.</p>
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>

@@ -13,6 +13,7 @@
     <span class="loader-line"></span>
   </div>
 </div>
+</div>
 <header class="site-header">
   <a class="brand" href="index.html">
     <span class="brand-mark">SQ</span>
@@ -23,6 +24,7 @@
     <a href="dashboard.html">Dashboard</a>
     <a href="earn.html">Earn</a>
     <a href="rewards.html">Rewards</a>
+    <a href="admin.html">Admin</a>
     <a href="how-it-works.html">How it works</a>
   </nav>
   <div class="nav-actions" id="navAuthActions">
@@ -35,43 +37,41 @@
   <section class="hero hero-split">
     <div class="hero-copy">
       <span class="pill">CS2 rewards without gambling</span>
-      <h1>Farm coins. Claim skins.</h1>
+      <h1>Earn coins. Redeem real CS2 skins.</h1>
       <p>
-        A CS2 reward hub where verified survey completions become SkinQuest coins. No cases, no coinflips, no fake “instant cash” nonsense.
+        Complete verified survey offers, collect SkinQuest coins, and redeem fixed CS2 skin rewards after manual review.
       </p>
 
       <div class="hero-actions" data-guest-home>
         <button class="button button-primary button-large" data-open-auth="signup">Create account</button>
-        <a class="button button-ghost button-large" href="rewards.html">Browse rewards</a>
+        <a class="button button-ghost button-large" href="rewards.html">View rewards</a>
       </div>
 
       <div class="hero-actions hidden" data-user-home>
-        <a class="button button-primary button-large" href="dashboard.html">Go to dashboard</a>
-        <a class="button button-ghost button-large" href="earn.html">Earn more coins</a>
+        <a class="button button-primary button-large" href="earn.html">Earn coins</a>
+        <a class="button button-ghost button-large" href="dashboard.html">Your dashboard</a>
       </div>
 
       <div class="trust-row">
+        <span>No cases</span>
+        <span>No roulette</span>
         <span>Fixed rewards</span>
-        <span>Survey verification</span>
         <span>Manual trade review</span>
       </div>
     </div>
 
-    <div class="hero-card pro-card identity-card">
+    <div class="hero-card pro-card home-wallet-card">
       <div class="card-topline">
-        <span>Account preview</span>
+        <span>Your SkinQuest wallet</span>
         <strong>LIVE</strong>
       </div>
-      <div class="coin-orbit">
+      <div class="wallet-glow">
         <div class="coin-core">SQ</div>
-        <span class="orbit-dot one"></span>
-        <span class="orbit-dot two"></span>
-        <span class="orbit-dot three"></span>
       </div>
       <div class="mini-stats">
         <div><strong data-home-coins>0</strong><span>coins</span></div>
         <div><strong data-home-level>1</strong><span>level</span></div>
-        <div><strong>6</strong><span>rewards</span></div>
+        <div><strong data-home-pending>0</strong><span>pending</span></div>
       </div>
     </div>
   </section>
@@ -79,18 +79,18 @@
   <section class="feature-grid">
     <article class="feature-card">
       <span class="step-number">01</span>
-      <h2>Sign up</h2>
-      <p>Create an account so your offerwall completions can be tracked safely.</p>
+      <h2>Complete offers</h2>
+      <p>Open a provider wall and complete verified surveys or tasks.</p>
     </article>
     <article class="feature-card">
       <span class="step-number">02</span>
-      <h2>Complete surveys</h2>
-      <p>Earn coins after a provider confirms a real completion.</p>
+      <h2>Get coins</h2>
+      <p>Coins are credited after the provider sends a confirmed postback.</p>
     </article>
     <article class="feature-card">
       <span class="step-number">03</span>
       <h2>Redeem skins</h2>
-      <p>Request a skin and get reviewed before a Steam trade is sent.</p>
+      <p>Spend coins on fixed rewards. No gambling, no random cases.</p>
     </article>
   </section>
 </main>
@@ -139,7 +139,7 @@
       <button class="button button-primary" type="submit">Sign in</button>
     </form>
 
-    <p class="fine-auth">By continuing, you agree to truthful survey answers and anti-fraud checks.</p>
+    <p class="fine-auth">Rewards require verified completions. Do not use VPNs, bots, or fake survey answers.</p>
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>

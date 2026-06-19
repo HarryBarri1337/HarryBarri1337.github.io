@@ -1035,3 +1035,216 @@ h1 {
 .rarity-restricted .rarity-badge { color: #8847ff; }
 .rarity-classified .rarity-badge { color: #d32ce6; }
 .rarity-covert .rarity-badge { color: #eb4b4b; }
+
+
+/* v8 polish */
+.coin-pill {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  padding: 0 12px;
+  border-radius: 12px;
+  background: rgba(240,178,50,0.12);
+  border: 1px solid rgba(240,178,50,0.32);
+  color: var(--brand-2);
+  font-weight: 950;
+  text-decoration: none;
+}
+
+.home-wallet-card {
+  overflow: hidden;
+  position: relative;
+}
+
+.wallet-glow {
+  height: 250px;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at center, rgba(240,178,50,0.22), transparent 38%),
+    radial-gradient(circle at 20% 70%, rgba(79,140,255,0.14), transparent 30%);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+}
+
+.provider-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+
+.provider-card {
+  background: linear-gradient(180deg, rgba(255,255,255,0.065), rgba(255,255,255,0.035));
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.provider-card.featured {
+  border-color: rgba(240,178,50,0.35);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(240,178,50,0.13), transparent 35%),
+    linear-gradient(180deg, rgba(255,255,255,0.075), rgba(255,255,255,0.04));
+}
+
+.provider-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.provider-logo {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  color: #101624;
+  background: linear-gradient(135deg, var(--brand-2), var(--brand));
+  font-weight: 950;
+}
+
+.provider-status {
+  padding: 6px 9px;
+  border-radius: 999px;
+  font-weight: 950;
+  font-size: 0.78rem;
+  border: 1px solid currentColor;
+}
+
+.provider-status.live {
+  color: var(--green);
+  background: rgba(50,213,131,0.1);
+}
+
+.provider-status.soon {
+  color: var(--muted);
+  background: rgba(255,255,255,0.04);
+}
+
+.provider-card ul {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--muted);
+  line-height: 1.8;
+  flex: 1;
+}
+
+.steam-item {
+  position: relative;
+  isolation: isolate;
+}
+
+.steam-item::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: .12;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.reward-card.rarity-consumer::before { background: #b0c3d9; }
+.reward-card.rarity-industrial::before { background: #5e98d9; }
+.reward-card.rarity-milspec::before { background: #4b69ff; }
+.reward-card.rarity-restricted::before { background: #8847ff; }
+.reward-card.rarity-classified::before { background: #d32ce6; }
+.reward-card.rarity-covert::before { background: #eb4b4b; }
+
+.reward-title-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.condition-badge {
+  color: var(--muted);
+  font-size: .78rem;
+  font-weight: 950;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 8px;
+}
+
+.skin-abbrev {
+  text-shadow: 0 12px 30px rgba(0,0,0,.35);
+}
+
+.xp-panel {
+  margin-bottom: 18px;
+}
+
+.xp-row {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-weight: 850;
+  margin-bottom: 10px;
+}
+
+.xp-bar {
+  height: 12px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.xp-bar span {
+  display: block;
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--brand), var(--brand-2));
+  transition: width 300ms ease;
+}
+
+.status-pending { color: var(--brand-2); }
+.status-completed { color: var(--green); }
+.status-rejected { color: var(--red); }
+
+.admin-toolbar {
+  margin-bottom: 18px;
+}
+
+.admin-list {
+  display: grid;
+  gap: 14px;
+}
+
+.admin-request {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 18px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: rgba(255,255,255,0.04);
+}
+
+.admin-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.admin-url {
+  max-width: 650px;
+  word-break: break-all;
+  color: var(--muted);
+  font-size: .9rem;
+}
+
+@media (max-width: 920px) {
+  .provider-grid,
+  .admin-request {
+    grid-template-columns: 1fr;
+  }
+}

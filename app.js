@@ -1,3 +1,98 @@
+let authModalModeSetter = null;
+
+function openAuthModal(mode = "signup") {
+  const modal = qs("#authModal");
+  if (!modal) return;
+  if (authModalModeSetter) authModalModeSetter(mode);
+  modal.classList.remove("hidden");
+}
+
+function initAuthModal() {
+  const modal = qs("#authModal");
+  if (!modal) return;
+
+  const title = qs("#authTitle");
+  const subtitle = qs("#authSubtitle");
+
+  function setMode(mode) {
+    qsa("[data-auth-tab]").forEach((tab) => tab.classList.toggle("active", tab.dataset.authTab === mode));
+    qsa("[data-auth-pane]").forEach((pane) => pane.classList.toggle("hidden", pane.dataset.authPane !== mode));
+
+    if (mode === "login") {
+      title.textContent = "Sign in";
+      subtitle.textContent = "Welcome back. Continue earning toward your next skin.";
+    } else {
+      title.textContent = "Create your account";
+      subtitle.textContent = "Start earning coins toward CS2 skins.";
+    }
+  }
+
+  authModalModeSetter = setMode;
+
+  document.addEventListener("click", (event) => {
+    const opener = event.target.closest("[data-open-auth]");
+    if (opener) {
+      event.preventDefault();
+      openAuthModal(opener.dataset.openAuth || "signup");
+    }
+
+    if (event.target.closest("[data-close-auth]")) {
+      modal.classList.add("hidden");
+    }
+
+    if (event.target === modal) {
+      modal.classList.add("hidden");
+    }
+
+    const tab = event.target.closest("[data-auth-tab]");
+    if (tab) {
+      setMode(tab.dataset.authTab);
+    }
+  });
+
+  const signupForm = qs("#modalSignupForm");
+  const loginForm = qs("#modalLoginForm");
+  const googleButton = qs("#googleLoginButton");
+
+  signupForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const email = qs("#modalSignupEmail").value.trim();
+    const password = qs("#modalSignupPassword").value;
+
+    const { error } = await sb.auth.signUp({ email, password });
+    if (error) {
+      showMessage(error.message);
+      return;
+    }
+
+    showMessage("Account created. If email confirmation is enabled, check your inbox. Then sign in.");
+    setMode("login");
+  });
+
+  loginForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const email = qs("#modalLoginEmail").value.trim();
+    const password = qs("#modalLoginPassword").value;
+
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) {
+      showMessage(error.message);
+      return;
+    }
+
+    modal.classList.add("hidden");
+    await refreshDashboard();
+    await updateNavAuthState();
+    await initAdmin();
+  });
+
+  googleButton?.addEventListener("click", async () => {
+    showMessage("Google login needs to be enabled in Supabase Auth providers first. We'll add that next.");
+  });
+}
+
 // SkinQuest v3 - Supabase-connected frontend.
 // Safe to expose the anon public key in frontend when Row Level Security is enabled.
 // NEVER put the service_role key in frontend code.
@@ -5,6 +100,7 @@
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const ADMIN_USER_IDS = ["6c4e7198-b08e-4e78-b4c7-f2abea9f5311"];
 
 const OFFERWALL_URL = "https://example.com/offerwall?user_id=";
 // Replace later with your real offerwall URL after publisher approval.
@@ -84,20 +180,24 @@ async function loadProfile() {
 }
 
 async function initOfferwall() {
-  const button = qs("#openCpxWall");
-  if (!button) return;
+  const cpxButton = qs("#openCpxWall");
+  if (!cpxButton) return;
 
   const user = await getSessionUser();
 
   if (!user) {
-    button.addEventListener("click", (event) => {
+    cpxButton.addEventListener("click", (event) => {
       event.preventDefault();
       openAuthModal("signup");
     });
     return;
   }
 
-  button.href = `https://offers.cpx-research.com/index.php?app_id=33831&ext_user_id=${encodeURIComponent(user.id)}`;
+  cpxButton.addEventListener("click", () => {
+    setTimeout(() => updateNavAuthState(), 1500);
+  });
+
+  cpxButton.href = `https://offers.cpx-research.com/index.php?app_id=33831&ext_user_id=${encodeURIComponent(user.id)}`;
 }
 
 async function loadRewards() {
@@ -138,22 +238,30 @@ function renderRewards() {
       return;
     }
 
-    grid.innerHTML = filtered.map((item) => `
-      <article class="reward-card ${rarityClass(item)}">
-        <div class="reward-art">${shortSkinName(item.name)}</div>
-        <div class="reward-info">
-          <span class="rarity-badge">${getRewardRarity(item).label}</span>
-          <h2>${escapeHtml(item.name)}</h2>
-          <p class="muted">CS2 reward</p>
-          <div class="reward-meta">
-            <span class="price">${item.points_cost} coins</span>
+    grid.innerHTML = filtered.map((item) => {
+      const rarity = getRewardRarity(item);
+      return `
+        <article class="reward-card steam-item ${rarityClass(item)}">
+          <div class="reward-art">
+            <span class="skin-abbrev">${shortSkinName(item.name)}</span>
           </div>
-          <div class="reward-actions">
-            <button class="button button-primary" data-redeem="${item.id}">Request redeem</button>
+          <div class="reward-info">
+            <div class="reward-title-row">
+              <span class="rarity-badge">${rarity.label}</span>
+              <span class="condition-badge">FT</span>
+            </div>
+            <h2>${escapeHtml(item.name)}</h2>
+            <p class="muted">Manual Steam trade after review</p>
+            <div class="reward-meta">
+              <span class="price">🪙 ${Number(item.points_cost).toLocaleString()} coins</span>
+            </div>
+            <div class="reward-actions">
+              <button class="button button-primary" data-redeem="${item.id}">Redeem</button>
+            </div>
           </div>
-        </div>
-      </article>
-    `).join("");
+        </article>
+      `;
+    }).join("");
 
     qsa("[data-redeem]").forEach((button) => {
       button.addEventListener("click", () => requestRedeem(Number(button.dataset.redeem)));
@@ -196,8 +304,8 @@ function shortSkinName(name) {
 async function requestRedeem(rewardId) {
   const user = await getSessionUser();
   if (!user) {
-    showMessage("Log in on the Dashboard first.");
-    location.href = "dashboard.html";
+    showMessage("Log in first.");
+    openAuthModal("signup");
     return;
   }
 
@@ -241,7 +349,6 @@ async function requestRedeem(rewardId) {
   });
 
   if (redeemError) {
-    // Refund coins if request creation fails.
     await sb
       .from("profiles")
       .update({ points_balance: profile.points_balance })
@@ -258,6 +365,7 @@ async function requestRedeem(rewardId) {
   });
 
   showMessage("Redeem request created. Coins were deducted and the request is now pending review.");
+  await updateNavAuthState();
 }
 
 function openAuthModal(mode = "signup") {
@@ -353,10 +461,18 @@ async function updateNavAuthState() {
   if (!actions) return;
 
   if (user) {
+    let coins = 0;
+    try {
+      const profile = await ensureProfile(user);
+      coins = profile.points_balance || 0;
+    } catch {}
+
     actions.innerHTML = `
+      <a class="coin-pill" href="dashboard.html">🪙 ${Number(coins).toLocaleString()} coins</a>
       <a class="nav-login" href="dashboard.html">Account</a>
       <button class="button button-ghost nav-cta" id="navLogoutButton">Log out</button>
     `;
+
     qs("#navLogoutButton")?.addEventListener("click", async () => {
       await sb.auth.signOut();
       location.href = "index.html";
@@ -366,13 +482,6 @@ async function updateNavAuthState() {
       <button class="nav-login" data-open-auth="login">Sign in</button>
       <button class="button button-primary nav-cta" data-open-auth="signup">Sign up</button>
     `;
-    qsa("[data-open-auth]").forEach((button) => {
-      button.addEventListener("click", () => {
-        const modal = qs("#authModal");
-        if (!modal) return;
-        openAuthModal(button.dataset.openAuth || "signup");
-      });
-    });
   }
 
   await updateHomeAuthState(user);
@@ -420,11 +529,17 @@ async function initDashboard() {
 async function refreshDashboard() {
   const authSection = qs("#authSection");
   const accountSection = qs("#accountSection");
+  if (!authSection || !accountSection) return;
+
   const accountEmail = qs("#accountEmail");
   const balanceDisplay = qs("#balanceDisplay");
   const pendingDisplay = qs("#pendingDisplay");
+  const totalEarnedDisplay = qs("#totalEarnedDisplay");
   const levelDisplay = qs("#levelDisplay");
   const xpDisplay = qs("#xpDisplay");
+  const levelText = qs("#levelText");
+  const nextLevelText = qs("#nextLevelText");
+  const xpBarFill = qs("#xpBarFill");
   const tradeUrl = qs("#tradeUrl");
   const redeemHistory = qs("#redeemHistory");
 
@@ -440,11 +555,17 @@ async function refreshDashboard() {
   accountSection.classList.remove("hidden");
 
   const profile = await ensureProfile(user);
+  const totalEarned = await getTotalEarned(user.id);
+  const progress = getLevelProgress(totalEarned);
 
   accountEmail.textContent = user.email || "Unknown";
-  balanceDisplay.textContent = profile.points_balance || 0;
-  levelDisplay.textContent = calculateLevel(profile.points_balance);
-  xpDisplay.textContent = `${calculateXp(profile.points_balance)} XP`;
+  balanceDisplay.textContent = Number(profile.points_balance || 0).toLocaleString();
+  totalEarnedDisplay.textContent = Number(totalEarned).toLocaleString();
+  levelDisplay.textContent = progress.level;
+  xpDisplay.textContent = `${Number(totalEarned).toLocaleString()} XP`;
+  levelText.textContent = `Level ${progress.level}`;
+  nextLevelText.textContent = `${Number(progress.nextFloor - totalEarned).toLocaleString()} XP to Level ${progress.level + 1}`;
+  xpBarFill.style.width = `${progress.progress}%`;
   tradeUrl.value = profile.steam_trade_url || "";
 
   const { data: redemptions, error } = await sb
@@ -473,7 +594,7 @@ async function refreshDashboard() {
         <strong>${escapeHtml(item.reward_name)}</strong>
         <p class="muted">${formatDate(item.created_at)} · ${item.points_cost} coins</p>
       </div>
-      <span class="status-pill">${escapeHtml(item.status)}</span>
+      <span class="status-pill status-${escapeHtml(item.status)}">${escapeHtml(item.status)}</span>
     </div>
   `).join("");
 }
@@ -488,13 +609,39 @@ function escapeHtml(value) {
 }
 
 
-function calculateLevel(coins) {
-  const safeCoins = Number(coins || 0);
-  return Math.max(1, Math.floor(Math.sqrt(safeCoins / 100)) + 1);
+
+
+
+
+function calculateLevel(totalEarned) {
+  const safeEarned = Number(totalEarned || 0);
+  return Math.max(1, Math.floor(Math.sqrt(safeEarned / 1000)) + 1);
 }
 
-function calculateXp(coins) {
-  return Number(coins || 0) * 10;
+function xpForLevel(level) {
+  return Math.pow(Math.max(0, level - 1), 2) * 1000;
+}
+
+function calculateXp(totalEarned) {
+  return Number(totalEarned || 0);
+}
+
+function getLevelProgress(totalEarned) {
+  const level = calculateLevel(totalEarned);
+  const currentFloor = xpForLevel(level);
+  const nextFloor = xpForLevel(level + 1);
+  const progress = nextFloor === currentFloor ? 0 : ((totalEarned - currentFloor) / (nextFloor - currentFloor)) * 100;
+  return { level, currentFloor, nextFloor, progress: Math.max(0, Math.min(100, progress)) };
+}
+
+async function getTotalEarned(userId) {
+  const { data, error } = await sb
+    .from("coin_adjustments")
+    .select("amount")
+    .eq("user_id", userId);
+
+  if (error || !data) return 0;
+  return data.filter((row) => row.amount > 0).reduce((sum, row) => sum + Number(row.amount || 0), 0);
 }
 
 async function updateHomeAuthState(userArg = null) {
@@ -508,8 +655,10 @@ async function updateHomeAuthState(userArg = null) {
     authed.classList.add("hidden");
     const homeCoins = qs("[data-home-coins]");
     const homeLevel = qs("[data-home-level]");
+    const homePending = qs("[data-home-pending]");
     if (homeCoins) homeCoins.textContent = "0";
     if (homeLevel) homeLevel.textContent = "1";
+    if (homePending) homePending.textContent = "0";
     return;
   }
 
@@ -518,20 +667,109 @@ async function updateHomeAuthState(userArg = null) {
 
   try {
     const profile = await ensureProfile(user);
-    const coins = profile.points_balance || 0;
+    const totalEarned = await getTotalEarned(user.id);
+    const { data: redemptions } = await sb
+      .from("redemption_requests")
+      .select("status")
+      .eq("user_id", user.id);
+
     const homeCoins = qs("[data-home-coins]");
     const homeLevel = qs("[data-home-level]");
-    if (homeCoins) homeCoins.textContent = coins;
-    if (homeLevel) homeLevel.textContent = calculateLevel(coins);
-  } catch {
-    // Do nothing on homepage if profile fetch is slow.
-  }
+    const homePending = qs("[data-home-pending]");
+    if (homeCoins) homeCoins.textContent = Number(profile.points_balance || 0).toLocaleString();
+    if (homeLevel) homeLevel.textContent = calculateLevel(totalEarned);
+    if (homePending) homePending.textContent = (redemptions || []).filter((item) => item.status === "pending").length;
+  } catch {}
 }
 
 function finishPageLoad() {
   const loader = qs("#pageLoader");
   if (!loader) return;
   setTimeout(() => loader.classList.add("done"), 280);
+}
+
+
+function isAdmin(user) {
+  return !!user && ADMIN_USER_IDS.includes(user.id);
+}
+
+async function initAdmin() {
+  const locked = qs("#adminLocked");
+  const panel = qs("#adminPanel");
+  const list = qs("#adminRequests");
+  if (!locked || !panel || !list) return;
+
+  const user = await getSessionUser();
+
+  if (!isAdmin(user)) {
+    locked.classList.remove("hidden");
+    panel.classList.add("hidden");
+    return;
+  }
+
+  locked.classList.add("hidden");
+  panel.classList.remove("hidden");
+
+  qs("#refreshAdmin")?.addEventListener("click", loadAdminRequests);
+  await loadAdminRequests();
+}
+
+async function loadAdminRequests() {
+  const list = qs("#adminRequests");
+  if (!list) return;
+
+  const { data, error } = await sb
+    .from("redemption_requests")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  if (error) {
+    list.className = "empty-state";
+    list.textContent = error.message;
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    list.className = "empty-state";
+    list.textContent = "No redeem requests yet.";
+    return;
+  }
+
+  list.className = "admin-list";
+  list.innerHTML = data.map((item) => `
+    <article class="admin-request">
+      <div>
+        <strong>${escapeHtml(item.reward_name)}</strong>
+        <p class="muted">${formatDate(item.created_at)} · ${item.points_cost} coins</p>
+        <p class="admin-url">${escapeHtml(item.steam_trade_url)}</p>
+      </div>
+      <div class="admin-actions">
+        <span class="status-pill status-${escapeHtml(item.status)}">${escapeHtml(item.status)}</span>
+        <button class="button button-ghost" data-admin-status="completed" data-request-id="${item.id}">Mark completed</button>
+        <button class="button button-ghost" data-admin-status="rejected" data-request-id="${item.id}">Reject</button>
+      </div>
+    </article>
+  `).join("");
+
+  qsa("[data-admin-status]").forEach((button) => {
+    button.addEventListener("click", () => updateRedeemStatus(Number(button.dataset.requestId), button.dataset.adminStatus));
+  });
+}
+
+async function updateRedeemStatus(id, status) {
+  const { error } = await sb
+    .from("redemption_requests")
+    .update({ status })
+    .eq("id", id);
+
+  if (error) {
+    showMessage(error.message);
+    return;
+  }
+
+  showMessage(`Request marked ${status}.`);
+  await loadAdminRequests();
 }
 
 async function boot() {
