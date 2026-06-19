@@ -41,25 +41,27 @@
   </section>
 
   <section class="earn-layout">
-    <div class="panel">
-      <h2>Offerwall</h2>
+    <div class="panel earn-main-panel">
+      <h2>Available surveys</h2>
       <p class="muted">
-        Replace the placeholder button with your provider embed or link when you have a publisher account.
+        Surveys are shown by CPX Research. You must be logged in so completions can be linked to your SkinQuest account.
       </p>
-      <button class="button button-primary" id="openOfferwall">Open offerwall</button>
+      <div class="cpx-wall-wrap">
+        <div id="fullscreen"></div>
+      </div>
       <p class="small">
-        Current placeholder URL is set in <code>app.js</code>. This page does not add coins by itself.
+        Coins are not added by this page directly. Real coin rewards require CPX postback verification.
       </p>
     </div>
 
     <div class="panel checklist">
-      <h2>Before going live</h2>
+      <h2>How earning will work</h2>
       <ul>
-        <li>Get approved by an offerwall provider.</li>
-        <li>Create a backend webhook/postback endpoint.</li>
-        <li>Store users and balances in a database.</li>
-        <li>Review skin redemptions before sending trades.</li>
-        <li>Do not encourage users to lie on surveys.</li>
+        <li>Log in to SkinQuest.</li>
+        <li>Open and complete a CPX survey.</li>
+        <li>CPX verifies the completion.</li>
+        <li>SkinQuest receives a postback later.</li>
+        <li>Coins are added after verification.</li>
       </ul>
     </div>
   </section>

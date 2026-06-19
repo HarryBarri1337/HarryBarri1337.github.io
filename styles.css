@@ -972,3 +972,25 @@ h1 {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* CPX wall */
+.earn-main-panel {
+  min-height: 620px;
+}
+
+.cpx-wall-wrap {
+  margin-top: 18px;
+  min-height: 520px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: rgba(255,255,255,0.035);
+  padding: 14px;
+  overflow: hidden;
+}
+
+#fullscreen {
+  max-width: 950px;
+  min-height: 480px;
+  margin: auto;
+}
