@@ -554,3 +554,90 @@ select {
     width: 100%;
   }
 }
+
+
+.hidden {
+  display: none !important;
+}
+
+.auth-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.stack-form {
+  display: grid;
+  gap: 12px;
+}
+
+.stack-form input {
+  margin: 0;
+}
+
+.account-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  padding: 18px 22px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+  margin-bottom: 18px;
+}
+
+.account-bar strong {
+  display: block;
+  margin-top: 4px;
+}
+
+.reward-actions {
+  margin-top: 16px;
+}
+
+.alert {
+  padding: 14px 16px;
+  border-radius: 14px;
+  margin: 14px 0;
+  background: #fff8db;
+  color: #7a5200;
+  border: 1px solid #f5d56a;
+}
+
+@media (max-width: 860px) {
+  .auth-grid,
+  .account-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .account-bar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+.redeem-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.redeem-row:last-child {
+  border-bottom: 0;
+}
+
+.status-pill {
+  display: inline-flex;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #fff8db;
+  color: #7a5200;
+  font-weight: 800;
+  font-size: 0.82rem;
+}

@@ -22,3 +22,28 @@ This frontend does not credit demo coins. For real rewards, you need:
 4. Manual review or a secure Steam bot for payouts.
 
 Never credit rewards from frontend JavaScript.
+
+
+## Supabase
+
+This version is connected to:
+
+`https://ubvkupqgigfxehprsoit.supabase.co`
+
+It uses the anon public key only. Do not add the service role key to frontend code.
+
+## What works now
+
+- Sign up
+- Login
+- Profile auto-creation
+- Save Steam trade URL
+- Load reward items from Supabase
+- Create pending redemption requests if the user has enough points
+
+## What does not exist yet
+
+- Offerwall postbacks
+- Automatic point crediting
+- Admin dashboard
+- Automatic Steam trades
