@@ -7,6 +7,12 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+<div id="pageLoader" class="page-loader">
+  <div class="loader-card">
+    <span class="loader-mark">SQ</span>
+    <span class="loader-line"></span>
+  </div>
+</div>
 <header class="site-header">
   <a class="brand" href="index.html">
     <span class="brand-mark">SQ</span>
@@ -19,7 +25,7 @@
     <a href="rewards.html">Rewards</a>
     <a href="how-it-works.html">How it works</a>
   </nav>
-  <div class="nav-actions">
+  <div class="nav-actions" id="navAuthActions">
     <button class="nav-login" data-open-auth="login">Sign in</button>
     <button class="button button-primary nav-cta" data-open-auth="signup">Sign up</button>
   </div>
@@ -38,7 +44,7 @@
     <div class="panel locked-panel">
       <span class="pill">Login required</span>
       <h2>You need an account to open the dashboard</h2>
-      <p class="muted">Create an account or sign in to see your points, Steam trade URL, and redeem requests.</p>
+      <p class="muted">Create an account or sign in to see your coins, Steam trade URL, and redeem requests.</p>
       <div class="hero-actions">
         <button class="button button-primary" data-open-auth="signup">Create account</button>
         <button class="button button-ghost" data-open-auth="login">Sign in</button>
@@ -57,7 +63,7 @@
 
     <section class="dashboard-grid">
       <div class="stat-card">
-        <span>Points balance</span>
+        <span>Coins balance</span>
         <strong id="balanceDisplay">0</strong>
         <p>Credits come from confirmed provider postbacks.</p>
       </div>
@@ -67,17 +73,18 @@
         <p>Requests waiting for manual review.</p>
       </div>
       <div class="stat-card">
-        <span>User ID</span>
-        <strong id="userIdDisplay">Guest</strong>
-        <p>Used for offerwall tracking.</p>
+        <span>Level</span>
+        <strong id="levelDisplay">1</strong>
+        <p><span id="xpDisplay">0 XP</span> earned from confirmed activity.</p>
       </div>
     </section>
 
     <section class="panel">
       <h2>Steam trade URL</h2>
       <p class="muted">Save your trade URL so rewards can be sent after review.</p>
-      <form id="tradeForm" class="form-row">
+      <form id="tradeForm" class="form-row trade-row">
         <input id="tradeUrl" type="url" placeholder="https://steamcommunity.com/tradeoffer/new/?partner=..." />
+        <a class="button button-ghost" target="_blank" rel="noopener" href="https://steamcommunity.com/my/tradeoffers/privacy#trade_offer_access_url">Find trade link</a>
         <button class="button button-primary" type="submit">Save</button>
       </form>
     </section>
@@ -94,7 +101,7 @@
 <footer class="site-footer">
   <div>
     <strong>SkinQuest</strong>
-    <p>Earn points from verified partner tasks and redeem CS2 skins.</p>
+    <p>Earn coins from verified partner tasks and redeem CS2 skins.</p>
   </div>
   <div class="footer-links">
     <a href="terms.html">Terms</a>
@@ -109,7 +116,7 @@
     <div class="auth-modal-head">
       <span class="pill">SkinQuest account</span>
       <h2 id="authTitle">Create your account</h2>
-      <p id="authSubtitle">Start earning points toward CS2 skins.</p>
+      <p id="authSubtitle">Start earning coins toward CS2 skins.</p>
     </div>
 
     <div class="auth-tabs">

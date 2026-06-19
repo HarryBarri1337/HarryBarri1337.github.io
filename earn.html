@@ -7,6 +7,12 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+<div id="pageLoader" class="page-loader">
+  <div class="loader-card">
+    <span class="loader-mark">SQ</span>
+    <span class="loader-line"></span>
+  </div>
+</div>
 <header class="site-header">
   <a class="brand" href="index.html">
     <span class="brand-mark">SQ</span>
@@ -19,7 +25,7 @@
     <a href="rewards.html">Rewards</a>
     <a href="how-it-works.html">How it works</a>
   </nav>
-  <div class="nav-actions">
+  <div class="nav-actions" id="navAuthActions">
     <button class="nav-login" data-open-auth="login">Sign in</button>
     <button class="button button-primary nav-cta" data-open-auth="signup">Sign up</button>
   </div>
@@ -27,10 +33,10 @@
 
 <main class="page">
   <section class="page-heading">
-    <span class="pill">Earn points</span>
+    <span class="pill">Earn coins</span>
     <h1>Complete verified partner tasks</h1>
     <p>
-      Connect BitLabs, CPX Research, Pollfish, or another provider here. Users should only receive points after the provider confirms completion through a backend postback.
+      Connect BitLabs, CPX Research, Pollfish, or another provider here. Users should only receive coins after the provider confirms completion through a backend postback.
     </p>
   </section>
 
@@ -42,7 +48,7 @@
       </p>
       <button class="button button-primary" id="openOfferwall">Open offerwall</button>
       <p class="small">
-        Current placeholder URL is set in <code>app.js</code>. This page does not add points by itself.
+        Current placeholder URL is set in <code>app.js</code>. This page does not add coins by itself.
       </p>
     </div>
 
@@ -62,7 +68,7 @@
 <footer class="site-footer">
   <div>
     <strong>SkinQuest</strong>
-    <p>Earn points from verified partner tasks and redeem CS2 skins.</p>
+    <p>Earn coins from verified partner tasks and redeem CS2 skins.</p>
   </div>
   <div class="footer-links">
     <a href="terms.html">Terms</a>
@@ -77,7 +83,7 @@
     <div class="auth-modal-head">
       <span class="pill">SkinQuest account</span>
       <h2 id="authTitle">Create your account</h2>
-      <p id="authSubtitle">Start earning points toward CS2 skins.</p>
+      <p id="authSubtitle">Start earning coins toward CS2 skins.</p>
     </div>
 
     <div class="auth-tabs">

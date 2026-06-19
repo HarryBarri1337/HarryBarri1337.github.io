@@ -47,3 +47,14 @@ It uses the anon public key only. Do not add the service role key to frontend co
 - Automatic point crediting
 - Admin dashboard
 - Automatic Steam trades
+
+
+## v5 changes
+
+- Dark professional polish
+- Coins wording instead of points
+- Dashboard protected behind login
+- Homepage changes CTA when logged in
+- Trade-link helper button
+- Level/XP display based on earned coins
+- Subtle loading overlay to avoid auth-state flicker

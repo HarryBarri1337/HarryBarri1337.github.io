@@ -149,7 +149,7 @@ function renderRewards() {
           <h2>${escapeHtml(item.name)}</h2>
           <p class="muted">CS2 reward</p>
           <div class="reward-meta">
-            <span class="price">${item.points_cost} pts</span>
+            <span class="price">${item.points_cost} coins</span>
           </div>
           <div class="reward-actions">
             <button class="button button-primary" data-redeem="${item.id}">Request redeem</button>
@@ -197,12 +197,12 @@ async function requestRedeem(rewardId) {
   }
 
   if (profile.points_balance < reward.points_cost) {
-    showMessage("Not enough points yet.");
+    showMessage("Not enough coins yet.");
     return;
   }
 
   // This creates a pending request only.
-  // A real backend/admin process should verify balance and deduct points server-side.
+  // A real backend/admin process should verify balance and deduct coins server-side.
   const { error } = await sb.from("redemption_requests").insert({
     user_id: user.id,
     reward_item_id: reward.id,
@@ -220,6 +220,15 @@ async function requestRedeem(rewardId) {
 }
 
 
+let authModalModeSetter = null;
+
+function openAuthModal(mode = "signup") {
+  const modal = qs("#authModal");
+  if (!modal) return;
+  if (authModalModeSetter) authModalModeSetter(mode);
+  modal.classList.remove("hidden");
+}
+
 function initAuthModal() {
   const modal = qs("#authModal");
   if (!modal) return;
@@ -236,15 +245,14 @@ function initAuthModal() {
       subtitle.textContent = "Welcome back. Continue earning toward your next skin.";
     } else {
       title.textContent = "Create your account";
-      subtitle.textContent = "Start earning points toward CS2 skins.";
+      subtitle.textContent = "Start earning coins toward CS2 skins.";
     }
   }
 
+  authModalModeSetter = setMode;
+
   qsa("[data-open-auth]").forEach((button) => {
-    button.addEventListener("click", () => {
-      setMode(button.dataset.openAuth || "signup");
-      modal.classList.remove("hidden");
-    });
+    button.addEventListener("click", () => openAuthModal(button.dataset.openAuth || "signup"));
   });
 
   qsa("[data-close-auth]").forEach((button) => {
@@ -303,22 +311,33 @@ function initAuthModal() {
 
 async function updateNavAuthState() {
   const user = await getSessionUser();
-  const loginButtons = qsa(".nav-login");
-  const ctas = qsa(".nav-cta");
+  const actions = qs("#navAuthActions");
+  if (!actions) return;
 
   if (user) {
-    loginButtons.forEach((btn) => {
-      btn.textContent = "Dashboard";
-      btn.onclick = () => location.href = "dashboard.html";
+    actions.innerHTML = `
+      <a class="nav-login" href="dashboard.html">Account</a>
+      <button class="button button-ghost nav-cta" id="navLogoutButton">Log out</button>
+    `;
+    qs("#navLogoutButton")?.addEventListener("click", async () => {
+      await sb.auth.signOut();
+      location.href = "index.html";
     });
-    ctas.forEach((btn) => {
-      btn.textContent = "Log out";
-      btn.onclick = async () => {
-        await sb.auth.signOut();
-        location.href = "index.html";
-      };
+  } else {
+    actions.innerHTML = `
+      <button class="nav-login" data-open-auth="login">Sign in</button>
+      <button class="button button-primary nav-cta" data-open-auth="signup">Sign up</button>
+    `;
+    qsa("[data-open-auth]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const modal = qs("#authModal");
+        if (!modal) return;
+        openAuthModal(button.dataset.openAuth || "signup");
+      });
     });
   }
+
+  await updateHomeAuthState(user);
 }
 
 async function initDashboard() {
@@ -366,7 +385,8 @@ async function refreshDashboard() {
   const accountEmail = qs("#accountEmail");
   const balanceDisplay = qs("#balanceDisplay");
   const pendingDisplay = qs("#pendingDisplay");
-  const userIdDisplay = qs("#userIdDisplay");
+  const levelDisplay = qs("#levelDisplay");
+  const xpDisplay = qs("#xpDisplay");
   const tradeUrl = qs("#tradeUrl");
   const redeemHistory = qs("#redeemHistory");
 
@@ -385,7 +405,8 @@ async function refreshDashboard() {
 
   accountEmail.textContent = user.email || "Unknown";
   balanceDisplay.textContent = profile.points_balance || 0;
-  userIdDisplay.textContent = user.id.slice(0, 8);
+  levelDisplay.textContent = calculateLevel(profile.points_balance);
+  xpDisplay.textContent = `${calculateXp(profile.points_balance)} XP`;
   tradeUrl.value = profile.steam_trade_url || "";
 
   const { data: redemptions, error } = await sb
@@ -412,7 +433,7 @@ async function refreshDashboard() {
     <div class="redeem-row">
       <div>
         <strong>${escapeHtml(item.reward_name)}</strong>
-        <p class="muted">${formatDate(item.created_at)} · ${item.points_cost} pts</p>
+        <p class="muted">${formatDate(item.created_at)} · ${item.points_cost} coins</p>
       </div>
       <span class="status-pill">${escapeHtml(item.status)}</span>
     </div>
@@ -426,6 +447,53 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+
+function calculateLevel(coins) {
+  const safeCoins = Number(coins || 0);
+  return Math.max(1, Math.floor(Math.sqrt(safeCoins / 100)) + 1);
+}
+
+function calculateXp(coins) {
+  return Number(coins || 0) * 10;
+}
+
+async function updateHomeAuthState(userArg = null) {
+  const guest = qs("[data-guest-home]");
+  const authed = qs("[data-user-home]");
+  if (!guest || !authed) return;
+
+  const user = userArg || await getSessionUser();
+  if (!user) {
+    guest.classList.remove("hidden");
+    authed.classList.add("hidden");
+    const homeCoins = qs("[data-home-coins]");
+    const homeLevel = qs("[data-home-level]");
+    if (homeCoins) homeCoins.textContent = "0";
+    if (homeLevel) homeLevel.textContent = "1";
+    return;
+  }
+
+  guest.classList.add("hidden");
+  authed.classList.remove("hidden");
+
+  try {
+    const profile = await ensureProfile(user);
+    const coins = profile.points_balance || 0;
+    const homeCoins = qs("[data-home-coins]");
+    const homeLevel = qs("[data-home-level]");
+    if (homeCoins) homeCoins.textContent = coins;
+    if (homeLevel) homeLevel.textContent = calculateLevel(coins);
+  } catch {
+    // Do nothing on homepage if profile fetch is slow.
+  }
+}
+
+function finishPageLoad() {
+  const loader = qs("#pageLoader");
+  if (!loader) return;
+  setTimeout(() => loader.classList.add("done"), 280);
 }
 
 async function boot() {
@@ -444,6 +512,7 @@ async function boot() {
   }
 
   await initDashboard();
+  finishPageLoad();
 }
 
-boot();
+boot().catch((error) => { console.error(error); finishPageLoad(); });

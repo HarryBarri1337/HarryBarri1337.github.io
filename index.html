@@ -7,6 +7,12 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+<div id="pageLoader" class="page-loader">
+  <div class="loader-card">
+    <span class="loader-mark">SQ</span>
+    <span class="loader-line"></span>
+  </div>
+</div>
 <header class="site-header">
   <a class="brand" href="index.html">
     <span class="brand-mark">SQ</span>
@@ -19,7 +25,7 @@
     <a href="rewards.html">Rewards</a>
     <a href="how-it-works.html">How it works</a>
   </nav>
-  <div class="nav-actions">
+  <div class="nav-actions" id="navAuthActions">
     <button class="nav-login" data-open-auth="login">Sign in</button>
     <button class="button button-primary nav-cta" data-open-auth="signup">Sign up</button>
   </div>
@@ -28,38 +34,44 @@
 <main>
   <section class="hero hero-split">
     <div class="hero-copy">
-      <span class="pill">Earn CS2 skins</span>
-      <h1>Turn surveys into skins.</h1>
+      <span class="pill">CS2 rewards without gambling</span>
+      <h1>Farm coins. Claim skins.</h1>
       <p>
-        Complete verified partner surveys, build your point balance, and redeem CS2 skins from a clean reward shop.
+        A CS2 reward hub where verified survey completions become SkinQuest coins. No cases, no coinflips, no fake “instant cash” nonsense.
       </p>
-      <div class="hero-actions">
+
+      <div class="hero-actions" data-guest-home>
         <button class="button button-primary button-large" data-open-auth="signup">Create account</button>
-        <a class="button button-ghost button-large" href="rewards.html">View rewards</a>
+        <a class="button button-ghost button-large" href="rewards.html">Browse rewards</a>
       </div>
+
+      <div class="hero-actions hidden" data-user-home>
+        <a class="button button-primary button-large" href="dashboard.html">Go to dashboard</a>
+        <a class="button button-ghost button-large" href="earn.html">Earn more coins</a>
+      </div>
+
       <div class="trust-row">
-        <span>No gambling</span>
-        <span>Manual payout review</span>
-        <span>Verified completions only</span>
+        <span>Fixed rewards</span>
+        <span>Survey verification</span>
+        <span>Manual trade review</span>
       </div>
     </div>
 
-    <div class="hero-card pro-card">
+    <div class="hero-card pro-card identity-card">
       <div class="card-topline">
-        <span>Available rewards</span>
-        <strong>CS2</strong>
+        <span>Account preview</span>
+        <strong>LIVE</strong>
       </div>
-      <div class="weapon-showcase">
-        <div class="weapon-art premium">AK</div>
-        <div>
-          <h2>AK-47 | Slate</h2>
-          <p>Popular reward · 900 points</p>
-        </div>
+      <div class="coin-orbit">
+        <div class="coin-core">SQ</div>
+        <span class="orbit-dot one"></span>
+        <span class="orbit-dot two"></span>
+        <span class="orbit-dot three"></span>
       </div>
       <div class="mini-stats">
-        <div><strong>0</strong><span>points</span></div>
+        <div><strong data-home-coins>0</strong><span>coins</span></div>
+        <div><strong data-home-level>1</strong><span>level</span></div>
         <div><strong>6</strong><span>rewards</span></div>
-        <div><strong>24h</strong><span>review</span></div>
       </div>
     </div>
   </section>
@@ -73,7 +85,7 @@
     <article class="feature-card">
       <span class="step-number">02</span>
       <h2>Complete surveys</h2>
-      <p>Earn points after a provider confirms a real completion.</p>
+      <p>Earn coins after a provider confirms a real completion.</p>
     </article>
     <article class="feature-card">
       <span class="step-number">03</span>
@@ -86,7 +98,7 @@
 <footer class="site-footer">
   <div>
     <strong>SkinQuest</strong>
-    <p>Earn points from verified partner tasks and redeem CS2 skins.</p>
+    <p>Earn coins from verified partner tasks and redeem CS2 skins.</p>
   </div>
   <div class="footer-links">
     <a href="terms.html">Terms</a>
@@ -101,7 +113,7 @@
     <div class="auth-modal-head">
       <span class="pill">SkinQuest account</span>
       <h2 id="authTitle">Create your account</h2>
-      <p id="authSubtitle">Start earning points toward CS2 skins.</p>
+      <p id="authSubtitle">Start earning coins toward CS2 skins.</p>
     </div>
 
     <div class="auth-tabs">
