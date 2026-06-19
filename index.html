@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SkinQuest - Earn CS2 Skins</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">
+    <span class="brand-mark">SQ</span>
+    <span>SkinQuest</span>
+  </a>
+  <button class="nav-toggle" aria-label="Open navigation" data-nav-toggle>Menu</button>
+  <nav class="site-nav" data-nav>
+    <a href="earn.html">Earn</a>
+    <a href="rewards.html">Rewards</a>
+    <a href="dashboard.html">Dashboard</a>
+    <a href="how-it-works.html">How it works</a>
+  </nav>
+</header>
+
+<main>
+  <section class="hero hero-split">
+    <div class="hero-copy">
+      <span class="pill">CS2 rewards platform</span>
+      <h1>Earn points. Redeem CS2 skins.</h1>
+      <p>
+        SkinQuest is a clean reward-site concept for CS2 players. Users complete verified surveys or partner tasks, earn points, and redeem skins from the reward shop.
+      </p>
+      <div class="hero-actions">
+        <a class="button button-primary" href="earn.html">Start earning</a>
+        <a class="button button-ghost" href="how-it-works.html">How it works</a>
+      </div>
+    </div>
+
+    <div class="hero-card">
+      <div class="skin-preview">
+        <span class="skin-rarity">Popular reward</span>
+        <div class="weapon-card">
+          <div class="weapon-art">AK</div>
+          <div>
+            <strong>AK-47 | Slate</strong>
+            <p>900 points</p>
+          </div>
+        </div>
+        <div class="progress-row">
+          <span>Progress</span>
+          <span>0 / 900</span>
+        </div>
+        <div class="progress-bar"><span style="width: 0%"></span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="feature-grid">
+    <article class="feature-card">
+      <h2>1. Complete tasks</h2>
+      <p>Users open the offerwall and complete surveys from approved partners.</p>
+    </article>
+    <article class="feature-card">
+      <h2>2. Earn points</h2>
+      <p>Points are added only after the provider confirms the completion.</p>
+    </article>
+    <article class="feature-card">
+      <h2>3. Redeem skins</h2>
+      <p>Users spend points on CS2 skins and submit their Steam trade URL.</p>
+    </article>
+  </section>
+
+  <section class="notice">
+    <h2>Real rewards need real verification</h2>
+    <p>
+      This frontend has no fake reward button. To go live, connect an offerwall provider and a backend postback that credits points after confirmed completions.
+    </p>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div>
+    <strong>SkinQuest</strong>
+    <p>Earn points from verified partner tasks and redeem CS2 skins.</p>
+  </div>
+  <div class="footer-links">
+    <a href="terms.html">Terms</a>
+    <a href="privacy.html">Privacy</a>
+    <a href="how-it-works.html">Support</a>
+  </div>
+  <p class="fine-print">Prototype. Not affiliated with Valve, Steam, or Counter-Strike.</p>
+</footer>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Earn - SkinQuest</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html">
+    <span class="brand-mark">SQ</span>
+    <span>SkinQuest</span>
+  </a>
+  <button class="nav-toggle" aria-label="Open navigation" data-nav-toggle>Menu</button>
+  <nav class="site-nav" data-nav>
+    <a href="earn.html">Earn</a>
+    <a href="rewards.html">Rewards</a>
+    <a href="dashboard.html">Dashboard</a>
+    <a href="how-it-works.html">How it works</a>
+  </nav>
+</header>
+
+<main class="page">
+  <section class="page-heading">
+    <span class="pill">Earn points</span>
+    <h1>Complete verified partner tasks</h1>
+    <p>
+      Connect BitLabs, CPX Research, Pollfish, or another provider here. Users should only receive points after the provider confirms completion through a backend postback.
+    </p>
+  </section>
+
+  <section class="earn-layout">
+    <div class="panel">
+      <h2>Offerwall</h2>
+      <p class="muted">
+        Replace the placeholder button with your provider embed or link when you have a publisher account.
+      </p>
+      <button class="button button-primary" id="openOfferwall">Open offerwall</button>
+      <p class="small">
+        Current placeholder URL is set in <code>app.js</code>. This page does not add points by itself.
+      </p>
+    </div>
+
+    <div class="panel checklist">
+      <h2>Before going live</h2>
+      <ul>
+        <li>Get approved by an offerwall provider.</li>
+        <li>Create a backend webhook/postback endpoint.</li>
+        <li>Store users and balances in a database.</li>
+        <li>Review skin redemptions before sending trades.</li>
+        <li>Do not encourage users to lie on surveys.</li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div>
+    <strong>SkinQuest</strong>
+    <p>Earn points from verified partner tasks and redeem CS2 skins.</p>
+  </div>
+  <div class="footer-links">
+    <a href="terms.html">Terms</a>
+    <a href="privacy.html">Privacy</a>
+    <a href="how-it-works.html">Support</a>
+  </div>
+  <p class="fine-print">Prototype. Not affiliated with Valve, Steam, or Counter-Strike.</p>
+</footer>
+<script src="app.js"></script>
+</body>
+</html>
