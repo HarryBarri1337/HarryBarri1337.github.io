@@ -14,11 +14,15 @@
   </a>
   <button class="nav-toggle" aria-label="Open navigation" data-nav-toggle>Menu</button>
   <nav class="site-nav" data-nav>
+    <a href="dashboard.html">Dashboard</a>
     <a href="earn.html">Earn</a>
     <a href="rewards.html">Rewards</a>
-    <a href="dashboard.html">Dashboard</a>
     <a href="how-it-works.html">How it works</a>
   </nav>
+  <div class="nav-actions">
+    <button class="nav-login" data-open-auth="login">Sign in</button>
+    <button class="button button-primary nav-cta" data-open-auth="signup">Sign up</button>
+  </div>
 </header>
 
 <main class="page">
@@ -30,25 +34,15 @@
     </p>
   </section>
 
-  <section class="auth-grid" id="authSection">
-    <div class="panel">
-      <h2>Create account</h2>
-      <p class="muted">Use an email and password. Supabase may ask you to confirm your email before login.</p>
-      <form id="signupForm" class="stack-form">
-        <input id="signupEmail" type="email" placeholder="Email" required />
-        <input id="signupPassword" type="password" placeholder="Password" required minlength="6" />
-        <button class="button button-primary" type="submit">Sign up</button>
-      </form>
-    </div>
-
-    <div class="panel">
-      <h2>Log in</h2>
-      <p class="muted">Log in to view your balance and redeem requests.</p>
-      <form id="loginForm" class="stack-form">
-        <input id="loginEmail" type="email" placeholder="Email" required />
-        <input id="loginPassword" type="password" placeholder="Password" required />
-        <button class="button button-primary" type="submit">Log in</button>
-      </form>
+  <section class="locked-dashboard" id="authSection">
+    <div class="panel locked-panel">
+      <span class="pill">Login required</span>
+      <h2>You need an account to open the dashboard</h2>
+      <p class="muted">Create an account or sign in to see your points, Steam trade URL, and redeem requests.</p>
+      <div class="hero-actions">
+        <button class="button button-primary" data-open-auth="signup">Create account</button>
+        <button class="button button-ghost" data-open-auth="login">Sign in</button>
+      </div>
     </div>
   </section>
 
@@ -109,6 +103,41 @@
   </div>
   <p class="fine-print">Prototype. Not affiliated with Valve, Steam, or Counter-Strike.</p>
 </footer>
+<div class="modal-backdrop hidden" id="authModal">
+  <div class="auth-modal" role="dialog" aria-modal="true">
+    <button class="modal-close" data-close-auth aria-label="Close">×</button>
+    <div class="auth-modal-head">
+      <span class="pill">SkinQuest account</span>
+      <h2 id="authTitle">Create your account</h2>
+      <p id="authSubtitle">Start earning points toward CS2 skins.</p>
+    </div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" data-auth-tab="signup">Sign up</button>
+      <button class="auth-tab" data-auth-tab="login">Sign in</button>
+    </div>
+
+    <button class="button google-button" id="googleLoginButton" type="button">
+      <span>G</span> Continue with Google
+    </button>
+
+    <div class="divider"><span>or use email</span></div>
+
+    <form id="modalSignupForm" class="stack-form auth-pane" data-auth-pane="signup">
+      <input id="modalSignupEmail" type="email" placeholder="Email address" required />
+      <input id="modalSignupPassword" type="password" placeholder="Password" required minlength="6" />
+      <button class="button button-primary" type="submit">Create account</button>
+    </form>
+
+    <form id="modalLoginForm" class="stack-form auth-pane hidden" data-auth-pane="login">
+      <input id="modalLoginEmail" type="email" placeholder="Email address" required />
+      <input id="modalLoginPassword" type="password" placeholder="Password" required />
+      <button class="button button-primary" type="submit">Sign in</button>
+    </form>
+
+    <p class="fine-auth">By continuing, you agree to truthful survey answers and anti-fraud checks.</p>
+  </div>
+</div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="app.js"></script>
 </body>

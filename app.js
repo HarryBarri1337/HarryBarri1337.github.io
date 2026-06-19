@@ -219,35 +219,71 @@ async function requestRedeem(rewardId) {
   showMessage("Redeem request created. It now needs manual review.");
 }
 
-async function initDashboard() {
-  const authSection = qs("#authSection");
-  const accountSection = qs("#accountSection");
-  const signupForm = qs("#signupForm");
-  const loginForm = qs("#loginForm");
-  const logoutButton = qs("#logoutButton");
 
-  if (!authSection || !accountSection) return;
+function initAuthModal() {
+  const modal = qs("#authModal");
+  if (!modal) return;
 
-  signupForm.addEventListener("submit", async (event) => {
+  const title = qs("#authTitle");
+  const subtitle = qs("#authSubtitle");
+
+  function setMode(mode) {
+    qsa("[data-auth-tab]").forEach((tab) => tab.classList.toggle("active", tab.dataset.authTab === mode));
+    qsa("[data-auth-pane]").forEach((pane) => pane.classList.toggle("hidden", pane.dataset.authPane !== mode));
+
+    if (mode === "login") {
+      title.textContent = "Sign in";
+      subtitle.textContent = "Welcome back. Continue earning toward your next skin.";
+    } else {
+      title.textContent = "Create your account";
+      subtitle.textContent = "Start earning points toward CS2 skins.";
+    }
+  }
+
+  qsa("[data-open-auth]").forEach((button) => {
+    button.addEventListener("click", () => {
+      setMode(button.dataset.openAuth || "signup");
+      modal.classList.remove("hidden");
+    });
+  });
+
+  qsa("[data-close-auth]").forEach((button) => {
+    button.addEventListener("click", () => modal.classList.add("hidden"));
+  });
+
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) modal.classList.add("hidden");
+  });
+
+  qsa("[data-auth-tab]").forEach((tab) => {
+    tab.addEventListener("click", () => setMode(tab.dataset.authTab));
+  });
+
+  const signupForm = qs("#modalSignupForm");
+  const loginForm = qs("#modalLoginForm");
+  const googleButton = qs("#googleLoginButton");
+
+  signupForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
 
-    const email = qs("#signupEmail").value.trim();
-    const password = qs("#signupPassword").value;
+    const email = qs("#modalSignupEmail").value.trim();
+    const password = qs("#modalSignupPassword").value;
 
-    const { data, error } = await sb.auth.signUp({ email, password });
+    const { error } = await sb.auth.signUp({ email, password });
     if (error) {
       showMessage(error.message);
       return;
     }
 
-    showMessage("Account created. If email confirmation is enabled, check your inbox. Then log in.");
+    showMessage("Account created. If email confirmation is enabled, check your inbox. Then sign in.");
+    setMode("login");
   });
 
-  loginForm.addEventListener("submit", async (event) => {
+  loginForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
 
-    const email = qs("#loginEmail").value.trim();
-    const password = qs("#loginPassword").value;
+    const email = qs("#modalLoginEmail").value.trim();
+    const password = qs("#modalLoginPassword").value;
 
     const { error } = await sb.auth.signInWithPassword({ email, password });
     if (error) {
@@ -255,16 +291,51 @@ async function initDashboard() {
       return;
     }
 
+    modal.classList.add("hidden");
     await refreshDashboard();
+    await updateNavAuthState();
   });
 
-  logoutButton.addEventListener("click", async () => {
+  googleButton?.addEventListener("click", async () => {
+    showMessage("Google login needs to be enabled in Supabase Auth providers first. We can add that next.");
+  });
+}
+
+async function updateNavAuthState() {
+  const user = await getSessionUser();
+  const loginButtons = qsa(".nav-login");
+  const ctas = qsa(".nav-cta");
+
+  if (user) {
+    loginButtons.forEach((btn) => {
+      btn.textContent = "Dashboard";
+      btn.onclick = () => location.href = "dashboard.html";
+    });
+    ctas.forEach((btn) => {
+      btn.textContent = "Log out";
+      btn.onclick = async () => {
+        await sb.auth.signOut();
+        location.href = "index.html";
+      };
+    });
+  }
+}
+
+async function initDashboard() {
+  const authSection = qs("#authSection");
+  const accountSection = qs("#accountSection");
+  const logoutButton = qs("#logoutButton");
+
+  if (!authSection || !accountSection) return;
+
+  logoutButton?.addEventListener("click", async () => {
     await sb.auth.signOut();
     await refreshDashboard();
+    await updateNavAuthState();
   });
 
   const tradeForm = qs("#tradeForm");
-  tradeForm.addEventListener("submit", async (event) => {
+  tradeForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
 
     const user = await getSessionUser();
@@ -359,6 +430,8 @@ function escapeHtml(value) {
 
 async function boot() {
   initNav();
+  initAuthModal();
+  await updateNavAuthState();
   await initOfferwall();
 
   if (qs("#rewardsGrid")) {
