@@ -84,24 +84,59 @@ async function loadProfile() {
 }
 
 async function initOfferwall() {
-  const button = qs("#openOfferwall");
-  if (!button) return;
+  const wall = qs("#fullscreen");
+  if (!wall) return;
 
-  button.addEventListener("click", async () => {
-    const user = await getSessionUser();
-    if (!user) {
-      showMessage("Log in on the Dashboard first.");
-      location.href = "dashboard.html";
-      return;
-    }
+  const user = await getSessionUser();
 
-    if (OFFERWALL_URL.includes("example.com")) {
-      showMessage("Offerwall URL is not connected yet. We need provider approval first.");
-      return;
-    }
+  if (!user) {
+    wall.innerHTML = `
+      <div class="empty-state">
+        <strong>Login required</strong><br>
+        Create an account or sign in before opening surveys.
+      </div>
+    `;
+    return;
+  }
 
-    window.open(OFFERWALL_URL + encodeURIComponent(user.id), "_blank");
-  });
+  const script1 = {
+    div_id: "fullscreen",
+    theme_style: 3,
+    display_mode: 1,
+    order_by: 2
+  };
+
+  const config = {
+    general_config: {
+      app_id: 33831,
+      ext_user_id: user.id,
+      email: user.email || "",
+      username: user.email ? user.email.split("@")[0] : user.id.slice(0, 8),
+      secure_hash: "",
+      subid_1: "skinquest",
+      subid_2: ""
+    },
+    style_config: {
+      text_color: "#f4f7fb",
+      survey_box: {
+        topbar_background_color: "#f0b232",
+        box_background_color: "#101624",
+        rounded_borders: true,
+        stars_filled: "#ffcf66"
+      }
+    },
+    script_config: [script1],
+    debug: false,
+    useIFrame: true,
+    iFramePosition: 1
+  };
+
+  window.config = config;
+
+  const cpxScript = document.createElement("script");
+  cpxScript.type = "text/javascript";
+  cpxScript.src = "https://cdn.cpx-research.com/assets/js/script_tag_v2.0.js";
+  document.body.appendChild(cpxScript);
 }
 
 async function loadRewards() {
