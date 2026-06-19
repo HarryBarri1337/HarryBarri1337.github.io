@@ -1,109 +1,10 @@
-let authModalModeSetter = null;
-
-function openAuthModal(mode = "signup") {
-  const modal = qs("#authModal");
-  if (!modal) return;
-  if (authModalModeSetter) authModalModeSetter(mode);
-  modal.classList.remove("hidden");
-}
-
-function initAuthModal() {
-  const modal = qs("#authModal");
-  if (!modal) return;
-
-  const title = qs("#authTitle");
-  const subtitle = qs("#authSubtitle");
-
-  function setMode(mode) {
-    qsa("[data-auth-tab]").forEach((tab) => tab.classList.toggle("active", tab.dataset.authTab === mode));
-    qsa("[data-auth-pane]").forEach((pane) => pane.classList.toggle("hidden", pane.dataset.authPane !== mode));
-
-    if (mode === "login") {
-      title.textContent = "Sign in";
-      subtitle.textContent = "Welcome back. Continue earning toward your next skin.";
-    } else {
-      title.textContent = "Create your account";
-      subtitle.textContent = "Start earning coins toward CS2 skins.";
-    }
-  }
-
-  authModalModeSetter = setMode;
-
-  document.addEventListener("click", (event) => {
-    const opener = event.target.closest("[data-open-auth]");
-    if (opener) {
-      event.preventDefault();
-      openAuthModal(opener.dataset.openAuth || "signup");
-    }
-
-    if (event.target.closest("[data-close-auth]")) {
-      modal.classList.add("hidden");
-    }
-
-    if (event.target === modal) {
-      modal.classList.add("hidden");
-    }
-
-    const tab = event.target.closest("[data-auth-tab]");
-    if (tab) {
-      setMode(tab.dataset.authTab);
-    }
-  });
-
-  const signupForm = qs("#modalSignupForm");
-  const loginForm = qs("#modalLoginForm");
-  const googleButton = qs("#googleLoginButton");
-
-  signupForm?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-
-    const email = qs("#modalSignupEmail").value.trim();
-    const password = qs("#modalSignupPassword").value;
-
-    const { error } = await sb.auth.signUp({ email, password });
-    if (error) {
-      showMessage(error.message);
-      return;
-    }
-
-    showMessage("Account created. If email confirmation is enabled, check your inbox. Then sign in.");
-    setMode("login");
-  });
-
-  loginForm?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-
-    const email = qs("#modalLoginEmail").value.trim();
-    const password = qs("#modalLoginPassword").value;
-
-    const { error } = await sb.auth.signInWithPassword({ email, password });
-    if (error) {
-      showMessage(error.message);
-      return;
-    }
-
-    modal.classList.add("hidden");
-    await refreshDashboard();
-    await updateNavAuthState();
-    await initAdmin();
-  });
-
-  googleButton?.addEventListener("click", async () => {
-    showMessage("Google login needs to be enabled in Supabase Auth providers first. We'll add that next.");
-  });
-}
-
-// SkinQuest v3 - Supabase-connected frontend.
-// Safe to expose the anon public key in frontend when Row Level Security is enabled.
-// NEVER put the service_role key in frontend code.
+// SkinQuest v8.1 - fixed auth buttons, CPX button, hover feel, and dashboard refresh.
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const ADMIN_USER_IDS = ["6c4e7198-b08e-4e78-b4c7-f2abea9f5311"];
-
-const OFFERWALL_URL = "https://example.com/offerwall?user_id=";
-// Replace later with your real offerwall URL after publisher approval.
+const CPX_APP_ID = 33831;
 
 let currentUser = null;
 let currentProfile = null;
@@ -117,6 +18,15 @@ function qsa(selector) {
   return Array.from(document.querySelectorAll(selector));
 }
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
 function formatDate(value) {
   return new Date(value).toLocaleString();
 }
@@ -125,19 +35,10 @@ function showMessage(message) {
   alert(message);
 }
 
-function initNav() {
-  const toggle = qs("[data-nav-toggle]");
-  const nav = qs("[data-nav]");
-  if (!toggle || !nav) return;
-
-  toggle.addEventListener("click", () => {
-    nav.classList.toggle("open");
-  });
-
-  const current = location.pathname.split("/").pop() || "index.html";
-  nav.querySelectorAll("a").forEach((link) => {
-    if (link.getAttribute("href") === current) link.classList.add("active");
-  });
+function finishPageLoad() {
+  const loader = qs("#pageLoader");
+  if (!loader) return;
+  setTimeout(() => loader.classList.add("done"), 180);
 }
 
 async function getSessionUser() {
@@ -160,10 +61,7 @@ async function ensureProfile(user) {
 
   const { data: created, error: insertError } = await sb
     .from("profiles")
-    .insert({
-      id: user.id,
-      username
-    })
+    .insert({ id: user.id, username })
     .select("*")
     .single();
 
@@ -171,12 +69,207 @@ async function ensureProfile(user) {
   return created;
 }
 
-async function loadProfile() {
-  currentUser = await getSessionUser();
-  if (!currentUser) return null;
+async function getTotalEarned(userId) {
+  const { data, error } = await sb
+    .from("coin_adjustments")
+    .select("amount")
+    .eq("user_id", userId);
 
-  currentProfile = await ensureProfile(currentUser);
-  return currentProfile;
+  if (error || !data) return 0;
+  return data.filter((row) => Number(row.amount) > 0).reduce((sum, row) => sum + Number(row.amount || 0), 0);
+}
+
+function calculateLevel(totalEarned) {
+  return Math.max(1, Math.floor(Math.sqrt(Number(totalEarned || 0) / 1000)) + 1);
+}
+
+function xpForLevel(level) {
+  return Math.pow(Math.max(0, level - 1), 2) * 1000;
+}
+
+function getLevelProgress(totalEarned) {
+  const level = calculateLevel(totalEarned);
+  const currentFloor = xpForLevel(level);
+  const nextFloor = xpForLevel(level + 1);
+  const progress = ((Number(totalEarned || 0) - currentFloor) / (nextFloor - currentFloor)) * 100;
+  return { level, currentFloor, nextFloor, progress: Math.max(0, Math.min(100, progress)) };
+}
+
+function initNav() {
+  const toggle = qs("[data-nav-toggle]");
+  const nav = qs("[data-nav]");
+  if (toggle && nav) {
+    toggle.addEventListener("click", () => nav.classList.toggle("open"));
+  }
+
+  const current = location.pathname.split("/").pop() || "index.html";
+  nav?.querySelectorAll("a").forEach((link) => {
+    if (link.getAttribute("href") === current) link.classList.add("active");
+  });
+}
+
+function openAuthModal(mode = "signup") {
+  const modal = qs("#authModal");
+  if (!modal) return;
+
+  setAuthMode(mode);
+  modal.classList.remove("hidden");
+}
+
+function closeAuthModal() {
+  qs("#authModal")?.classList.add("hidden");
+}
+
+function setAuthMode(mode) {
+  const title = qs("#authTitle");
+  const subtitle = qs("#authSubtitle");
+
+  qsa("[data-auth-tab]").forEach((tab) => {
+    tab.classList.toggle("active", tab.dataset.authTab === mode);
+  });
+
+  qsa("[data-auth-pane]").forEach((pane) => {
+    pane.classList.toggle("hidden", pane.dataset.authPane !== mode);
+  });
+
+  if (title) title.textContent = mode === "login" ? "Sign in" : "Create your account";
+  if (subtitle) {
+    subtitle.textContent = mode === "login"
+      ? "Welcome back. Continue earning toward your next skin."
+      : "Start earning coins toward CS2 skins.";
+  }
+}
+
+function initAuthModal() {
+  const modal = qs("#authModal");
+  if (!modal) return;
+
+  document.addEventListener("click", async (event) => {
+    const openButton = event.target.closest("[data-open-auth]");
+    if (openButton) {
+      event.preventDefault();
+      openAuthModal(openButton.dataset.openAuth || "signup");
+      return;
+    }
+
+    if (event.target.closest("[data-close-auth]")) {
+      event.preventDefault();
+      closeAuthModal();
+      return;
+    }
+
+    if (event.target === modal) {
+      closeAuthModal();
+      return;
+    }
+
+    const tab = event.target.closest("[data-auth-tab]");
+    if (tab) {
+      event.preventDefault();
+      setAuthMode(tab.dataset.authTab);
+    }
+  });
+
+  qs("#modalSignupForm")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const email = qs("#modalSignupEmail")?.value.trim();
+    const password = qs("#modalSignupPassword")?.value;
+
+    const { error } = await sb.auth.signUp({ email, password });
+    if (error) return showMessage(error.message);
+
+    showMessage("Account created. If email confirmation is enabled, check your inbox. Then sign in.");
+    setAuthMode("login");
+  });
+
+  qs("#modalLoginForm")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const email = qs("#modalLoginEmail")?.value.trim();
+    const password = qs("#modalLoginPassword")?.value;
+
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) return showMessage(error.message);
+
+    closeAuthModal();
+    await refreshAll();
+  });
+
+  qs("#googleLoginButton")?.addEventListener("click", () => {
+    showMessage("Google sign-in is not connected yet. We'll add it next.");
+  });
+}
+
+async function updateNavAuthState() {
+  const actions = qs("#navAuthActions");
+  if (!actions) return;
+
+  const user = await getSessionUser();
+
+  if (!user) {
+    actions.innerHTML = `
+      <button class="nav-login nav-clickable" type="button" data-open-auth="login">Sign in</button>
+      <button class="button button-primary nav-cta" type="button" data-open-auth="signup">Sign up</button>
+    `;
+    return;
+  }
+
+  let coins = 0;
+  try {
+    const profile = await ensureProfile(user);
+    coins = Number(profile.points_balance || 0);
+  } catch {}
+
+  actions.innerHTML = `
+    <a class="coin-pill" href="dashboard.html">🪙 ${coins.toLocaleString()} coins</a>
+    <a class="nav-login nav-clickable" href="dashboard.html">Account</a>
+    <button class="button button-ghost nav-cta" type="button" id="navLogoutButton">Log out</button>
+  `;
+
+  qs("#navLogoutButton")?.addEventListener("click", async () => {
+    await sb.auth.signOut();
+    location.href = "index.html";
+  });
+}
+
+async function updateHomeAuthState() {
+  const guest = qs("[data-guest-home]");
+  const authed = qs("[data-user-home]");
+  if (!guest || !authed) return;
+
+  const user = await getSessionUser();
+
+  if (!user) {
+    guest.classList.remove("hidden");
+    authed.classList.add("hidden");
+    const homeCoins = qs("[data-home-coins]");
+    const homeLevel = qs("[data-home-level]");
+    const homePending = qs("[data-home-pending]");
+    if (homeCoins) homeCoins.textContent = "0";
+    if (homeLevel) homeLevel.textContent = "1";
+    if (homePending) homePending.textContent = "0";
+    return;
+  }
+
+  guest.classList.add("hidden");
+  authed.classList.remove("hidden");
+
+  try {
+    const profile = await ensureProfile(user);
+    const totalEarned = await getTotalEarned(user.id);
+    const { data: redemptions } = await sb
+      .from("redemption_requests")
+      .select("status")
+      .eq("user_id", user.id);
+
+    const homeCoins = qs("[data-home-coins]");
+    const homeLevel = qs("[data-home-level]");
+    const homePending = qs("[data-home-pending]");
+    if (homeCoins) homeCoins.textContent = Number(profile.points_balance || 0).toLocaleString();
+    if (homeLevel) homeLevel.textContent = calculateLevel(totalEarned);
+    if (homePending) homePending.textContent = (redemptions || []).filter((item) => item.status === "pending").length;
+  } catch {}
 }
 
 async function initOfferwall() {
@@ -186,6 +279,8 @@ async function initOfferwall() {
   const user = await getSessionUser();
 
   if (!user) {
+    cpxButton.href = "#";
+    cpxButton.classList.add("needs-login");
     cpxButton.addEventListener("click", (event) => {
       event.preventDefault();
       openAuthModal("signup");
@@ -193,11 +288,10 @@ async function initOfferwall() {
     return;
   }
 
-  cpxButton.addEventListener("click", () => {
-    setTimeout(() => updateNavAuthState(), 1500);
-  });
-
-  cpxButton.href = `https://offers.cpx-research.com/index.php?app_id=33831&ext_user_id=${encodeURIComponent(user.id)}`;
+  cpxButton.classList.remove("needs-login");
+  cpxButton.href = `https://offers.cpx-research.com/index.php?app_id=${CPX_APP_ID}&ext_user_id=${encodeURIComponent(user.id)}`;
+  cpxButton.target = "_blank";
+  cpxButton.rel = "noopener";
 }
 
 async function loadRewards() {
@@ -209,6 +303,33 @@ async function loadRewards() {
 
   if (error) throw error;
   rewardItems = data || [];
+}
+
+function getRewardRarity(item) {
+  const name = (item.name || "").toLowerCase();
+
+  if (name.includes("sand dune")) return { key: "consumer", label: "Consumer" };
+  if (name.includes("moonrise")) return { key: "restricted", label: "Restricted" };
+  if (name.includes("ticket to hell")) return { key: "restricted", label: "Restricted" };
+  if (name.includes("slate")) return { key: "restricted", label: "Restricted" };
+  if (name.includes("night terror")) return { key: "restricted", label: "Restricted" };
+  if (name.includes("atheris")) return { key: "restricted", label: "Restricted" };
+
+  return { key: "milspec", label: "Mil-Spec" };
+}
+
+function rarityClass(item) {
+  return `rarity-${getRewardRarity(item).key}`;
+}
+
+function shortSkinName(name) {
+  if (name.includes("AK-47")) return "AK";
+  if (name.includes("AWP")) return "AWP";
+  if (name.includes("M4")) return "M4";
+  if (name.includes("USP")) return "USP";
+  if (name.includes("Glock")) return "G18";
+  if (name.includes("P250")) return "P250";
+  return "CS";
 }
 
 function renderRewards() {
@@ -242,9 +363,7 @@ function renderRewards() {
       const rarity = getRewardRarity(item);
       return `
         <article class="reward-card steam-item ${rarityClass(item)}">
-          <div class="reward-art">
-            <span class="skin-abbrev">${shortSkinName(item.name)}</span>
-          </div>
+          <div class="reward-art"><span class="skin-abbrev">${shortSkinName(item.name)}</span></div>
           <div class="reward-info">
             <div class="reward-title-row">
               <span class="rarity-badge">${rarity.label}</span>
@@ -256,7 +375,7 @@ function renderRewards() {
               <span class="price">🪙 ${Number(item.points_cost).toLocaleString()} coins</span>
             </div>
             <div class="reward-actions">
-              <button class="button button-primary" data-redeem="${item.id}">Redeem</button>
+              <button class="button button-primary" type="button" data-redeem="${item.id}">Redeem</button>
             </div>
           </div>
         </article>
@@ -273,38 +392,9 @@ function renderRewards() {
   apply();
 }
 
-
-function getRewardRarity(item) {
-  const name = (item.name || "").toLowerCase();
-
-  if (name.includes("sand dune")) return { key: "consumer", label: "Consumer" };
-  if (name.includes("moonrise")) return { key: "restricted", label: "Restricted" };
-  if (name.includes("ticket to hell")) return { key: "restricted", label: "Restricted" };
-  if (name.includes("slate")) return { key: "restricted", label: "Restricted" };
-  if (name.includes("night terror")) return { key: "restricted", label: "Restricted" };
-  if (name.includes("atheris")) return { key: "restricted", label: "Restricted" };
-
-  return { key: "milspec", label: "Mil-Spec" };
-}
-
-function rarityClass(item) {
-  return `rarity-${getRewardRarity(item).key}`;
-}
-
-function shortSkinName(name) {
-  if (name.includes("AK-47")) return "AK";
-  if (name.includes("AWP")) return "AWP";
-  if (name.includes("M4")) return "M4";
-  if (name.includes("USP")) return "USP";
-  if (name.includes("Glock")) return "G18";
-  if (name.includes("P250")) return "P250";
-  return "CS";
-}
-
 async function requestRedeem(rewardId) {
   const user = await getSessionUser();
   if (!user) {
-    showMessage("Log in first.");
     openAuthModal("signup");
     return;
   }
@@ -324,8 +414,7 @@ async function requestRedeem(rewardId) {
     return;
   }
 
-  const confirmRedeem = confirm(`Redeem ${reward.name} for ${reward.points_cost} coins? Coins will be deducted immediately while the request is pending.`);
-  if (!confirmRedeem) return;
+  if (!confirm(`Redeem ${reward.name} for ${reward.points_cost} coins? Coins will be deducted immediately while pending.`)) return;
 
   const newBalance = profile.points_balance - reward.points_cost;
 
@@ -334,10 +423,7 @@ async function requestRedeem(rewardId) {
     .update({ points_balance: newBalance })
     .eq("id", user.id);
 
-  if (updateError) {
-    showMessage(updateError.message);
-    return;
-  }
+  if (updateError) return showMessage(updateError.message);
 
   const { error: redeemError } = await sb.from("redemption_requests").insert({
     user_id: user.id,
@@ -349,13 +435,8 @@ async function requestRedeem(rewardId) {
   });
 
   if (redeemError) {
-    await sb
-      .from("profiles")
-      .update({ points_balance: profile.points_balance })
-      .eq("id", user.id);
-
-    showMessage(redeemError.message);
-    return;
+    await sb.from("profiles").update({ points_balance: profile.points_balance }).eq("id", user.id);
+    return showMessage(redeemError.message);
   }
 
   await sb.from("coin_adjustments").insert({
@@ -365,163 +446,31 @@ async function requestRedeem(rewardId) {
   });
 
   showMessage("Redeem request created. Coins were deducted and the request is now pending review.");
-  await updateNavAuthState();
-}
-
-function openAuthModal(mode = "signup") {
-  const modal = qs("#authModal");
-  if (!modal) return;
-  if (authModalModeSetter) authModalModeSetter(mode);
-  modal.classList.remove("hidden");
-}
-
-function initAuthModal() {
-  const modal = qs("#authModal");
-  if (!modal) return;
-
-  const title = qs("#authTitle");
-  const subtitle = qs("#authSubtitle");
-
-  function setMode(mode) {
-    qsa("[data-auth-tab]").forEach((tab) => tab.classList.toggle("active", tab.dataset.authTab === mode));
-    qsa("[data-auth-pane]").forEach((pane) => pane.classList.toggle("hidden", pane.dataset.authPane !== mode));
-
-    if (mode === "login") {
-      title.textContent = "Sign in";
-      subtitle.textContent = "Welcome back. Continue earning toward your next skin.";
-    } else {
-      title.textContent = "Create your account";
-      subtitle.textContent = "Start earning coins toward CS2 skins.";
-    }
-  }
-
-  authModalModeSetter = setMode;
-
-  qsa("[data-open-auth]").forEach((button) => {
-    button.addEventListener("click", () => openAuthModal(button.dataset.openAuth || "signup"));
-  });
-
-  qsa("[data-close-auth]").forEach((button) => {
-    button.addEventListener("click", () => modal.classList.add("hidden"));
-  });
-
-  modal.addEventListener("click", (event) => {
-    if (event.target === modal) modal.classList.add("hidden");
-  });
-
-  qsa("[data-auth-tab]").forEach((tab) => {
-    tab.addEventListener("click", () => setMode(tab.dataset.authTab));
-  });
-
-  const signupForm = qs("#modalSignupForm");
-  const loginForm = qs("#modalLoginForm");
-  const googleButton = qs("#googleLoginButton");
-
-  signupForm?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-
-    const email = qs("#modalSignupEmail").value.trim();
-    const password = qs("#modalSignupPassword").value;
-
-    const { error } = await sb.auth.signUp({ email, password });
-    if (error) {
-      showMessage(error.message);
-      return;
-    }
-
-    showMessage("Account created. If email confirmation is enabled, check your inbox. Then sign in.");
-    setMode("login");
-  });
-
-  loginForm?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-
-    const email = qs("#modalLoginEmail").value.trim();
-    const password = qs("#modalLoginPassword").value;
-
-    const { error } = await sb.auth.signInWithPassword({ email, password });
-    if (error) {
-      showMessage(error.message);
-      return;
-    }
-
-    modal.classList.add("hidden");
-    await refreshDashboard();
-    await updateNavAuthState();
-  });
-
-  googleButton?.addEventListener("click", async () => {
-    showMessage("Google login needs to be enabled in Supabase Auth providers first. We can add that next.");
-  });
-}
-
-async function updateNavAuthState() {
-  const user = await getSessionUser();
-  const actions = qs("#navAuthActions");
-  if (!actions) return;
-
-  if (user) {
-    let coins = 0;
-    try {
-      const profile = await ensureProfile(user);
-      coins = profile.points_balance || 0;
-    } catch {}
-
-    actions.innerHTML = `
-      <a class="coin-pill" href="dashboard.html">🪙 ${Number(coins).toLocaleString()} coins</a>
-      <a class="nav-login" href="dashboard.html">Account</a>
-      <button class="button button-ghost nav-cta" id="navLogoutButton">Log out</button>
-    `;
-
-    qs("#navLogoutButton")?.addEventListener("click", async () => {
-      await sb.auth.signOut();
-      location.href = "index.html";
-    });
-  } else {
-    actions.innerHTML = `
-      <button class="nav-login" data-open-auth="login">Sign in</button>
-      <button class="button button-primary nav-cta" data-open-auth="signup">Sign up</button>
-    `;
-  }
-
-  await updateHomeAuthState(user);
+  await refreshAll();
 }
 
 async function initDashboard() {
-  const authSection = qs("#authSection");
-  const accountSection = qs("#accountSection");
-  const logoutButton = qs("#logoutButton");
-
-  if (!authSection || !accountSection) return;
-
-  logoutButton?.addEventListener("click", async () => {
-    await sb.auth.signOut();
-    await refreshDashboard();
-    await updateNavAuthState();
-  });
-
   const tradeForm = qs("#tradeForm");
-  tradeForm?.addEventListener("submit", async (event) => {
-    event.preventDefault();
+  if (tradeForm) {
+    tradeForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
 
-    const user = await getSessionUser();
-    if (!user) return;
+      const user = await getSessionUser();
+      if (!user) return openAuthModal("login");
 
-    const steamTradeUrl = qs("#tradeUrl").value.trim();
+      const steamTradeUrl = qs("#tradeUrl")?.value.trim();
 
-    const { error } = await sb
-      .from("profiles")
-      .update({ steam_trade_url: steamTradeUrl })
-      .eq("id", user.id);
+      const { error } = await sb
+        .from("profiles")
+        .update({ steam_trade_url: steamTradeUrl })
+        .eq("id", user.id);
 
-    if (error) {
-      showMessage(error.message);
-      return;
-    }
+      if (error) return showMessage(error.message);
 
-    showMessage("Steam trade URL saved.");
-    await refreshDashboard();
-  });
+      showMessage("Steam trade URL saved.");
+      await refreshAll();
+    });
+  }
 
   await refreshDashboard();
 }
@@ -530,18 +479,6 @@ async function refreshDashboard() {
   const authSection = qs("#authSection");
   const accountSection = qs("#accountSection");
   if (!authSection || !accountSection) return;
-
-  const accountEmail = qs("#accountEmail");
-  const balanceDisplay = qs("#balanceDisplay");
-  const pendingDisplay = qs("#pendingDisplay");
-  const totalEarnedDisplay = qs("#totalEarnedDisplay");
-  const levelDisplay = qs("#levelDisplay");
-  const xpDisplay = qs("#xpDisplay");
-  const levelText = qs("#levelText");
-  const nextLevelText = qs("#nextLevelText");
-  const xpBarFill = qs("#xpBarFill");
-  const tradeUrl = qs("#tradeUrl");
-  const redeemHistory = qs("#redeemHistory");
 
   const user = await getSessionUser();
 
@@ -558,15 +495,24 @@ async function refreshDashboard() {
   const totalEarned = await getTotalEarned(user.id);
   const progress = getLevelProgress(totalEarned);
 
-  accountEmail.textContent = user.email || "Unknown";
-  balanceDisplay.textContent = Number(profile.points_balance || 0).toLocaleString();
-  totalEarnedDisplay.textContent = Number(totalEarned).toLocaleString();
-  levelDisplay.textContent = progress.level;
-  xpDisplay.textContent = `${Number(totalEarned).toLocaleString()} XP`;
-  levelText.textContent = `Level ${progress.level}`;
-  nextLevelText.textContent = `${Number(progress.nextFloor - totalEarned).toLocaleString()} XP to Level ${progress.level + 1}`;
-  xpBarFill.style.width = `${progress.progress}%`;
-  tradeUrl.value = profile.steam_trade_url || "";
+  const setText = (selector, value) => {
+    const el = qs(selector);
+    if (el) el.textContent = value;
+  };
+
+  setText("#accountEmail", user.email || "Unknown");
+  setText("#balanceDisplay", Number(profile.points_balance || 0).toLocaleString());
+  setText("#totalEarnedDisplay", Number(totalEarned).toLocaleString());
+  setText("#levelDisplay", progress.level);
+  setText("#xpDisplay", `${Number(totalEarned).toLocaleString()} XP`);
+  setText("#levelText", `Level ${progress.level}`);
+  setText("#nextLevelText", `${Number(progress.nextFloor - totalEarned).toLocaleString()} XP to Level ${progress.level + 1}`);
+
+  const xpBar = qs("#xpBarFill");
+  if (xpBar) xpBar.style.width = `${progress.progress}%`;
+
+  const tradeUrl = qs("#tradeUrl");
+  if (tradeUrl) tradeUrl.value = profile.steam_trade_url || "";
 
   const { data: redemptions, error } = await sb
     .from("redemption_requests")
@@ -574,12 +520,12 @@ async function refreshDashboard() {
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
-  if (error) {
-    redeemHistory.textContent = error.message;
-    return;
-  }
+  if (error) return;
 
-  pendingDisplay.textContent = (redemptions || []).filter((item) => item.status === "pending").length;
+  setText("#pendingDisplay", (redemptions || []).filter((item) => item.status === "pending").length);
+
+  const redeemHistory = qs("#redeemHistory");
+  if (!redeemHistory) return;
 
   if (!redemptions || redemptions.length === 0) {
     redeemHistory.className = "empty-state";
@@ -598,96 +544,6 @@ async function refreshDashboard() {
     </div>
   `).join("");
 }
-
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-
-
-
-
-
-function calculateLevel(totalEarned) {
-  const safeEarned = Number(totalEarned || 0);
-  return Math.max(1, Math.floor(Math.sqrt(safeEarned / 1000)) + 1);
-}
-
-function xpForLevel(level) {
-  return Math.pow(Math.max(0, level - 1), 2) * 1000;
-}
-
-function calculateXp(totalEarned) {
-  return Number(totalEarned || 0);
-}
-
-function getLevelProgress(totalEarned) {
-  const level = calculateLevel(totalEarned);
-  const currentFloor = xpForLevel(level);
-  const nextFloor = xpForLevel(level + 1);
-  const progress = nextFloor === currentFloor ? 0 : ((totalEarned - currentFloor) / (nextFloor - currentFloor)) * 100;
-  return { level, currentFloor, nextFloor, progress: Math.max(0, Math.min(100, progress)) };
-}
-
-async function getTotalEarned(userId) {
-  const { data, error } = await sb
-    .from("coin_adjustments")
-    .select("amount")
-    .eq("user_id", userId);
-
-  if (error || !data) return 0;
-  return data.filter((row) => row.amount > 0).reduce((sum, row) => sum + Number(row.amount || 0), 0);
-}
-
-async function updateHomeAuthState(userArg = null) {
-  const guest = qs("[data-guest-home]");
-  const authed = qs("[data-user-home]");
-  if (!guest || !authed) return;
-
-  const user = userArg || await getSessionUser();
-  if (!user) {
-    guest.classList.remove("hidden");
-    authed.classList.add("hidden");
-    const homeCoins = qs("[data-home-coins]");
-    const homeLevel = qs("[data-home-level]");
-    const homePending = qs("[data-home-pending]");
-    if (homeCoins) homeCoins.textContent = "0";
-    if (homeLevel) homeLevel.textContent = "1";
-    if (homePending) homePending.textContent = "0";
-    return;
-  }
-
-  guest.classList.add("hidden");
-  authed.classList.remove("hidden");
-
-  try {
-    const profile = await ensureProfile(user);
-    const totalEarned = await getTotalEarned(user.id);
-    const { data: redemptions } = await sb
-      .from("redemption_requests")
-      .select("status")
-      .eq("user_id", user.id);
-
-    const homeCoins = qs("[data-home-coins]");
-    const homeLevel = qs("[data-home-level]");
-    const homePending = qs("[data-home-pending]");
-    if (homeCoins) homeCoins.textContent = Number(profile.points_balance || 0).toLocaleString();
-    if (homeLevel) homeLevel.textContent = calculateLevel(totalEarned);
-    if (homePending) homePending.textContent = (redemptions || []).filter((item) => item.status === "pending").length;
-  } catch {}
-}
-
-function finishPageLoad() {
-  const loader = qs("#pageLoader");
-  if (!loader) return;
-  setTimeout(() => loader.classList.add("done"), 280);
-}
-
 
 function isAdmin(user) {
   return !!user && ADMIN_USER_IDS.includes(user.id);
@@ -746,8 +602,8 @@ async function loadAdminRequests() {
       </div>
       <div class="admin-actions">
         <span class="status-pill status-${escapeHtml(item.status)}">${escapeHtml(item.status)}</span>
-        <button class="button button-ghost" data-admin-status="completed" data-request-id="${item.id}">Mark completed</button>
-        <button class="button button-ghost" data-admin-status="rejected" data-request-id="${item.id}">Reject</button>
+        <button class="button button-ghost" type="button" data-admin-status="completed" data-request-id="${item.id}">Mark completed</button>
+        <button class="button button-ghost" type="button" data-admin-status="rejected" data-request-id="${item.id}">Reject</button>
       </div>
     </article>
   `).join("");
@@ -763,19 +619,25 @@ async function updateRedeemStatus(id, status) {
     .update({ status })
     .eq("id", id);
 
-  if (error) {
-    showMessage(error.message);
-    return;
-  }
+  if (error) return showMessage(error.message);
 
   showMessage(`Request marked ${status}.`);
   await loadAdminRequests();
+}
+
+async function refreshAll() {
+  await updateNavAuthState();
+  await updateHomeAuthState();
+  await refreshDashboard();
+  await initOfferwall();
+  await initAdmin();
 }
 
 async function boot() {
   initNav();
   initAuthModal();
   await updateNavAuthState();
+  await updateHomeAuthState();
   await initOfferwall();
 
   if (qs("#rewardsGrid")) {
@@ -788,7 +650,11 @@ async function boot() {
   }
 
   await initDashboard();
+  await initAdmin();
   finishPageLoad();
 }
 
-boot().catch((error) => { console.error(error); finishPageLoad(); });
+boot().catch((error) => {
+  console.error(error);
+  finishPageLoad();
+});

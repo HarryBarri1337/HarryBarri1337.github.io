@@ -1248,3 +1248,91 @@ h1 {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* v8.1 interaction fixes */
+.page-loader.done {
+  pointer-events: none;
+}
+
+.button,
+.nav-login,
+.coin-pill,
+.provider-card,
+.reward-card,
+.auth-tab,
+.modal-close {
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, filter 160ms ease, box-shadow 160ms ease, color 160ms ease;
+}
+
+.button:hover,
+.nav-login:hover,
+.coin-pill:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+}
+
+.button:active,
+.nav-login:active,
+.coin-pill:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.provider-card:hover,
+.reward-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(240,178,50,0.32);
+  box-shadow: 0 32px 90px rgba(0,0,0,0.46);
+}
+
+.provider-action {
+  width: fit-content;
+  cursor: pointer;
+  position: relative;
+  z-index: 2;
+}
+
+.provider-action::after {
+  content: "↗";
+  margin-left: 10px;
+  opacity: .8;
+}
+
+.nav-clickable {
+  cursor: pointer;
+}
+
+.nav-actions button,
+.auth-modal button,
+.provider-card a,
+.reward-card button {
+  pointer-events: auto;
+}
+
+.site-header,
+.provider-card,
+.panel,
+.auth-modal {
+  position: relative;
+}
+
+.site-header {
+  z-index: 50;
+}
+
+.auth-modal {
+  z-index: 101;
+}
+
+.modal-backdrop {
+  z-index: 100;
+}
+
+.provider-card .button-ghost:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(148,163,184,0.35);
+}
+
+#openCpxWall:hover {
+  box-shadow: 0 20px 45px rgba(240,178,50,0.28);
+}
