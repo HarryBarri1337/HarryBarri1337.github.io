@@ -84,8 +84,21 @@ async function loadProfile() {
 }
 
 async function initOfferwall() {
-  const wall = qs("#fullscreen");
-  if (!wall) return;
+  const button = qs("#openCpxWall");
+  if (!button) return;
+
+  const user = await getSessionUser();
+
+  if (!user) {
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      openAuthModal("signup");
+    });
+    return;
+  }
+
+  button.href = `https://offers.cpx-research.com/index.php?app_id=33831&ext_user_id=${encodeURIComponent(user.id)}`;
+}
 
   const user = await getSessionUser();
 
