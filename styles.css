@@ -1336,3 +1336,71 @@ h1 {
 #openCpxWall:hover {
   box-shadow: 0 20px 45px rgba(240,178,50,0.28);
 }
+
+/* v8.2 reward shop: real item images, stock/quantity, and out-of-stock state */
+.reward-art.has-image {
+  position: relative;
+  overflow: hidden;
+  padding: 12px;
+}
+
+.reward-art.has-image img {
+  max-width: 92%;
+  max-height: 128px;
+  object-fit: contain;
+  filter: drop-shadow(0 18px 28px rgba(0,0,0,.45));
+  transform: translateY(2px);
+  transition: transform .18s ease, filter .18s ease;
+}
+
+.reward-card:hover .reward-art.has-image img {
+  transform: translateY(-3px) scale(1.03);
+  filter: drop-shadow(0 22px 34px rgba(0,0,0,.55));
+}
+
+.reward-art .fallback-abbrev {
+  display: none;
+}
+
+.reward-art.image-failed .fallback-abbrev {
+  display: block;
+}
+
+.reward-description {
+  min-height: 38px;
+}
+
+.stock-pill {
+  border: 1px solid rgba(72, 187, 120, .35);
+  background: rgba(72, 187, 120, .10);
+  color: #9ae6b4;
+  border-radius: 999px;
+  padding: 6px 9px;
+  font-size: .78rem;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.stock-pill.stock-out {
+  border-color: rgba(248, 113, 113, .35);
+  background: rgba(248, 113, 113, .10);
+  color: #fecaca;
+}
+
+.reward-card.is-out {
+  opacity: .64;
+}
+
+.reward-card.is-out .reward-art {
+  filter: grayscale(.55);
+}
+
+.reward-actions button:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.reward-card.rarity-contraband::before { background: #e4ae39; }
+.reward-card.rarity-contraband .reward-art { color: #e4ae39; }
+.rarity-contraband .rarity-badge { color: #e4ae39; }

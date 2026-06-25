@@ -306,8 +306,20 @@ async function loadRewards() {
 }
 
 function getRewardRarity(item) {
-  const name = (item.name || "").toLowerCase();
+  const explicit = (item.rarity || item.rarity_key || "").toLowerCase().replace(/[^a-z]/g, "");
+  const explicitMap = {
+    consumer: "Consumer",
+    industrial: "Industrial",
+    milspec: "Mil-Spec",
+    restricted: "Restricted",
+    classified: "Classified",
+    covert: "Covert",
+    contraband: "Contraband"
+  };
 
+  if (explicitMap[explicit]) return { key: explicit, label: explicitMap[explicit] };
+
+  const name = (item.name || "").toLowerCase();
   if (name.includes("sand dune")) return { key: "consumer", label: "Consumer" };
   if (name.includes("moonrise")) return { key: "restricted", label: "Restricted" };
   if (name.includes("ticket to hell")) return { key: "restricted", label: "Restricted" };
@@ -322,14 +334,50 @@ function rarityClass(item) {
   return `rarity-${getRewardRarity(item).key}`;
 }
 
-function shortSkinName(name) {
+function shortSkinName(name = "") {
   if (name.includes("AK-47")) return "AK";
   if (name.includes("AWP")) return "AWP";
   if (name.includes("M4")) return "M4";
   if (name.includes("USP")) return "USP";
   if (name.includes("Glock")) return "G18";
   if (name.includes("P250")) return "P250";
+  if (name.includes("Desert Eagle")) return "DE";
   return "CS";
+}
+
+function getRewardImage(item) {
+  return item.image_url || item.image || item.icon_url || "";
+}
+
+function getRewardCondition(item) {
+  return item.condition || item.wear || "";
+}
+
+function getRewardQuantity(item) {
+  if (item.quantity === null || item.quantity === undefined || item.quantity === "") return null;
+  const quantity = Number(item.quantity);
+  return Number.isFinite(quantity) ? quantity : null;
+}
+
+function rewardIsOutOfStock(item) {
+  const quantity = getRewardQuantity(item);
+  return quantity !== null && quantity <= 0;
+}
+
+function renderRewardArt(item) {
+  const image = getRewardImage(item);
+  const name = escapeHtml(item.name || "CS2 reward");
+
+  if (!image) {
+    return `<div class="reward-art reward-art-placeholder"><span class="skin-abbrev">${shortSkinName(item.name || "")}</span></div>`;
+  }
+
+  return `
+    <div class="reward-art has-image">
+      <img src="${escapeHtml(image)}" alt="${name}" loading="lazy" onerror="this.closest('.reward-art').classList.add('image-failed'); this.remove();" />
+      <span class="skin-abbrev fallback-abbrev">${shortSkinName(item.name || "")}</span>
+    </div>
+  `;
 }
 
 function renderRewards() {
@@ -344,12 +392,14 @@ function renderRewards() {
     const priceFilter = filter?.value || "all";
 
     const filtered = rewardItems.filter((item) => {
-      const matchesSearch = item.name.toLowerCase().includes(query);
+      const haystack = [item.name, item.description, item.rarity, item.condition].filter(Boolean).join(" ").toLowerCase();
+      const cost = Number(item.points_cost || 0);
+      const matchesSearch = haystack.includes(query);
       const matchesPrice =
         priceFilter === "all" ||
-        (priceFilter === "low" && item.points_cost < 500) ||
-        (priceFilter === "mid" && item.points_cost >= 500 && item.points_cost <= 1200) ||
-        (priceFilter === "high" && item.points_cost > 1200);
+        (priceFilter === "low" && cost < 500) ||
+        (priceFilter === "mid" && cost >= 500 && cost <= 1200) ||
+        (priceFilter === "high" && cost > 1200);
 
       return matchesSearch && matchesPrice;
     });
@@ -361,21 +411,30 @@ function renderRewards() {
 
     grid.innerHTML = filtered.map((item) => {
       const rarity = getRewardRarity(item);
+      const condition = getRewardCondition(item);
+      const quantity = getRewardQuantity(item);
+      const outOfStock = rewardIsOutOfStock(item);
+      const stockText = quantity === null ? "In stock" : `${quantity} left`;
+      const description = item.description || item.market_name || "Manual Steam trade after review";
+
       return `
-        <article class="reward-card steam-item ${rarityClass(item)}">
-          <div class="reward-art"><span class="skin-abbrev">${shortSkinName(item.name)}</span></div>
+        <article class="reward-card steam-item ${rarityClass(item)} ${outOfStock ? "is-out" : ""}">
+          ${renderRewardArt(item)}
           <div class="reward-info">
             <div class="reward-title-row">
               <span class="rarity-badge">${rarity.label}</span>
-              <span class="condition-badge">FT</span>
+              ${condition ? `<span class="condition-badge">${escapeHtml(condition)}</span>` : ""}
             </div>
             <h2>${escapeHtml(item.name)}</h2>
-            <p class="muted">Manual Steam trade after review</p>
+            <p class="muted reward-description">${escapeHtml(description)}</p>
             <div class="reward-meta">
-              <span class="price">🪙 ${Number(item.points_cost).toLocaleString()} coins</span>
+              <span class="price">🪙 ${Number(item.points_cost || 0).toLocaleString()} coins</span>
+              <span class="stock-pill ${outOfStock ? "stock-out" : ""}">${outOfStock ? "Out of stock" : escapeHtml(stockText)}</span>
             </div>
             <div class="reward-actions">
-              <button class="button button-primary" type="button" data-redeem="${item.id}">Redeem</button>
+              <button class="button button-primary" type="button" data-redeem="${item.id}" ${outOfStock ? "disabled" : ""}>
+                ${outOfStock ? "Unavailable" : "Redeem"}
+              </button>
             </div>
           </div>
         </article>
@@ -414,7 +473,16 @@ async function requestRedeem(rewardId) {
     return;
   }
 
-  if (!confirm(`Redeem ${reward.name} for ${reward.points_cost} coins? Coins will be deducted immediately while pending.`)) return;
+  if (rewardIsOutOfStock(reward)) {
+    showMessage("That reward is out of stock.");
+    await loadRewards();
+    renderRewards();
+    return;
+  }
+
+  const quantity = getRewardQuantity(reward);
+  const stockLine = quantity === null ? "" : `\nStock after this request: ${Math.max(0, quantity - 1)} left.`;
+  if (!confirm(`Redeem ${reward.name} for ${reward.points_cost} coins? Coins will be deducted immediately while pending.${stockLine}`)) return;
 
   const newBalance = profile.points_balance - reward.points_cost;
 
@@ -424,6 +492,20 @@ async function requestRedeem(rewardId) {
     .eq("id", user.id);
 
   if (updateError) return showMessage(updateError.message);
+
+  const currentQuantity = getRewardQuantity(reward);
+  if (currentQuantity !== null) {
+    const { error: stockError } = await sb
+      .from("reward_items")
+      .update({ quantity: Math.max(0, currentQuantity - 1) })
+      .eq("id", reward.id)
+      .gt("quantity", 0);
+
+    if (stockError) {
+      await sb.from("profiles").update({ points_balance: profile.points_balance }).eq("id", user.id);
+      return showMessage(stockError.message);
+    }
+  }
 
   const { error: redeemError } = await sb.from("redemption_requests").insert({
     user_id: user.id,
@@ -436,6 +518,10 @@ async function requestRedeem(rewardId) {
 
   if (redeemError) {
     await sb.from("profiles").update({ points_balance: profile.points_balance }).eq("id", user.id);
+    const currentQuantity = getRewardQuantity(reward);
+    if (currentQuantity !== null) {
+      await sb.from("reward_items").update({ quantity: currentQuantity }).eq("id", reward.id);
+    }
     return showMessage(redeemError.message);
   }
 
@@ -446,6 +532,8 @@ async function requestRedeem(rewardId) {
   });
 
   showMessage("Redeem request created. Coins were deducted and the request is now pending review.");
+  await loadRewards();
+  renderRewards();
   await refreshAll();
 }
 
