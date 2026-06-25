@@ -38,7 +38,7 @@
     <span class="pill">Account</span>
     <h1>Your dashboard</h1>
     <p>
-      This page is prepared for a real backend. Static GitHub Pages cannot securely store balances or process payouts.
+      Track your balance, Steam trade link, redeem status, and coin history. Rewards are manually reviewed before skins are sent.
     </p>
   </section>
 
@@ -99,7 +99,7 @@
       <h2>Steam trade URL</h2>
       <p class="muted">Save your trade URL so rewards can be sent after review.</p>
       <form id="tradeForm" class="form-row trade-row">
-        <input id="tradeUrl" type="url" placeholder="https://steamcommunity.com/tradeoffer/new/?partner=..." />
+        <input id="tradeUrl" type="url" placeholder="https://steamcommunity.com/tradeoffer/new/?partner=...&token=..." />
         <a class="button button-ghost" target="_blank" rel="noopener" href="https://steamcommunity.com/my/tradeoffers/privacy#trade_offer_access_url">Find trade link</a>
         <button class="button button-primary" type="submit">Save</button>
       </form>
@@ -107,8 +107,17 @@
 
     <section class="panel">
       <h2>Redeem requests</h2>
+      <p class="muted">Statuses update when the admin reviews, sends, completes, rejects, or refunds your request.</p>
       <div id="redeemHistory" class="empty-state">
         No redeem history yet.
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Coin history</h2>
+      <p class="muted">Shows confirmed offerwall credits, redeem deductions, and refund adjustments.</p>
+      <div id="coinHistory" class="empty-state">
+        No coin history yet.
       </div>
     </section>
   </section>

@@ -1,14 +1,16 @@
-// SkinQuest v8.1 - fixed auth buttons, CPX button, hover feel, and dashboard refresh.
+// SkinQuest v9 - safer Supabase rewards, admin manager, manual redeem workflow.
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-const ADMIN_USER_IDS = ["6c4e7198-b08e-4e78-b4c7-f2abea9f5311"];
+
+const ADMIN_EMAILS = ["harrygotesson@gmail.com"];
 const CPX_APP_ID = 33831;
 
+let rewardItems = [];
+let adminRewardItems = [];
 let currentUser = null;
 let currentProfile = null;
-let rewardItems = [];
 
 function qs(selector) {
   return document.querySelector(selector);
@@ -28,6 +30,7 @@ function escapeHtml(value) {
 }
 
 function formatDate(value) {
+  if (!value) return "Unknown date";
   return new Date(value).toLocaleString();
 }
 
@@ -45,6 +48,17 @@ async function getSessionUser() {
   const { data, error } = await sb.auth.getUser();
   if (error || !data.user) return null;
   return data.user;
+}
+
+function isAdmin(user) {
+  const email = (user?.email || "").toLowerCase();
+  return ADMIN_EMAILS.includes(email);
+}
+
+async function requireUser() {
+  const user = await getSessionUser();
+  if (!user) throw new Error("You need to sign in first.");
+  return user;
 }
 
 async function ensureProfile(user) {
@@ -95,6 +109,12 @@ function getLevelProgress(totalEarned) {
   return { level, currentFloor, nextFloor, progress: Math.max(0, Math.min(100, progress)) };
 }
 
+function updateAdminVisibility(user) {
+  qsa('a[href="admin.html"]').forEach((link) => {
+    link.classList.toggle("hidden-admin-link", !isAdmin(user));
+  });
+}
+
 function initNav() {
   const toggle = qs("[data-nav-toggle]");
   const nav = qs("[data-nav]");
@@ -111,7 +131,6 @@ function initNav() {
 function openAuthModal(mode = "signup") {
   const modal = qs("#authModal");
   if (!modal) return;
-
   setAuthMode(mode);
   modal.classList.remove("hidden");
 }
@@ -197,15 +216,17 @@ function initAuthModal() {
   });
 
   qs("#googleLoginButton")?.addEventListener("click", () => {
-    showMessage("Google sign-in is not connected yet. We'll add it next.");
+    showMessage("Google sign-in is not connected yet. Steam login can be added later.");
   });
 }
 
 async function updateNavAuthState() {
   const actions = qs("#navAuthActions");
-  if (!actions) return;
-
   const user = await getSessionUser();
+  currentUser = user;
+  updateAdminVisibility(user);
+
+  if (!actions) return;
 
   if (!user) {
     actions.innerHTML = `
@@ -218,6 +239,7 @@ async function updateNavAuthState() {
   let coins = 0;
   try {
     const profile = await ensureProfile(user);
+    currentProfile = profile;
     coins = Number(profile.points_balance || 0);
   } catch {}
 
@@ -268,7 +290,7 @@ async function updateHomeAuthState() {
     const homePending = qs("[data-home-pending]");
     if (homeCoins) homeCoins.textContent = Number(profile.points_balance || 0).toLocaleString();
     if (homeLevel) homeLevel.textContent = calculateLevel(totalEarned);
-    if (homePending) homePending.textContent = (redemptions || []).filter((item) => item.status === "pending").length;
+    if (homePending) homePending.textContent = (redemptions || []).filter((item) => ["pending", "reviewing", "trade_sent"].includes(item.status)).length;
   } catch {}
 }
 
@@ -295,19 +317,23 @@ async function initOfferwall() {
 }
 
 async function loadRewards() {
-  const { data, error } = await sb
-    .from("reward_items")
-    .select("*")
-    .eq("active", true)
-    .order("points_cost", { ascending: true });
+  let query = sb.from("reward_items").select("*").eq("active", true).order("sort_order", { ascending: true }).order("points_coins", { ascending: true });
+  let { data, error } = await query;
+
+  if (error && String(error.message || "").includes("sort_order")) {
+    const fallback = await sb.from("reward_items").select("*").eq("active", true).order("points_coins", { ascending: true });
+    data = fallback.data;
+    error = fallback.error;
+  }
 
   if (error) throw error;
   rewardItems = data || [];
 }
 
 function getRewardRarity(item) {
-  const explicit = (item.rarity || item.rarity_key || "").toLowerCase().replace(/[^a-z]/g, "");
-  const explicitMap = {
+  const raw = (item.rarity || item.rarity_key || "").toString().trim();
+  const key = raw.toLowerCase().replace(/[^a-z]/g, "");
+  const labels = {
     consumer: "Consumer",
     industrial: "Industrial",
     milspec: "Mil-Spec",
@@ -317,21 +343,23 @@ function getRewardRarity(item) {
     contraband: "Contraband"
   };
 
-  if (explicitMap[explicit]) return { key: explicit, label: explicitMap[explicit] };
+  if (!key) return null;
+  return { key: labels[key] ? key : "milspec", label: labels[key] || raw };
+}
 
-  const name = (item.name || "").toLowerCase();
-  if (name.includes("sand dune")) return { key: "consumer", label: "Consumer" };
-  if (name.includes("moonrise")) return { key: "restricted", label: "Restricted" };
-  if (name.includes("ticket to hell")) return { key: "restricted", label: "Restricted" };
-  if (name.includes("slate")) return { key: "restricted", label: "Restricted" };
-  if (name.includes("night terror")) return { key: "restricted", label: "Restricted" };
-  if (name.includes("atheris")) return { key: "restricted", label: "Restricted" };
+function getRewardCost(item) {
+  const cost = Number(item.points_coins ?? item.points_cost ?? 0);
+  return Number.isFinite(cost) ? cost : 0;
+}
 
-  return { key: "milspec", label: "Mil-Spec" };
+function getRequestCost(item) {
+  const cost = Number(item.points_cost ?? item.points_coins ?? 0);
+  return Number.isFinite(cost) ? cost : 0;
 }
 
 function rarityClass(item) {
-  return `rarity-${getRewardRarity(item).key}`;
+  const rarity = getRewardRarity(item);
+  return rarity ? `rarity-${rarity.key}` : "";
 }
 
 function shortSkinName(name = "") {
@@ -353,15 +381,32 @@ function getRewardCondition(item) {
   return item.condition || item.wear || "";
 }
 
-function getRewardQuantity(item) {
-  if (item.quantity === null || item.quantity === undefined || item.quantity === "") return null;
-  const quantity = Number(item.quantity);
-  return Number.isFinite(quantity) ? quantity : null;
+function getRewardTotalStock(item) {
+  if (item.quantity_total !== null && item.quantity_total !== undefined && item.quantity_total !== "") {
+    const total = Number(item.quantity_total);
+    return Number.isFinite(total) ? total : null;
+  }
+  if (item.quantity !== null && item.quantity !== undefined && item.quantity !== "") {
+    const quantity = Number(item.quantity);
+    return Number.isFinite(quantity) ? quantity : null;
+  }
+  return null;
+}
+
+function getRewardReservedStock(item) {
+  const reserved = Number(item.quantity_reserved || 0);
+  return Number.isFinite(reserved) ? Math.max(0, reserved) : 0;
+}
+
+function getRewardAvailableStock(item) {
+  const total = getRewardTotalStock(item);
+  if (total === null) return null;
+  return Math.max(0, total - getRewardReservedStock(item));
 }
 
 function rewardIsOutOfStock(item) {
-  const quantity = getRewardQuantity(item);
-  return quantity !== null && quantity <= 0;
+  const available = getRewardAvailableStock(item);
+  return available !== null && available <= 0;
 }
 
 function renderRewardArt(item) {
@@ -392,8 +437,8 @@ function renderRewards() {
     const priceFilter = filter?.value || "all";
 
     const filtered = rewardItems.filter((item) => {
-      const haystack = [item.name, item.description, item.rarity, item.condition].filter(Boolean).join(" ").toLowerCase();
-      const cost = Number(item.points_cost || 0);
+      const haystack = [item.name, item.description, item.rarity, item.condition, item.market_name].filter(Boolean).join(" ").toLowerCase();
+      const cost = getRewardCost(item);
       const matchesSearch = haystack.includes(query);
       const matchesPrice =
         priceFilter === "all" ||
@@ -412,9 +457,11 @@ function renderRewards() {
     grid.innerHTML = filtered.map((item) => {
       const rarity = getRewardRarity(item);
       const condition = getRewardCondition(item);
-      const quantity = getRewardQuantity(item);
+      const total = getRewardTotalStock(item);
+      const reserved = getRewardReservedStock(item);
+      const available = getRewardAvailableStock(item);
       const outOfStock = rewardIsOutOfStock(item);
-      const stockText = quantity === null ? "In stock" : `${quantity} left`;
+      const stockText = available === null ? "In stock" : `${available} available`;
       const description = item.description || item.market_name || "Manual Steam trade after review";
 
       return `
@@ -422,14 +469,15 @@ function renderRewards() {
           ${renderRewardArt(item)}
           <div class="reward-info">
             <div class="reward-title-row">
-              <span class="rarity-badge">${rarity.label}</span>
+              ${rarity ? `<span class="rarity-badge">${escapeHtml(rarity.label)}</span>` : ""}
               ${condition ? `<span class="condition-badge">${escapeHtml(condition)}</span>` : ""}
             </div>
             <h2>${escapeHtml(item.name)}</h2>
             <p class="muted reward-description">${escapeHtml(description)}</p>
             <div class="reward-meta">
-              <span class="price">🪙 ${Number(item.points_cost || 0).toLocaleString()} coins</span>
+              <span class="price">🪙 ${getRewardCost(item).toLocaleString()} coins</span>
               <span class="stock-pill ${outOfStock ? "stock-out" : ""}">${outOfStock ? "Out of stock" : escapeHtml(stockText)}</span>
+              ${total !== null && reserved > 0 ? `<span class="stock-pill reserved-stock">${reserved} reserved</span>` : ""}
             </div>
             <div class="reward-actions">
               <button class="button button-primary" type="button" data-redeem="${item.id}" ${outOfStock ? "disabled" : ""}>
@@ -459,7 +507,7 @@ async function requestRedeem(rewardId) {
   }
 
   const profile = await ensureProfile(user);
-  const reward = rewardItems.find((item) => item.id === rewardId);
+  const reward = rewardItems.find((item) => Number(item.id) === Number(rewardId));
   if (!reward) return;
 
   if (!profile.steam_trade_url) {
@@ -468,7 +516,13 @@ async function requestRedeem(rewardId) {
     return;
   }
 
-  if (profile.points_balance < reward.points_cost) {
+  if (!isValidSteamTradeUrl(profile.steam_trade_url)) {
+    showMessage("Your saved Steam trade URL looks invalid. Open Dashboard and save the correct trade offer link first.");
+    location.href = "dashboard.html";
+    return;
+  }
+
+  if (Number(profile.points_balance || 0) < getRewardCost(reward)) {
     showMessage("Not enough coins yet.");
     return;
   }
@@ -480,61 +534,34 @@ async function requestRedeem(rewardId) {
     return;
   }
 
-  const quantity = getRewardQuantity(reward);
-  const stockLine = quantity === null ? "" : `\nStock after this request: ${Math.max(0, quantity - 1)} left.`;
-  if (!confirm(`Redeem ${reward.name} for ${reward.points_cost} coins? Coins will be deducted immediately while pending.${stockLine}`)) return;
+  const available = getRewardAvailableStock(reward);
+  const stockLine = available === null ? "" : `\nAvailable after this request: ${Math.max(0, available - 1)}.`;
+  if (!confirm(`Redeem ${reward.name} for ${getRewardCost(reward)} coins?\n\nCoins will be deducted now and held while your request is pending.${stockLine}`)) return;
 
-  const newBalance = profile.points_balance - reward.points_cost;
+  const { error } = await sb.rpc("redeem_reward", { p_reward_id: rewardId });
 
-  const { error: updateError } = await sb
-    .from("profiles")
-    .update({ points_balance: newBalance })
-    .eq("id", user.id);
-
-  if (updateError) return showMessage(updateError.message);
-
-  const currentQuantity = getRewardQuantity(reward);
-  if (currentQuantity !== null) {
-    const { error: stockError } = await sb
-      .from("reward_items")
-      .update({ quantity: Math.max(0, currentQuantity - 1) })
-      .eq("id", reward.id)
-      .gt("quantity", 0);
-
-    if (stockError) {
-      await sb.from("profiles").update({ points_balance: profile.points_balance }).eq("id", user.id);
-      return showMessage(stockError.message);
-    }
+  if (error) {
+    return showMessage(`${error.message}\n\nIf this says the function does not exist, run skinquest_v9_supabase_upgrade.sql in Supabase.`);
   }
 
-  const { error: redeemError } = await sb.from("redemption_requests").insert({
-    user_id: user.id,
-    reward_item_id: reward.id,
-    reward_name: reward.name,
-    points_cost: reward.points_cost,
-    steam_trade_url: profile.steam_trade_url,
-    status: "pending"
-  });
-
-  if (redeemError) {
-    await sb.from("profiles").update({ points_balance: profile.points_balance }).eq("id", user.id);
-    const currentQuantity = getRewardQuantity(reward);
-    if (currentQuantity !== null) {
-      await sb.from("reward_items").update({ quantity: currentQuantity }).eq("id", reward.id);
-    }
-    return showMessage(redeemError.message);
-  }
-
-  await sb.from("coin_adjustments").insert({
-    user_id: user.id,
-    amount: -reward.points_cost,
-    reason: `Redeem pending / ${reward.name}`
-  });
-
-  showMessage("Redeem request created. Coins were deducted and the request is now pending review.");
+  showMessage("Redeem request created. Coins were deducted and stock was reserved for manual review.");
   await loadRewards();
   renderRewards();
   await refreshAll();
+}
+
+function isValidSteamTradeUrl(url) {
+  if (!url) return false;
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+    return host === "steamcommunity.com" &&
+      parsed.pathname.startsWith("/tradeoffer/new/") &&
+      parsed.searchParams.has("partner") &&
+      parsed.searchParams.has("token");
+  } catch {
+    return false;
+  }
 }
 
 async function initDashboard() {
@@ -547,6 +574,9 @@ async function initDashboard() {
       if (!user) return openAuthModal("login");
 
       const steamTradeUrl = qs("#tradeUrl")?.value.trim();
+      if (steamTradeUrl && !isValidSteamTradeUrl(steamTradeUrl)) {
+        return showMessage("That does not look like a valid Steam trade URL. It should include steamcommunity.com/tradeoffer/new/?partner=...&token=...");
+      }
 
       const { error } = await sb
         .from("profiles")
@@ -559,6 +589,11 @@ async function initDashboard() {
       await refreshAll();
     });
   }
+
+  qs("#logoutButton")?.addEventListener("click", async () => {
+    await sb.auth.signOut();
+    location.href = "index.html";
+  });
 
   await refreshDashboard();
 }
@@ -608,10 +643,15 @@ async function refreshDashboard() {
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
-  if (error) return;
+  if (!error) {
+    setText("#pendingDisplay", (redemptions || []).filter((item) => ["pending", "reviewing", "trade_sent"].includes(item.status)).length);
+    renderRedeemHistory(redemptions || []);
+  }
 
-  setText("#pendingDisplay", (redemptions || []).filter((item) => item.status === "pending").length);
+  await renderCoinHistory(user.id);
+}
 
+function renderRedeemHistory(redemptions) {
   const redeemHistory = qs("#redeemHistory");
   if (!redeemHistory) return;
 
@@ -621,20 +661,67 @@ async function refreshDashboard() {
     return;
   }
 
-  redeemHistory.className = "";
+  redeemHistory.className = "redeem-list";
   redeemHistory.innerHTML = redemptions.map((item) => `
     <div class="redeem-row">
       <div>
         <strong>${escapeHtml(item.reward_name)}</strong>
-        <p class="muted">${formatDate(item.created_at)} · ${item.points_cost} coins</p>
+        <p class="muted">${formatDate(item.created_at)} · ${getRequestCost(item).toLocaleString()} coins</p>
+        ${item.trade_offer_url ? `<a class="mini-link" target="_blank" rel="noopener" href="${escapeHtml(item.trade_offer_url)}">Open trade offer</a>` : ""}
+        ${item.admin_note ? `<p class="muted admin-note-view">${escapeHtml(item.admin_note)}</p>` : ""}
       </div>
-      <span class="status-pill status-${escapeHtml(item.status)}">${escapeHtml(item.status)}</span>
+      <span class="status-pill status-${escapeHtml(item.status)}">${escapeHtml(formatStatus(item.status))}</span>
     </div>
   `).join("");
 }
 
-function isAdmin(user) {
-  return !!user && ADMIN_USER_IDS.includes(user.id);
+async function renderCoinHistory(userId) {
+  const coinHistory = qs("#coinHistory");
+  if (!coinHistory) return;
+
+  const { data, error } = await sb
+    .from("coin_adjustments")
+    .select("amount, reason, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  if (error) {
+    coinHistory.className = "empty-state";
+    coinHistory.textContent = "Could not load coin history.";
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    coinHistory.className = "empty-state";
+    coinHistory.textContent = "No coin history yet.";
+    return;
+  }
+
+  coinHistory.className = "coin-history-list";
+  coinHistory.innerHTML = data.map((item) => {
+    const amount = Number(item.amount || 0);
+    return `
+      <div class="coin-history-row ${amount >= 0 ? "positive" : "negative"}">
+        <strong>${amount >= 0 ? "+" : ""}${amount.toLocaleString()} coins</strong>
+        <span>${escapeHtml(item.reason || "Coin adjustment")}</span>
+        <small>${formatDate(item.created_at)}</small>
+      </div>
+    `;
+  }).join("");
+}
+
+function formatStatus(status) {
+  const labels = {
+    pending: "Pending",
+    reviewing: "Reviewing",
+    trade_sent: "Trade sent",
+    completed: "Completed",
+    rejected: "Rejected",
+    refunded: "Refunded",
+    cancelled: "Cancelled"
+  };
+  return labels[status] || status || "Unknown";
 }
 
 async function initAdmin() {
@@ -654,63 +741,252 @@ async function initAdmin() {
   locked.classList.add("hidden");
   panel.classList.remove("hidden");
 
-  qs("#refreshAdmin")?.addEventListener("click", loadAdminRequests);
+  qs("#refreshAdmin")?.addEventListener("click", async () => {
+    await loadAdminRequests();
+    await loadAdminRewards();
+  });
+
+  qs("#adminStatusFilter")?.addEventListener("change", loadAdminRequests);
+  initAdminRewardForm();
+
   await loadAdminRequests();
+  await loadAdminRewards();
 }
 
 async function loadAdminRequests() {
   const list = qs("#adminRequests");
   if (!list) return;
 
-  const { data, error } = await sb
-    .from("redemption_requests")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(50);
+  const statusFilter = qs("#adminStatusFilter")?.value || "open";
+  let query = sb.from("redemption_requests").select("*").order("created_at", { ascending: false }).limit(100);
+
+  if (statusFilter === "open") {
+    query = query.in("status", ["pending", "reviewing", "trade_sent"]);
+  } else if (statusFilter !== "all") {
+    query = query.eq("status", statusFilter);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     list.className = "empty-state";
-    list.textContent = error.message;
+    list.textContent = `${error.message} Run skinquest_v9_supabase_upgrade.sql if admin access/policies are missing.`;
     return;
   }
 
   if (!data || data.length === 0) {
     list.className = "empty-state";
-    list.textContent = "No redeem requests yet.";
+    list.textContent = "No redeem requests found.";
     return;
   }
 
   list.className = "admin-list";
   list.innerHTML = data.map((item) => `
     <article class="admin-request">
-      <div>
-        <strong>${escapeHtml(item.reward_name)}</strong>
-        <p class="muted">${formatDate(item.created_at)} · ${item.points_cost} coins</p>
-        <p class="admin-url">${escapeHtml(item.steam_trade_url)}</p>
+      <div class="admin-request-main">
+        <div class="request-topline">
+          <strong>${escapeHtml(item.reward_name)}</strong>
+          <span class="status-pill status-${escapeHtml(item.status)}">${escapeHtml(formatStatus(item.status))}</span>
+        </div>
+        <p class="muted">${formatDate(item.created_at)} · ${getRequestCost(item).toLocaleString()} coins · User: ${escapeHtml(item.user_id)}</p>
+        <div class="admin-url-block">
+          <label>Steam trade URL</label>
+          <p class="admin-url">${escapeHtml(item.steam_trade_url || "No trade URL saved")}</p>
+        </div>
+        <div class="admin-grid-form compact">
+          <label>Status
+            <select data-request-status="${item.id}">
+              ${["pending", "reviewing", "trade_sent", "completed", "rejected", "refunded", "cancelled"].map((status) => `
+                <option value="${status}" ${status === item.status ? "selected" : ""}>${formatStatus(status)}</option>
+              `).join("")}
+            </select>
+          </label>
+          <label>Trade offer URL / proof
+            <input data-request-trade="${item.id}" value="${escapeHtml(item.trade_offer_url || "")}" placeholder="Optional Steam trade/proof link" />
+          </label>
+          <label class="wide">Admin note
+            <input data-request-note="${item.id}" value="${escapeHtml(item.admin_note || "")}" placeholder="Visible note, refund reason, etc." />
+          </label>
+        </div>
       </div>
-      <div class="admin-actions">
-        <span class="status-pill status-${escapeHtml(item.status)}">${escapeHtml(item.status)}</span>
-        <button class="button button-ghost" type="button" data-admin-status="completed" data-request-id="${item.id}">Mark completed</button>
-        <button class="button button-ghost" type="button" data-admin-status="rejected" data-request-id="${item.id}">Reject</button>
+      <div class="admin-actions vertical">
+        <button class="button button-primary" type="button" data-admin-save="${item.id}">Save status</button>
+        <button class="button button-ghost" type="button" data-admin-quick="trade_sent" data-request-id="${item.id}">Trade sent</button>
+        <button class="button button-ghost" type="button" data-admin-quick="completed" data-request-id="${item.id}">Completed</button>
+        <button class="button button-danger" type="button" data-admin-quick="rejected" data-request-id="${item.id}">Reject + refund</button>
       </div>
     </article>
   `).join("");
 
-  qsa("[data-admin-status]").forEach((button) => {
-    button.addEventListener("click", () => updateRedeemStatus(Number(button.dataset.requestId), button.dataset.adminStatus));
+  qsa("[data-admin-save]").forEach((button) => {
+    button.addEventListener("click", () => saveRequestStatus(Number(button.dataset.adminSave)));
+  });
+
+  qsa("[data-admin-quick]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const id = Number(button.dataset.requestId);
+      const status = button.dataset.adminQuick;
+      const statusInput = qs(`[data-request-status="${id}"]`);
+      if (statusInput) statusInput.value = status;
+      await saveRequestStatus(id);
+    });
   });
 }
 
-async function updateRedeemStatus(id, status) {
-  const { error } = await sb
-    .from("redemption_requests")
-    .update({ status })
-    .eq("id", id);
+async function saveRequestStatus(id) {
+  const status = qs(`[data-request-status="${id}"]`)?.value;
+  const adminNote = qs(`[data-request-note="${id}"]`)?.value || "";
+  const tradeOfferUrl = qs(`[data-request-trade="${id}"]`)?.value || "";
 
-  if (error) return showMessage(error.message);
+  if (!status) return;
+  if (["rejected", "refunded", "cancelled"].includes(status)) {
+    if (!confirm("This status will refund coins and release reserved stock if it has not already been done. Continue?")) return;
+  }
+  if (status === "completed") {
+    if (!confirm("Mark this request completed? This finalizes stock if it has not already been done.")) return;
+  }
 
-  showMessage(`Request marked ${status}.`);
+  const { error } = await sb.rpc("admin_update_redemption_status", {
+    p_request_id: id,
+    p_status: status,
+    p_admin_note: adminNote,
+    p_trade_offer_url: tradeOfferUrl
+  });
+
+  if (error) return showMessage(`${error.message}\n\nRun skinquest_v9_supabase_upgrade.sql if the admin RPC is missing.`);
+
+  showMessage(`Request marked ${formatStatus(status)}.`);
   await loadAdminRequests();
+  await loadAdminRewards();
+}
+
+function initAdminRewardForm() {
+  const form = qs("#adminRewardForm");
+  if (!form) return;
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    await saveAdminReward();
+  });
+
+  qs("#resetRewardForm")?.addEventListener("click", () => setRewardForm(null));
+}
+
+function setRewardForm(item) {
+  qs("#rewardFormTitle") && (qs("#rewardFormTitle").textContent = item ? "Edit reward" : "Add reward");
+  qs("#rewardId") && (qs("#rewardId").value = item?.id || "");
+  qs("#rewardName") && (qs("#rewardName").value = item?.name || "");
+  qs("#rewardCost") && (qs("#rewardCost").value = item?.points_coins ?? "");
+  qs("#rewardImage") && (qs("#rewardImage").value = item?.image_url || "");
+  qs("#rewardTotal") && (qs("#rewardTotal").value = getRewardTotalStock(item || {}) ?? 1);
+  qs("#rewardReserved") && (qs("#rewardReserved").value = getRewardReservedStock(item || {}));
+  qs("#rewardRarity") && (qs("#rewardRarity").value = item?.rarity || "");
+  qs("#rewardCondition") && (qs("#rewardCondition").value = item?.condition || "");
+  qs("#rewardSort") && (qs("#rewardSort").value = item?.sort_order ?? 0);
+  qs("#rewardDescription") && (qs("#rewardDescription").value = item?.description || "");
+  qs("#rewardActive") && (qs("#rewardActive").checked = item?.active ?? true);
+}
+
+function getRewardFormPayload() {
+  return {
+    name: qs("#rewardName")?.value.trim(),
+    points_coins: Number(qs("#rewardCost")?.value || 0),
+    image_url: qs("#rewardImage")?.value.trim() || null,
+    quantity_total: Number(qs("#rewardTotal")?.value || 0),
+    quantity_reserved: Number(qs("#rewardReserved")?.value || 0),
+    rarity: qs("#rewardRarity")?.value || null,
+    condition: qs("#rewardCondition")?.value.trim() || null,
+    sort_order: Number(qs("#rewardSort")?.value || 0),
+    description: qs("#rewardDescription")?.value.trim() || null,
+    active: !!qs("#rewardActive")?.checked
+  };
+}
+
+async function saveAdminReward() {
+  const payload = getRewardFormPayload();
+  const id = qs("#rewardId")?.value;
+
+  if (!payload.name) return showMessage("Reward name is required.");
+  if (!payload.points_coins || payload.points_coins < 1) return showMessage("Coin price must be at least 1.");
+  if (payload.quantity_reserved > payload.quantity_total) return showMessage("Reserved stock cannot be higher than total stock.");
+
+  const query = id
+    ? sb.from("reward_items").update(payload).eq("id", id)
+    : sb.from("reward_items").insert(payload);
+
+  const { error } = await query;
+  if (error) return showMessage(`${error.message}\n\nRun skinquest_v9_supabase_upgrade.sql if reward admin policies/columns are missing.`);
+
+  showMessage(id ? "Reward updated." : "Reward created.");
+  setRewardForm(null);
+  await loadAdminRewards();
+  await loadRewards().catch(() => {});
+}
+
+async function loadAdminRewards() {
+  const list = qs("#adminRewardsList");
+  if (!list) return;
+
+  let { data, error } = await sb
+    .from("reward_items")
+    .select("*")
+    .order("active", { ascending: false })
+    .order("sort_order", { ascending: true })
+    .order("points_coins", { ascending: true });
+
+  if (error) {
+    list.className = "empty-state";
+    list.textContent = `${error.message} Run skinquest_v9_supabase_upgrade.sql if admin reward access is missing.`;
+    return;
+  }
+
+  adminRewardItems = data || [];
+  if (adminRewardItems.length === 0) {
+    list.className = "empty-state";
+    list.textContent = "No rewards yet.";
+    return;
+  }
+
+  list.className = "admin-rewards-list";
+  list.innerHTML = adminRewardItems.map((item) => {
+    const available = getRewardAvailableStock(item);
+    const total = getRewardTotalStock(item);
+    const reserved = getRewardReservedStock(item);
+    return `
+      <article class="admin-reward-row ${item.active ? "" : "inactive"}">
+        <div class="admin-reward-thumb">
+          ${getRewardImage(item) ? `<img src="${escapeHtml(getRewardImage(item))}" alt="" loading="lazy" />` : `<span>${shortSkinName(item.name || "")}</span>`}
+        </div>
+        <div>
+          <strong>${escapeHtml(item.name)}</strong>
+          <p class="muted">${getRewardCost(item).toLocaleString()} coins · ${escapeHtml(item.rarity || "No rarity")} · ${escapeHtml(item.condition || "No condition")}</p>
+          <p class="muted">Stock: ${available ?? "∞"} available / ${total ?? "∞"} total / ${reserved} reserved · ${item.active ? "Active" : "Hidden"}</p>
+        </div>
+        <div class="admin-actions">
+          <button class="button button-ghost" type="button" data-edit-reward="${item.id}">Edit</button>
+          <button class="button button-ghost" type="button" data-toggle-reward="${item.id}">${item.active ? "Hide" : "Activate"}</button>
+        </div>
+      </article>
+    `;
+  }).join("");
+
+  qsa("[data-edit-reward]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const item = adminRewardItems.find((reward) => Number(reward.id) === Number(button.dataset.editReward));
+      setRewardForm(item);
+      qs("#adminRewardForm")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  });
+
+  qsa("[data-toggle-reward]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const item = adminRewardItems.find((reward) => Number(reward.id) === Number(button.dataset.toggleReward));
+      if (!item) return;
+      const { error } = await sb.from("reward_items").update({ active: !item.active }).eq("id", item.id);
+      if (error) return showMessage(error.message);
+      await loadAdminRewards();
+    });
+  });
 }
 
 async function refreshAll() {
@@ -733,7 +1009,7 @@ async function boot() {
       await loadRewards();
       renderRewards();
     } catch (error) {
-      qs("#rewardsGrid").innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
+      qs("#rewardsGrid").innerHTML = `<div class="empty-state">${escapeHtml(error.message)}<br><br>Run the v9 Supabase SQL if new reward columns are missing.</div>`;
     }
   }
 

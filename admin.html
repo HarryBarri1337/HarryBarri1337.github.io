@@ -32,24 +32,121 @@
   </div>
 </header>
 
-<main class="page">
+<main class="page admin-page">
   <section class="page-heading">
-    <span class="pill">Manual admin</span>
-    <h1>Redeem requests</h1>
-    <p>This is a basic manual admin view. For now, access is controlled by your admin user ID inside <code>app.js</code>.</p>
+    <span class="pill">Owner admin</span>
+    <h1>SkinQuest control room</h1>
+    <p>Manage rewards, stock, manual Steam trades, and redeem statuses. Only <strong>harrygotesson@gmail.com</strong> should be able to access this page after the v9 SQL is installed.</p>
   </section>
 
   <section id="adminLocked" class="panel locked-panel">
     <h2>Admin access required</h2>
-    <p class="muted">Log in with the configured admin account to view pending redeems.</p>
+    <p class="muted">Log in with harrygotesson@gmail.com to manage rewards and redeem requests.</p>
     <button class="button button-primary" data-open-auth="login">Sign in</button>
   </section>
 
-  <section id="adminPanel" class="hidden">
-    <div class="admin-toolbar">
-      <button class="button button-primary" id="refreshAdmin">Refresh requests</button>
+  <section id="adminPanel" class="hidden admin-layout">
+    <div class="admin-toolbar panel">
+      <div>
+        <span class="pill">Manual workflow</span>
+        <h2>Redeem requests</h2>
+        <p class="muted">Use this while you send skins manually. Rejected/refunded/cancelled requests refund coins through the v9 RPC.</p>
+      </div>
+      <div class="admin-toolbar-actions">
+        <select id="adminStatusFilter">
+          <option value="open">Open requests</option>
+          <option value="pending">Pending</option>
+          <option value="reviewing">Reviewing</option>
+          <option value="trade_sent">Trade sent</option>
+          <option value="completed">Completed</option>
+          <option value="rejected">Rejected</option>
+          <option value="refunded">Refunded</option>
+          <option value="cancelled">Cancelled</option>
+          <option value="all">All</option>
+        </select>
+        <button class="button button-primary" id="refreshAdmin">Refresh</button>
+      </div>
     </div>
-    <div id="adminRequests" class="admin-list empty-state">Loading...</div>
+
+    <div id="adminRequests" class="admin-list empty-state">Loading requests...</div>
+
+    <section class="panel reward-admin-panel">
+      <div class="section-headline">
+        <div>
+          <span class="pill">Reward manager</span>
+          <h2 id="rewardFormTitle">Add reward</h2>
+        </div>
+        <button class="button button-ghost" id="resetRewardForm" type="button">Clear form</button>
+      </div>
+
+      <form id="adminRewardForm" class="admin-grid-form reward-editor">
+        <input type="hidden" id="rewardId" />
+
+        <label>Name
+          <input id="rewardName" required placeholder="AK-47 | Slate" />
+        </label>
+
+        <label>Coin price
+          <input id="rewardCost" type="number" min="1" step="1" required placeholder="900" />
+        </label>
+
+        <label>Total quantity
+          <input id="rewardTotal" type="number" min="0" step="1" value="1" />
+        </label>
+
+        <label>Reserved
+          <input id="rewardReserved" type="number" min="0" step="1" value="0" />
+        </label>
+
+        <label>Rarity
+          <select id="rewardRarity">
+            <option value="">No rarity</option>
+            <option value="consumer">Consumer</option>
+            <option value="industrial">Industrial</option>
+            <option value="milspec">Mil-Spec</option>
+            <option value="restricted">Restricted</option>
+            <option value="classified">Classified</option>
+            <option value="covert">Covert</option>
+            <option value="contraband">Contraband</option>
+          </select>
+        </label>
+
+        <label>Condition
+          <input id="rewardCondition" placeholder="FN / MW / FT / WW / BS" />
+        </label>
+
+        <label>Sort order
+          <input id="rewardSort" type="number" step="1" value="0" />
+        </label>
+
+        <label class="wide">Image URL
+          <input id="rewardImage" placeholder="assets/rewards/ak-slate.png" />
+        </label>
+
+        <label class="wide">Description
+          <textarea id="rewardDescription" rows="3" placeholder="Manual Steam trade after review"></textarea>
+        </label>
+
+        <label class="check-row">
+          <input id="rewardActive" type="checkbox" checked />
+          <span>Active / visible in shop</span>
+        </label>
+
+        <div class="form-actions wide">
+          <button class="button button-primary" type="submit">Save reward</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="panel">
+      <div class="section-headline">
+        <div>
+          <span class="pill">Current stock</span>
+          <h2>Rewards in Supabase</h2>
+        </div>
+      </div>
+      <div id="adminRewardsList" class="empty-state">Loading rewards...</div>
+    </section>
   </section>
 </main>
 
