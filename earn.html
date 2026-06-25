@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Earn - SkinQuest</title>
-  <link rel="stylesheet" href="styles.css?v=94" />
+  <link rel="stylesheet" href="styles.css?v=95" />
 </head>
 <body>
 <div id="pageLoader" class="page-loader">
@@ -32,67 +32,53 @@
   </div>
 </header>
 
-<main class="page">
-  <section class="page-heading">
-    <span class="pill">Earn coins</span>
-    <h1>Choose a survey provider</h1>
+<main class="page earn-page">
+  <section class="page-heading compact-heading">
+    <span class="pill">Earn</span>
+    <h1>Earn Coins</h1>
     <p>
-      Start with CPX Research now. BitLabs and another major offerwall are prepared for later once you add their links.
+      Complete available survey tasks through connected providers. Coins appear after the provider verifies the completion.
     </p>
   </section>
 
-  <section class="provider-grid">
-    <article class="provider-card featured">
+  <section class="provider-grid clean-providers">
+    <article class="provider-card featured provider-main-card">
       <div class="provider-head">
         <span class="provider-logo">CPX</span>
-        <span class="provider-status live">Live</span>
+        <div>
+          <h2>CPX Research</h2>
+          <p>Surveys connected to your SkinQuest account.</p>
+        </div>
       </div>
-      <h2>CPX Research</h2>
-      <p>Complete surveys through CPX. Coins are added through verified postbacks.</p>
       <ul>
-        <li>Connected to your account ID</li>
-        <li>Postback tested</li>
-        <li>Reversals supported</li>
+        <li>Complete surveys honestly</li>
+        <li>Rewards are credited after verification</li>
+        <li>Avoid VPNs, bots, or fake answers</li>
       </ul>
       <a class="button button-primary button-large provider-action" id="openCpxWall" href="#" target="_blank" rel="noopener">Open CPX surveys</a>
     </article>
 
-    <article class="provider-card">
+    <article class="provider-card provider-muted-card">
       <div class="provider-head">
         <span class="provider-logo">BL</span>
-        <span class="provider-status soon">Soon</span>
+        <div>
+          <h2>BitLabs</h2>
+          <p>Planned as a second provider later.</p>
+        </div>
       </div>
-      <h2>BitLabs</h2>
-      <p>Add your BitLabs link later for a second survey source.</p>
-      <ul>
-        <li>Good backup provider</li>
-        <li>Prepared button</li>
-        <li>Not connected yet</li>
-      </ul>
-      <a class="button button-ghost button-large" id="openBitlabsWall" href="#" target="_blank" rel="noopener">BitLabs coming soon</a>
+      <p class="muted">This card is kept as a roadmap slot, but it has no button until it is connected.</p>
     </article>
 
-    <article class="provider-card">
+    <article class="provider-card provider-muted-card">
       <div class="provider-head">
         <span class="provider-logo">AD</span>
-        <span class="provider-status soon">Soon</span>
+        <div>
+          <h2>Extra offerwall</h2>
+          <p>Reserved for a future provider.</p>
+        </div>
       </div>
-      <h2>Adscend Media</h2>
-      <p>A well-known reward/offer provider slot for later.</p>
-      <ul>
-        <li>Surveys and offers</li>
-        <li>Good long-term candidate</li>
-        <li>Not connected yet</li>
-      </ul>
-      <a class="button button-ghost button-large" id="openExtraWall" href="#" target="_blank" rel="noopener">Adscend coming soon</a>
+      <p class="muted">Only connected walls should have action buttons, so users do not click dead links.</p>
     </article>
-  </section>
-
-  <section class="notice">
-    <h2>How coins are credited</h2>
-    <p>
-      The button opens the provider wall. When a completion is verified, the provider calls SkinQuest's postback endpoint. The frontend never adds coins by itself.
-    </p>
   </section>
 </main>
 
@@ -106,7 +92,7 @@
     <a href="privacy.html">Privacy</a>
     <a href="how-it-works.html">Support</a>
   </div>
-  <p class="fine-print">Prototype. Not affiliated with Valve, Steam, or Counter-Strike.</p>
+  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike.</p>
 </footer>
 <div class="modal-backdrop hidden" id="authModal">
   <div class="auth-modal" role="dialog" aria-modal="true">
@@ -144,6 +130,6 @@
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js?v=94"></script>
+<script src="app.js?v=95"></script>
 </body>
 </html>

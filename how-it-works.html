@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>How it works - SkinQuest</title>
-  <link rel="stylesheet" href="styles.css?v=94" />
+  <link rel="stylesheet" href="styles.css?v=95" />
 </head>
 <body>
 <div id="pageLoader" class="page-loader">
@@ -32,43 +32,73 @@
   </div>
 </header>
 
-<main class="page">
-  <section class="page-heading">
-    <span class="pill">Process</span>
-    <h1>How SkinQuest works</h1>
+<main class="page how-page">
+  <section class="page-heading compact-heading">
+    <span class="pill">Guide</span>
+    <h1>How It Works</h1>
     <p>
-      A reward site is simple on the surface, but real payouts need verification, anti-fraud, and manual review.
+      SkinQuest is a fixed-reward site: earn coins from verified offers, choose a listed CS2 reward, and receive it through a manual Steam trade after review.
     </p>
+    <div class="hero-actions">
+      <a class="button button-primary" href="earn.html">Start earning</a>
+      <a class="button button-ghost" href="rewards.html">View rewards</a>
+    </div>
   </section>
 
-  <section class="timeline">
-    <article>
-      <span>01</span>
-      <h2>User joins</h2>
-      <p>User creates an account. Their profile gets a unique internal user ID.</p>
+  <section class="how-overview panel">
+    <div>
+      <span class="pill">No cases · No roulette</span>
+      <h2>Pick exactly what you want</h2>
+      <p class="muted">Rewards are listed with a fixed coin price and available stock. When you redeem, the item is reserved while the request is reviewed.</p>
+    </div>
+    <div class="how-summary-grid">
+      <div><strong>1</strong><span>create account</span></div>
+      <div><strong>2</strong><span>earn coins</span></div>
+      <div><strong>3</strong><span>redeem reward</span></div>
+      <div><strong>4</strong><span>receive trade</span></div>
+    </div>
+  </section>
+
+  <section class="how-step-grid">
+    <article class="feature-card how-step-card">
+      <span class="step-number">01</span>
+      <h2>Create your account</h2>
+      <p>Sign up and confirm your email. Your account stores coins, reward requests, and your saved Steam trade URL.</p>
     </article>
-    <article>
-      <span>02</span>
-      <h2>User completes survey</h2>
-      <p>The offerwall provider tracks the completion and calculates payout.</p>
+    <article class="feature-card how-step-card">
+      <span class="step-number">02</span>
+      <h2>Complete offers</h2>
+      <p>Open a connected offerwall from the Earn page. Coins are added after the provider confirms the completion.</p>
     </article>
-    <article>
-      <span>03</span>
-      <h2>Provider sends postback</h2>
-      <p>Your backend receives a signed confirmation and credits coins.</p>
+    <article class="feature-card how-step-card">
+      <span class="step-number">03</span>
+      <h2>Choose a reward</h2>
+      <p>Spend coins on a listed reward. Stock is reserved while the request is waiting for review.</p>
     </article>
-    <article>
-      <span>04</span>
-      <h2>User redeems skin</h2>
-      <p>You review the request and send a Steam trade offer manually or through a bot later.</p>
+    <article class="feature-card how-step-card">
+      <span class="step-number">04</span>
+      <h2>Receive the trade</h2>
+      <p>The admin checks the request and sends the skin manually through your Steam trade URL.</p>
     </article>
   </section>
 
-  <section class="notice">
-    <h2>Important rule</h2>
-    <p>
-      Never credit users from frontend JavaScript. Users can edit browser code. All real rewards must be added server-side after verified provider callbacks.
-    </p>
+  <section class="faq-grid">
+    <article class="panel faq-card">
+      <h2>Why do I need a Steam trade URL?</h2>
+      <p class="muted">It lets the reward be sent without adding anyone as a friend on Steam. Save it on your dashboard before redeeming.</p>
+    </article>
+    <article class="panel faq-card">
+      <h2>How long does delivery take?</h2>
+      <p class="muted">Rewards are manual at the start, so delivery is not instant. Check your dashboard for request status updates.</p>
+    </article>
+    <article class="panel faq-card">
+      <h2>Can a request be rejected?</h2>
+      <p class="muted">Yes. If something is wrong, the request can be rejected or refunded and the reserved stock is released.</p>
+    </article>
+    <article class="panel faq-card">
+      <h2>Is this gambling?</h2>
+      <p class="muted">No. Rewards are fixed listings with fixed prices. There are no random cases, spins, or betting features.</p>
+    </article>
   </section>
 </main>
 
@@ -82,7 +112,7 @@
     <a href="privacy.html">Privacy</a>
     <a href="how-it-works.html">Support</a>
   </div>
-  <p class="fine-print">Prototype. Not affiliated with Valve, Steam, or Counter-Strike.</p>
+  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike.</p>
 </footer>
 <div class="modal-backdrop hidden" id="authModal">
   <div class="auth-modal" role="dialog" aria-modal="true">
@@ -120,6 +150,6 @@
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js?v=94"></script>
+<script src="app.js?v=95"></script>
 </body>
 </html>

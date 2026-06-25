@@ -1,4 +1,4 @@
-/* SkinQuest v9.3 - clean marketplace UI */
+/* SkinQuest v9.5 - clean marketplace UI */
 
 :root {
   --bg: #0b0f16;
@@ -963,4 +963,131 @@ label { display: grid; gap: 7px; color: #d8e1ee; font-weight: 800; }
   .auth-result { padding: 24px; }
   .auth-confirm-actions { display: grid; }
   .auth-confirm-actions .button { width: 100%; }
+}
+
+/* v9.5 polish */
+.dashboard-heading {
+  padding: 2px 0 18px;
+}
+.dashboard-heading h1,
+.compact-heading h1 {
+  font-size: clamp(2.05rem, 4.2vw, 3.35rem);
+  line-height: 1.03;
+  letter-spacing: -0.045em;
+}
+.dashboard-heading p,
+.compact-heading p {
+  max-width: 680px;
+}
+.compact-copy {
+  margin: -4px 0 14px;
+}
+.history-show-more {
+  width: fit-content;
+  margin-top: 4px;
+  justify-self: center;
+}
+.coin-history-row.history-extra.hidden { display: none !important; }
+
+.clean-providers {
+  align-items: stretch;
+}
+.clean-providers .provider-card {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+}
+.provider-main-card {
+  background: linear-gradient(180deg, rgba(232,179,77,0.08), var(--surface) 46%);
+}
+.provider-main-card .provider-head,
+.provider-muted-card .provider-head {
+  justify-content: flex-start;
+  align-items: center;
+}
+.provider-main-card .provider-head h2,
+.provider-main-card .provider-head p,
+.provider-muted-card .provider-head h2,
+.provider-muted-card .provider-head p {
+  margin: 0;
+}
+.provider-muted-card {
+  opacity: .86;
+}
+.provider-muted-card .provider-logo {
+  color: var(--muted);
+}
+.provider-card ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.how-page .hero-actions { margin-top: 20px; }
+.how-overview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, .8fr);
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 16px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.02));
+}
+.how-overview h2 {
+  margin-top: 14px;
+  font-size: clamp(1.6rem, 3vw, 2.3rem);
+}
+.how-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.how-summary-grid div {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(255,255,255,0.04);
+}
+.how-summary-grid strong {
+  display: block;
+  font-size: 1.65rem;
+  color: var(--brand-2);
+  line-height: 1;
+}
+.how-summary-grid span {
+  display: block;
+  margin-top: 8px;
+  color: var(--muted);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  font-size: .76rem;
+}
+.how-step-grid,
+.faq-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+.faq-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.how-step-card {
+  min-height: 210px;
+}
+.faq-card h2 { font-size: 1.1rem; }
+.faq-card p { margin-bottom: 0; }
+
+@media (max-width: 920px) {
+  .how-overview { grid-template-columns: 1fr; }
+  .how-step-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 680px) {
+  .dashboard-heading h1,
+  .compact-heading h1 { font-size: clamp(1.9rem, 10vw, 2.45rem); }
+  .how-summary-grid,
+  .how-step-grid,
+  .faq-grid { grid-template-columns: 1fr; }
+  .history-show-more { width: 100%; }
 }

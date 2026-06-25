@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dashboard - SkinQuest</title>
-  <link rel="stylesheet" href="styles.css?v=94" />
+  <link rel="stylesheet" href="styles.css?v=95" />
 </head>
 <body>
 <div id="pageLoader" class="page-loader">
@@ -33,11 +33,10 @@
 </header>
 
 <main class="page">
-  <section class="page-heading">
-    <span class="pill">Account</span>
-    <h1>Your dashboard</h1>
+  <section class="page-heading dashboard-heading">
+    <h1>Your Dashboard</h1>
     <p>
-      Track your balance, Steam trade link, redeem status, and coin history. Rewards are manually reviewed before skins are sent.
+      Track your coins, reward requests, Steam trade link, and recent activity.
     </p>
   </section>
 
@@ -54,39 +53,32 @@
   </section>
 
   <section id="accountSection" class="hidden">
-    <div class="account-bar">
-      <div>
-        <span class="muted">Logged in as</span>
-        <strong id="accountEmail">Loading...</strong>
-      </div>
-      <button class="button button-ghost" id="logoutButton">Log out</button>
-    </div>
-
     <section class="dashboard-grid">
       <div class="stat-card">
-        <span>Coins balance</span>
+        <span>Available coins</span>
         <strong id="balanceDisplay">0</strong>
-        <p>Credits come from confirmed provider postbacks.</p>
+        <p>Ready to spend on listed rewards.</p>
       </div>
       <div class="stat-card">
-        <span>Pending redeems</span>
+        <span>Open requests</span>
         <strong id="pendingDisplay">0</strong>
-        <p>Requests waiting for manual review.</p>
+        <p>Pending, reviewing, or trade sent.</p>
       </div>
       <div class="stat-card">
-        <span>Total earned</span>
+        <span>Lifetime earned</span>
         <strong id="totalEarnedDisplay">0</strong>
-        <p>Lifetime positive coin adjustments.</p>
+        <p>All confirmed positive coin credits.</p>
       </div>
       <div class="stat-card">
         <span>Level</span>
         <strong id="levelDisplay">1</strong>
-        <p><span id="xpDisplay">0 XP</span> earned from confirmed activity.</p>
+        <p><span id="xpDisplay">0 / 100 coins</span> toward the next level.</p>
       </div>
     </section>
 
     <section class="panel xp-panel">
       <h2>Level progress</h2>
+      <p class="muted compact-copy">Every 100 lifetime earned coins adds one account level.</p>
       <div class="xp-row">
         <span id="levelText">Level 1</span>
         <span id="nextLevelText">Next level</span>
@@ -114,7 +106,7 @@
 
     <section class="panel">
       <h2>Coin history</h2>
-      <p class="muted">Shows confirmed offerwall credits, redeem deductions, and refund adjustments.</p>
+      <p class="muted">Showing your latest coin movements. Use Show more for older activity.</p>
       <div id="coinHistory" class="empty-state">
         No coin history yet.
       </div>
@@ -132,7 +124,7 @@
     <a href="privacy.html">Privacy</a>
     <a href="how-it-works.html">Support</a>
   </div>
-  <p class="fine-print">Prototype. Not affiliated with Valve, Steam, or Counter-Strike.</p>
+  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike.</p>
 </footer>
 <div class="modal-backdrop hidden" id="authModal">
   <div class="auth-modal" role="dialog" aria-modal="true">
@@ -170,6 +162,6 @@
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js?v=94"></script>
+<script src="app.js?v=95"></script>
 </body>
 </html>

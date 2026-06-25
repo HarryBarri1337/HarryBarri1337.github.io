@@ -1,6 +1,6 @@
 # SkinQuest
 
-SkinQuest is a static frontend prototype for a CS2 skin reward site.
+SkinQuest is a static frontend for a CS2 skin reward site.
 
 ## Pages
 
@@ -56,5 +56,5 @@ It uses the anon public key only. Do not add the service role key to frontend co
 - Dashboard protected behind login
 - Homepage changes CTA when logged in
 - Trade-link helper button
-- Level/XP display based on earned coins
+- Level display based on earned coins, with 100 earned coins per level
 - Subtle loading overlay to avoid auth-state flicker

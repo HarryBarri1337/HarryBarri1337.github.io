@@ -1,4 +1,4 @@
-// SkinQuest v9.4 - email confirmation page, profile fallback, redeem diagnostics, admin coin tools.
+// SkinQuest v9.5 - dashboard cleanup, 100-coin levels, cleaner earn/how-it-works, coin history show-more.
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -186,19 +186,22 @@ async function getTotalEarned(userId) {
   return data.filter((row) => Number(row.amount) > 0).reduce((sum, row) => sum + Number(row.amount || 0), 0);
 }
 
+const COINS_PER_LEVEL = 100;
+
 function calculateLevel(totalEarned) {
-  return Math.max(1, Math.floor(Math.sqrt(Number(totalEarned || 0) / 1000)) + 1);
+  return Math.max(1, Math.floor(Number(totalEarned || 0) / COINS_PER_LEVEL) + 1);
 }
 
-function xpForLevel(level) {
-  return Math.pow(Math.max(0, level - 1), 2) * 1000;
+function coinsForLevel(level) {
+  return Math.max(0, level - 1) * COINS_PER_LEVEL;
 }
 
 function getLevelProgress(totalEarned) {
-  const level = calculateLevel(totalEarned);
-  const currentFloor = xpForLevel(level);
-  const nextFloor = xpForLevel(level + 1);
-  const progress = ((Number(totalEarned || 0) - currentFloor) / (nextFloor - currentFloor)) * 100;
+  const earned = Number(totalEarned || 0);
+  const level = calculateLevel(earned);
+  const currentFloor = coinsForLevel(level);
+  const nextFloor = coinsForLevel(level + 1);
+  const progress = ((earned - currentFloor) / COINS_PER_LEVEL) * 100;
   return { level, currentFloor, nextFloor, progress: Math.max(0, Math.min(100, progress)) };
 }
 
@@ -807,9 +810,9 @@ async function refreshDashboard() {
   setText("#balanceDisplay", Number(profile.points_balance || 0).toLocaleString());
   setText("#totalEarnedDisplay", Number(totalEarned).toLocaleString());
   setText("#levelDisplay", progress.level);
-  setText("#xpDisplay", `${Number(totalEarned).toLocaleString()} XP`);
+  setText("#xpDisplay", `${Number(totalEarned - progress.currentFloor).toLocaleString()} / ${COINS_PER_LEVEL.toLocaleString()} coins`);
   setText("#levelText", `Level ${progress.level}`);
-  setText("#nextLevelText", `${Number(progress.nextFloor - totalEarned).toLocaleString()} XP to Level ${progress.level + 1}`);
+  setText("#nextLevelText", `${Number(Math.max(0, progress.nextFloor - totalEarned)).toLocaleString()} coins to Level ${progress.level + 1}`);
 
   const xpBar = qs("#xpBarFill");
   if (xpBar) xpBar.style.width = `${progress.progress}%`;
@@ -864,7 +867,7 @@ async function renderCoinHistory(userId) {
     .select("amount, reason, created_at")
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
-    .limit(20);
+    .limit(50);
 
   if (error) {
     coinHistory.className = "empty-state";
@@ -878,17 +881,30 @@ async function renderCoinHistory(userId) {
     return;
   }
 
-  coinHistory.className = "coin-history-list";
-  coinHistory.innerHTML = data.map((item) => {
+  const rows = data.map((item, index) => {
     const amount = Number(item.amount || 0);
     return `
-      <div class="coin-history-row ${amount >= 0 ? "positive" : "negative"}">
+      <div class="coin-history-row ${amount >= 0 ? "positive" : "negative"} ${index >= 5 ? "history-extra hidden" : ""}">
         <strong>${amount >= 0 ? "+" : ""}${amount.toLocaleString()} coins</strong>
         <span>${escapeHtml(item.reason || "Coin adjustment")}</span>
         <small>${formatDate(item.created_at)}</small>
       </div>
     `;
   }).join("");
+
+  const showMore = data.length > 5 ? `
+    <button class="button button-ghost history-show-more" type="button" data-show-more-history>
+      Show more
+    </button>
+  ` : "";
+
+  coinHistory.className = "coin-history-list";
+  coinHistory.innerHTML = `${rows}${showMore}`;
+
+  coinHistory.querySelector("[data-show-more-history]")?.addEventListener("click", (event) => {
+    coinHistory.querySelectorAll(".history-extra").forEach((row) => row.classList.remove("hidden"));
+    event.currentTarget.remove();
+  });
 }
 
 function formatStatus(status) {
