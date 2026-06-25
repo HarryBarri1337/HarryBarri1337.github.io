@@ -1,4 +1,4 @@
-// SkinQuest v9.5 - dashboard cleanup, 100-coin levels, cleaner earn/how-it-works, coin history show-more.
+// SkinQuest v9.6 - redeem no-redirect fix, better modals/toasts, trade URL save hardening.
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -77,14 +77,18 @@ function showMessage(message, type = "info") {
     <button type="button" aria-label="Close message">×</button>
   `;
   stack.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add("show"));
 
+  let closed = false;
   const close = () => {
+    if (closed) return;
+    closed = true;
     toast.classList.add("leaving");
-    setTimeout(() => toast.remove(), 180);
+    setTimeout(() => toast.remove(), 220);
   };
 
   toast.querySelector("button")?.addEventListener("click", close);
-  setTimeout(close, Math.max(3200, Math.min(9000, String(message || "").length * 55)));
+  setTimeout(close, Math.max(3600, Math.min(9500, String(message || "").length * 60)));
 }
 
 function showConfirm(message, options = {}) {
@@ -92,10 +96,10 @@ function showConfirm(message, options = {}) {
     const backdrop = document.createElement("div");
     backdrop.className = "confirm-backdrop";
     backdrop.innerHTML = `
-      <div class="confirm-modal" role="dialog" aria-modal="true">
+      <div class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
         <div class="confirm-icon ${options.danger ? "danger" : ""}">${options.icon || "SQ"}</div>
         <div class="confirm-copy">
-          <h2>${escapeHtml(options.title || "Confirm action")}</h2>
+          <h2 id="confirmTitle">${escapeHtml(options.title || "Confirm action")}</h2>
           <p>${escapeHtml(message)}</p>
         </div>
         <div class="confirm-actions">
@@ -105,19 +109,28 @@ function showConfirm(message, options = {}) {
       </div>
     `;
 
+    let finished = false;
     const done = (value) => {
+      if (finished) return;
+      finished = true;
+      backdrop.classList.remove("show");
       backdrop.classList.add("leaving");
-      setTimeout(() => backdrop.remove(), 160);
+      setTimeout(() => backdrop.remove(), 220);
       resolve(value);
     };
 
     backdrop.addEventListener("click", (event) => {
       if (event.target === backdrop) done(false);
     });
+    document.addEventListener("keydown", function onKey(event) {
+      if (!document.body.contains(backdrop)) return document.removeEventListener("keydown", onKey);
+      if (event.key === "Escape") done(false);
+    });
     backdrop.querySelector("[data-confirm-cancel]")?.addEventListener("click", () => done(false));
     backdrop.querySelector("[data-confirm-ok]")?.addEventListener("click", () => done(true));
     document.body.appendChild(backdrop);
-    backdrop.querySelector("[data-confirm-ok]")?.focus();
+    requestAnimationFrame(() => backdrop.classList.add("show"));
+    setTimeout(() => backdrop.querySelector("[data-confirm-ok]")?.focus(), 80);
   });
 }
 
@@ -657,7 +670,11 @@ function renderRewards() {
     }).join("");
 
     qsa("[data-redeem]").forEach((button) => {
-      button.addEventListener("click", () => requestRedeem(Number(button.dataset.redeem)));
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        requestRedeem(Number(button.dataset.redeem), button);
+      });
     });
   }
 
@@ -666,7 +683,7 @@ function renderRewards() {
   apply();
 }
 
-async function requestRedeem(rewardId) {
+async function requestRedeem(rewardId, sourceButton = null) {
   const user = await getSessionUser();
   if (!user) {
     openAuthModal("signup");
@@ -685,14 +702,20 @@ async function requestRedeem(rewardId) {
   if (!reward) return;
 
   if (!profile.steam_trade_url) {
-    showMessage("Save your Steam trade URL on the Dashboard before redeeming.");
-    location.href = "dashboard.html";
+    const goDashboard = await showConfirm(
+      "You need to save your Steam trade URL before redeeming. This lets SkinQuest send the reward after manual review.",
+      { title: "Steam trade URL required", confirmText: "Open Dashboard", cancelText: "Stay on rewards", icon: "↗" }
+    );
+    if (goDashboard) location.href = "dashboard.html#tradeForm";
     return;
   }
 
   if (!isValidSteamTradeUrl(profile.steam_trade_url)) {
-    showMessage("Your saved Steam trade URL looks invalid. Open Dashboard and save the correct trade offer link first.");
-    location.href = "dashboard.html";
+    const goDashboard = await showConfirm(
+      "Your saved Steam trade URL looks invalid. Open Dashboard and paste the full Steam trade offer link with partner and token.",
+      { title: "Fix Steam trade URL", confirmText: "Open Dashboard", cancelText: "Stay on rewards", icon: "!" }
+    );
+    if (goDashboard) location.href = "dashboard.html#tradeForm";
     return;
   }
 
@@ -721,10 +744,21 @@ async function requestRedeem(rewardId) {
   );
   if (!confirmed) return;
 
+  if (sourceButton) {
+    sourceButton.disabled = true;
+    sourceButton.dataset.originalText = sourceButton.textContent;
+    sourceButton.textContent = "Redeeming...";
+  }
+
   const { error } = await sb.rpc("redeem_reward", { p_reward_id: rewardId });
 
+  if (sourceButton) {
+    sourceButton.disabled = false;
+    sourceButton.textContent = sourceButton.dataset.originalText || "Redeem";
+  }
+
   if (error) {
-    return showMessage(`${error.message}\n\nIf this happens only for normal users, run skinquest_v9_4_supabase_patch.sql in Supabase.`, "error");
+    return showMessage(`${error.message}\n\nIf this happens only for normal users, run skinquest_v9_6_supabase_patch.sql in Supabase and make sure their Steam trade URL is saved.`, "error");
   }
 
   showMessage("Redeem request created. Coins were deducted and stock was reserved for manual review.", "success");
@@ -747,6 +781,26 @@ function isValidSteamTradeUrl(url) {
   }
 }
 
+async function saveSteamTradeUrlForUser(user, steamTradeUrl) {
+  if (!user?.id) throw new Error("You need to sign in first.");
+
+  // v9.6 preferred route. This avoids the silent '0 rows updated' problem when a profile row is missing.
+  const { error: rpcError } = await sb.rpc("save_skinquest_trade_url", { p_trade_url: steamTradeUrl });
+  if (!rpcError) return;
+
+  // Fallback for users who have not run the v9.6 SQL yet.
+  await ensureProfile(user);
+  const { data, error } = await sb
+    .from("profiles")
+    .update({ steam_trade_url: steamTradeUrl })
+    .eq("id", user.id)
+    .select("id, steam_trade_url")
+    .maybeSingle();
+
+  if (error) throw new Error(`${error.message}. Run skinquest_v9_6_supabase_patch.sql if normal users cannot save trade URLs.`);
+  if (!data) throw new Error("No profile row was updated. Run skinquest_v9_6_supabase_patch.sql, then save the trade URL again.");
+}
+
 async function initDashboard() {
   const tradeForm = qs("#tradeForm");
   if (tradeForm) {
@@ -761,14 +815,13 @@ async function initDashboard() {
         return showMessage("That does not look like a valid Steam trade URL. It should include steamcommunity.com/tradeoffer/new/?partner=...&token=...");
       }
 
-      const { error } = await sb
-        .from("profiles")
-        .update({ steam_trade_url: steamTradeUrl })
-        .eq("id", user.id);
+      try {
+        await saveSteamTradeUrlForUser(user, steamTradeUrl);
+      } catch (error) {
+        return showMessage(error.message, "error");
+      }
 
-      if (error) return showMessage(error.message);
-
-      showMessage("Steam trade URL saved.");
+      showMessage("Steam trade URL saved.", "success");
       await refreshAll();
     });
   }
