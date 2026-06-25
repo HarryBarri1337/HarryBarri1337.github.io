@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Privacy - SkinQuest</title>
+  <title>Email confirmed - SkinQuest</title>
   <link rel="stylesheet" href="styles.css?v=94" />
 </head>
 <body>
@@ -32,15 +32,17 @@
   </div>
 </header>
 
-<main class="page legal">
-  <h1>Privacy Policy</h1>
-  <p>This is placeholder text. Replace it before launch.</p>
-  <h2>Data collected</h2>
-  <p>Potential data includes account ID, Steam trade URL, reward history, and offerwall completion events.</p>
-  <h2>Offerwall providers</h2>
-  <p>Survey providers may collect additional information under their own privacy policies.</p>
-  <h2>Contact</h2>
-  <p>Add your support email here before launch.</p>
+<main class="page auth-confirm-page">
+  <section class="auth-confirm-shell">
+    <div id="authConfirmStatus" class="panel auth-result auth-result-loading">
+      <span class="pill">Email confirmation</span>
+      <h1 id="authConfirmTitle">Confirming your email...</h1>
+      <p id="authConfirmCopy" class="muted">Finishing your SkinQuest sign-in. This usually takes a second.</p>
+      <div id="authConfirmActions" class="hero-actions auth-confirm-actions">
+        <a class="button button-ghost" href="index.html">Back home</a>
+      </div>
+    </div>
+  </section>
 </main>
 
 <footer class="site-footer">
@@ -55,6 +57,7 @@
   </div>
   <p class="fine-print">Prototype. Not affiliated with Valve, Steam, or Counter-Strike.</p>
 </footer>
+
 <div class="modal-backdrop hidden" id="authModal">
   <div class="auth-modal" role="dialog" aria-modal="true">
     <button class="modal-close" data-close-auth aria-label="Close">×</button>
@@ -63,30 +66,22 @@
       <h2 id="authTitle">Create your account</h2>
       <p id="authSubtitle">Start earning coins toward CS2 skins.</p>
     </div>
-
     <div class="auth-tabs">
       <button class="auth-tab active" data-auth-tab="signup">Sign up</button>
       <button class="auth-tab" data-auth-tab="login">Sign in</button>
     </div>
-
-    <button class="button google-button" id="googleLoginButton" type="button">
-      <span>G</span> Continue with Google
-    </button>
-
+    <button class="button google-button" id="googleLoginButton" type="button"><span>G</span> Continue with Google</button>
     <div class="divider"><span>or use email</span></div>
-
     <form id="modalSignupForm" class="stack-form auth-pane" data-auth-pane="signup">
       <input id="modalSignupEmail" type="email" placeholder="Email address" required />
       <input id="modalSignupPassword" type="password" placeholder="Password" required minlength="6" />
       <button class="button button-primary" type="submit">Create account</button>
     </form>
-
     <form id="modalLoginForm" class="stack-form auth-pane hidden" data-auth-pane="login">
       <input id="modalLoginEmail" type="email" placeholder="Email address" required />
       <input id="modalLoginPassword" type="password" placeholder="Password" required />
       <button class="button button-primary" type="submit">Sign in</button>
     </form>
-
     <p class="fine-auth">Rewards require verified completions. Do not use VPNs, bots, or fake survey answers.</p>
   </div>
 </div>

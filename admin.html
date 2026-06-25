@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin - SkinQuest</title>
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=94" />
 </head>
 <body>
 <div id="pageLoader" class="page-loader">
@@ -69,6 +69,30 @@
     </div>
 
     <div id="adminRequests" class="admin-list empty-state">Loading requests...</div>
+
+    <section class="panel admin-coin-panel">
+      <div class="section-headline">
+        <div>
+          <span class="pill">Testing tools</span>
+          <h2>Adjust user coins</h2>
+          <p class="muted">Use this to give a friend test coins or correct a balance while you are testing. Enter their email if they have confirmed/logged in, or their user id from Supabase.</p>
+        </div>
+      </div>
+      <form id="adminCoinForm" class="admin-grid-form compact">
+        <label>User email or user id
+          <input id="coinUserIdentifier" placeholder="friend@example.com or uuid" required />
+        </label>
+        <label>Amount
+          <input id="coinAmount" type="number" step="1" placeholder="10 or -10" required />
+        </label>
+        <label class="wide">Reason
+          <input id="coinReason" placeholder="Test coins" value="Test coins" />
+        </label>
+        <div class="form-actions wide">
+          <button class="button button-primary" type="submit">Apply coin adjustment</button>
+        </div>
+      </form>
+    </section>
 
     <section class="panel reward-admin-panel">
       <div class="section-headline">
@@ -191,6 +215,6 @@
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js"></script>
+<script src="app.js?v=94"></script>
 </body>
 </html>

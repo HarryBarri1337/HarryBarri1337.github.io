@@ -1,4 +1,4 @@
-// SkinQuest v9.3 - cleaner UI, fixed loader, safer reward fallbacks.
+// SkinQuest v9.4 - email confirmation page, profile fallback, redeem diagnostics, admin coin tools.
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -49,6 +49,11 @@ function shortEmail(email) {
   const [name, domain] = String(email).split("@");
   if (!domain) return email;
   return `${name}@${domain}`;
+}
+
+function getPageUrl(fileName = "index.html") {
+  const basePath = location.pathname.replace(/[^/]*$/, "");
+  return `${location.origin}${basePath}${fileName}`;
 }
 
 function getToastStack() {
@@ -140,14 +145,21 @@ async function requireUser() {
 }
 
 async function ensureProfile(user) {
+  if (!user?.id) throw new Error("You need to sign in first.");
+
   const { data: existing, error: selectError } = await sb
     .from("profiles")
     .select("*")
     .eq("id", user.id)
     .maybeSingle();
 
-  if (selectError) throw selectError;
-  if (existing) return existing;
+  if (!selectError && existing) return existing;
+
+  // v9.4 fallback: lets normal users get a profile even if direct insert RLS is too strict.
+  const { data: rpcProfile, error: rpcError } = await sb.rpc("ensure_skinquest_profile");
+  if (!rpcError && rpcProfile) {
+    return Array.isArray(rpcProfile) ? rpcProfile[0] : rpcProfile;
+  }
 
   const username = user.email ? user.email.split("@")[0] : "user";
 
@@ -157,7 +169,10 @@ async function ensureProfile(user) {
     .select("*")
     .single();
 
-  if (insertError) throw insertError;
+  if (insertError) {
+    const details = rpcError ? ` RPC fallback also failed: ${rpcError.message}` : "";
+    throw new Error(`${insertError.message}${details}`);
+  }
   return created;
 }
 
@@ -273,10 +288,23 @@ function initAuthModal() {
     const email = qs("#modalSignupEmail")?.value.trim();
     const password = qs("#modalSignupPassword")?.value;
 
-    const { error } = await sb.auth.signUp({ email, password });
-    if (error) return showMessage(error.message);
+    const { data, error } = await sb.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: getPageUrl("auth-confirm.html")
+      }
+    });
+    if (error) return showMessage(error.message, "error");
 
-    showMessage("Account created. If email confirmation is enabled, check your inbox. Then sign in.");
+    if (data?.session) {
+      showMessage("Account created and signed in.", "success");
+      closeAuthModal();
+      await refreshAll();
+      return;
+    }
+
+    showMessage("Account created. Check your inbox and click the SkinQuest confirmation link.", "success");
     setAuthMode("login");
   });
 
@@ -287,7 +315,7 @@ function initAuthModal() {
     const password = qs("#modalLoginPassword")?.value;
 
     const { error } = await sb.auth.signInWithPassword({ email, password });
-    if (error) return showMessage(error.message);
+    if (error) return showMessage(error.message, "error");
 
     closeAuthModal();
     await refreshAll();
@@ -642,7 +670,14 @@ async function requestRedeem(rewardId) {
     return;
   }
 
-  const profile = await ensureProfile(user);
+  let profile;
+  try {
+    profile = await ensureProfile(user);
+  } catch (error) {
+    showMessage(`Could not prepare your account profile: ${error.message}. Run the v9.4 Supabase patch if this happens for normal users.`, "error");
+    return;
+  }
+
   const reward = rewardItems.find((item) => Number(item.id) === Number(rewardId));
   if (!reward) return;
 
@@ -659,7 +694,7 @@ async function requestRedeem(rewardId) {
   }
 
   if (Number(profile.points_balance || 0) < getRewardCost(reward)) {
-    showMessage("Not enough coins yet.");
+    showMessage(`Not enough coins yet. You have ${Number(profile.points_balance || 0).toLocaleString()} coins and this costs ${getRewardCost(reward).toLocaleString()}.`, "error");
     return;
   }
 
@@ -686,10 +721,10 @@ async function requestRedeem(rewardId) {
   const { error } = await sb.rpc("redeem_reward", { p_reward_id: rewardId });
 
   if (error) {
-    return showMessage(`${error.message}\n\nIf this says the function does not exist, run skinquest_v9_supabase_upgrade.sql in Supabase.`);
+    return showMessage(`${error.message}\n\nIf this happens only for normal users, run skinquest_v9_4_supabase_patch.sql in Supabase.`, "error");
   }
 
-  showMessage("Redeem request created. Coins were deducted and stock was reserved for manual review.");
+  showMessage("Redeem request created. Coins were deducted and stock was reserved for manual review.", "success");
   await loadRewards();
   renderRewards();
   await refreshAll();
@@ -869,6 +904,85 @@ function formatStatus(status) {
   return labels[status] || status || "Unknown";
 }
 
+async function initAuthConfirmPage() {
+  const statusBox = qs("#authConfirmStatus");
+  if (!statusBox) return;
+
+  const title = qs("#authConfirmTitle");
+  const copy = qs("#authConfirmCopy");
+  const actions = qs("#authConfirmActions");
+
+  function setState(state, heading, message) {
+    statusBox.className = `panel auth-result auth-result-${state}`;
+    if (title) title.textContent = heading;
+    if (copy) copy.textContent = message;
+  }
+
+  setState("loading", "Confirming your email...", "Finishing your SkinQuest sign-in. This usually takes a second.");
+
+  try {
+    const params = new URLSearchParams(location.search);
+    const code = params.get("code");
+
+    if (code) {
+      const { error } = await sb.auth.exchangeCodeForSession(code);
+      if (error && !String(error.message || "").toLowerCase().includes("already")) throw error;
+      history.replaceState({}, document.title, location.pathname);
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    const { data, error } = await sb.auth.getSession();
+    if (error) throw error;
+
+    const user = data?.session?.user || await getSessionUser();
+    if (!user) {
+      setState("warning", "Email link opened", "Your email link was opened, but no active session was found. Try signing in now. If Supabase still sends you here, check the redirect URL settings.");
+      if (actions) actions.innerHTML = `<button class="button button-primary" data-open-auth="login">Sign in</button><a class="button button-ghost" href="index.html">Home</a>`;
+      return;
+    }
+
+    await ensureProfile(user);
+    setState("success", "Email confirmed", "Your SkinQuest account is ready. You can now earn coins and redeem rewards.");
+    if (actions) actions.innerHTML = `<a class="button button-primary" href="dashboard.html">Go to dashboard</a><a class="button button-ghost" href="rewards.html">View rewards</a>`;
+    await updateNavAuthState();
+  } catch (error) {
+    setState("error", "Could not confirm email", error.message || "The confirmation link could not be processed.");
+    if (actions) actions.innerHTML = `<button class="button button-primary" data-open-auth="login">Try signing in</button><a class="button button-ghost" href="index.html">Home</a>`;
+  }
+}
+
+function initAdminCoinForm() {
+  const form = qs("#adminCoinForm");
+  if (!form || form.dataset.bound === "true") return;
+  form.dataset.bound = "true";
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const identifier = qs("#coinUserIdentifier")?.value.trim();
+    const amount = Number(qs("#coinAmount")?.value || 0);
+    const reason = qs("#coinReason")?.value.trim() || "Manual admin adjustment";
+
+    if (!identifier) return showMessage("Enter the user's email or user id.", "error");
+    if (!Number.isInteger(amount) || amount === 0) return showMessage("Amount must be a whole number, not 0.", "error");
+
+    const confirmed = await showConfirm(
+      `Apply ${amount > 0 ? "+" : ""}${amount.toLocaleString()} coins to ${identifier}?`,
+      { title: "Adjust user coins", confirmText: "Apply", cancelText: "Cancel", icon: coinIcon("coin-icon-confirm") }
+    );
+    if (!confirmed) return;
+
+    const { error } = await sb.rpc("admin_adjust_user_coins", {
+      p_user_identifier: identifier,
+      p_amount: amount,
+      p_reason: reason
+    });
+
+    if (error) return showMessage(`${error.message} Run skinquest_v9_4_supabase_patch.sql if the admin coin RPC is missing.`, "error");
+    showMessage("Coin adjustment saved.", "success");
+    form.reset();
+  });
+}
+
 async function initAdmin() {
   const locked = qs("#adminLocked");
   const panel = qs("#adminPanel");
@@ -893,6 +1007,7 @@ async function initAdmin() {
 
   qs("#adminStatusFilter")?.addEventListener("change", loadAdminRequests);
   initAdminRewardForm();
+  initAdminCoinForm();
 
   await loadAdminRequests();
   await loadAdminRewards();
@@ -1174,6 +1289,7 @@ async function boot() {
   initAuthModal();
   await updateNavAuthState();
   await updateHomeAuthState();
+  await initAuthConfirmPage();
   await initOfferwall();
 
   if (qs("#rewardsGrid")) {
