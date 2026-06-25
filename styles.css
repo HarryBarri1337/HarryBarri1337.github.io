@@ -1941,3 +1941,469 @@ h1 {
   .confirm-actions { display: grid; grid-template-columns: 1fr; }
   .hero { padding-top: 44px; }
 }
+
+/* v9.2 interface polish: real coin asset, standard account dropdown, mobile cleanup */
+:root {
+  --surface-solid: #0e1420;
+  --surface-raised: #121a29;
+  --ring: rgba(240, 178, 50, 0.34);
+}
+
+.brand-mark,
+.loader-mark,
+.coin-core {
+  overflow: hidden;
+}
+
+.brand-mark img,
+.loader-mark img,
+.coin-core img {
+  width: 72%;
+  height: 72%;
+  object-fit: contain;
+  display: block;
+}
+
+.loader-mark img {
+  width: 58px;
+  height: 58px;
+}
+
+.coin-core {
+  background: rgba(240, 178, 50, 0.10);
+  border: 1px solid rgba(240, 178, 50, 0.25);
+}
+
+.coin-core img {
+  width: 74%;
+  height: 74%;
+  filter: drop-shadow(0 18px 34px rgba(240,178,50,.24));
+}
+
+.coin-icon {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  flex: 0 0 auto;
+  vertical-align: -5px;
+  filter: drop-shadow(0 6px 12px rgba(240,178,50,.22));
+}
+
+.coin-icon-small {
+  width: 18px;
+  height: 18px;
+}
+
+.coin-icon-confirm {
+  width: 32px;
+  height: 32px;
+}
+
+.coin-pill,
+.price {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.coin-pill {
+  height: 42px;
+  padding: 0 12px 0 10px;
+  border-radius: 999px;
+  background: rgba(240,178,50,0.105);
+  border-color: rgba(240,178,50,0.24);
+  white-space: nowrap;
+}
+
+.coin-pill span:first-of-type {
+  color: var(--text);
+}
+
+.coin-pill-label {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.nav-actions {
+  position: relative;
+}
+
+.account-menu {
+  position: relative;
+  min-width: 0;
+}
+
+.account-trigger {
+  height: 46px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 10px 0 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(148,163,184,.20);
+  background: rgba(255,255,255,.045);
+  color: var(--text);
+  cursor: pointer;
+  max-width: 270px;
+  transition: transform 160ms ease, background 160ms ease, border-color 160ms ease;
+}
+
+.account-trigger:hover,
+.account-trigger[aria-expanded="true"] {
+  background: rgba(255,255,255,.075);
+  border-color: rgba(148,163,184,.34);
+}
+
+.account-trigger:active {
+  transform: scale(.98);
+}
+
+.account-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(180deg, rgba(240,178,50,.95), rgba(184,124,12,.95));
+  color: #111827;
+  font-weight: 950;
+  font-size: .84rem;
+  flex: 0 0 auto;
+  box-shadow: inset 0 1px rgba(255,255,255,.35), 0 8px 22px rgba(0,0,0,.28);
+}
+
+.account-avatar.large {
+  width: 38px;
+  height: 38px;
+}
+
+.account-trigger-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.08;
+}
+
+.account-trigger-copy strong {
+  font-size: .88rem;
+}
+
+.account-trigger-copy small {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-weight: 750;
+  font-size: .72rem;
+}
+
+.account-chevron {
+  color: var(--muted);
+  font-size: 1rem;
+  margin-left: 2px;
+}
+
+.account-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: min(310px, calc(100vw - 28px));
+  padding: 8px;
+  border-radius: 16px;
+  border: 1px solid rgba(148,163,184,.18);
+  background: rgba(14,20,32,.98);
+  box-shadow: 0 26px 70px rgba(0,0,0,.48);
+  backdrop-filter: blur(18px);
+  z-index: 120;
+  animation: accountDropIn 140ms ease;
+}
+
+.account-dropdown-head {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: center;
+  padding: 10px;
+  margin-bottom: 6px;
+  border-radius: 12px;
+  background: rgba(255,255,255,.045);
+}
+
+.account-dropdown-head strong,
+.account-dropdown-head small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-dropdown-head small {
+  color: var(--muted);
+  margin-top: 2px;
+  font-weight: 700;
+}
+
+.account-dropdown a,
+.account-dropdown button {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  color: #dbe4f0;
+  background: transparent;
+  text-decoration: none;
+  font: inherit;
+  font-weight: 850;
+  cursor: pointer;
+  text-align: left;
+}
+
+.account-dropdown a:hover,
+.account-dropdown button:hover {
+  background: rgba(255,255,255,.065);
+  color: var(--text);
+}
+
+.account-dropdown button {
+  color: #fecdd3;
+}
+
+@keyframes accountDropIn {
+  from { transform: translateY(-4px) scale(.985); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.site-header {
+  box-shadow: 0 18px 55px rgba(0,0,0,.34);
+}
+
+.hero h1,
+.page-heading h1 {
+  letter-spacing: -.055em;
+}
+
+.hero-copy p,
+.page-heading p {
+  max-width: 720px;
+}
+
+.reward-card,
+.panel,
+.feature-card,
+.stat-card {
+  box-shadow: 0 20px 55px rgba(0,0,0,.30);
+}
+
+.reward-card:hover,
+.provider-card:hover {
+  transform: translateY(-2px);
+}
+
+.reward-meta .price {
+  color: var(--brand-2);
+  font-weight: 950;
+}
+
+.confirm-icon img {
+  display: block;
+}
+
+@media (max-width: 1080px) {
+  .site-header {
+    grid-template-columns: auto auto;
+  }
+
+  .nav-toggle {
+    display: inline-flex;
+    justify-self: end;
+  }
+
+  .site-nav {
+    display: none;
+    grid-column: 1 / -1;
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 4px 0 8px;
+  }
+
+  .site-nav.open {
+    display: flex;
+  }
+
+  .site-nav a {
+    min-height: 42px;
+    display: flex;
+    align-items: center;
+  }
+
+  .nav-actions {
+    grid-column: 1 / -1;
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+  }
+
+  .nav-actions > * {
+    min-width: 0;
+  }
+
+  .account-trigger {
+    max-width: none;
+  }
+
+  .account-dropdown {
+    right: 0;
+  }
+}
+
+@media (max-width: 760px) {
+  body {
+    background:
+      radial-gradient(circle at 20% 0%, rgba(240, 178, 50, 0.10), transparent 34%),
+      linear-gradient(180deg, #0a0f1a, #070a11 52%);
+  }
+
+  .site-header,
+  main {
+    width: min(100% - 20px, 1180px);
+  }
+
+  .site-header {
+    top: 8px;
+    margin-top: 10px;
+    min-height: 62px;
+    padding: 0 10px;
+    border-radius: 16px;
+    gap: 10px;
+  }
+
+  .brand span:last-child {
+    font-size: .96rem;
+  }
+
+  .brand-mark {
+    width: 34px;
+    height: 34px;
+    border-radius: 11px;
+  }
+
+  .hero {
+    padding: 50px 0 36px;
+  }
+
+  h1 {
+    font-size: clamp(2.25rem, 13vw, 4.2rem);
+    line-height: .95;
+  }
+
+  .hero-split {
+    gap: 28px;
+  }
+
+  .hero-actions,
+  .trust-row {
+    gap: 9px;
+  }
+
+  .hero-actions .button {
+    width: 100%;
+  }
+
+  .wallet-glow {
+    height: 190px;
+  }
+
+  .feature-grid,
+  .provider-grid,
+  .dashboard-grid,
+  .reward-grid {
+    gap: 12px;
+  }
+
+  .panel,
+  .feature-card,
+  .stat-card,
+  .reward-card,
+  .auth-modal {
+    border-radius: 18px;
+  }
+
+  .reward-card {
+    overflow: hidden;
+  }
+
+  .shop-toolbar {
+    gap: 10px;
+  }
+
+  .shop-toolbar input,
+  .shop-toolbar select,
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  .trade-row a,
+  .trade-row button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 560px) {
+  .nav-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .coin-pill {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .account-trigger {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .account-trigger-copy {
+    flex: 1;
+  }
+
+  .account-trigger-copy small {
+    max-width: 100%;
+  }
+
+  .account-chevron {
+    margin-left: auto;
+  }
+
+  .account-dropdown {
+    left: 0;
+    right: 0;
+    width: 100%;
+  }
+
+  .card-topline,
+  .request-topline,
+  .reward-title-row,
+  .reward-meta {
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .mini-stats,
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .toast-stack {
+    top: 86px;
+  }
+}

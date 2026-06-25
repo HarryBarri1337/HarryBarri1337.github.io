@@ -34,6 +34,23 @@ function formatDate(value) {
   return new Date(value).toLocaleString();
 }
 
+function coinIcon(extraClass = "") {
+  const cls = extraClass ? `coin-icon ${extraClass}` : "coin-icon";
+  return `<img class="${cls}" src="assets/interface/coin_logo.png" alt="" loading="lazy" onerror="this.style.display='none'" />`;
+}
+
+function userInitial(user) {
+  const source = user?.email || "S";
+  return source.trim().charAt(0).toUpperCase() || "S";
+}
+
+function shortEmail(email) {
+  if (!email) return "Account";
+  const [name, domain] = String(email).split("@");
+  if (!domain) return email;
+  return `${name}@${domain}`;
+}
+
 function getToastStack() {
   let stack = qs("#toastStack");
   if (!stack) {
@@ -304,11 +321,54 @@ async function updateNavAuthState() {
     coins = Number(profile.points_balance || 0);
   } catch {}
 
+  const email = user.email || "Account";
+  const adminLink = isAdmin(user) ? `<a href="admin.html">Admin panel</a>` : "";
+
   actions.innerHTML = `
-    <a class="coin-pill" href="dashboard.html">🪙 ${coins.toLocaleString()} coins</a>
-    <a class="nav-login nav-clickable" href="dashboard.html">Account</a>
-    <button class="button button-ghost nav-cta" type="button" id="navLogoutButton">Log out</button>
+    <a class="coin-pill" href="dashboard.html">${coinIcon("coin-icon-small")}<span>${coins.toLocaleString()}</span><span class="coin-pill-label">coins</span></a>
+    <div class="account-menu" data-account-menu>
+      <button class="account-trigger" type="button" id="accountMenuButton" aria-haspopup="true" aria-expanded="false">
+        <span class="account-avatar">${escapeHtml(userInitial(user))}</span>
+        <span class="account-trigger-copy">
+          <strong>Account</strong>
+          <small>${escapeHtml(shortEmail(email))}</small>
+        </span>
+        <span class="account-chevron">⌄</span>
+      </button>
+      <div class="account-dropdown hidden" id="accountDropdown" role="menu">
+        <div class="account-dropdown-head">
+          <span class="account-avatar large">${escapeHtml(userInitial(user))}</span>
+          <div>
+            <strong>${escapeHtml(email)}</strong>
+            <small>${coins.toLocaleString()} coins available</small>
+          </div>
+        </div>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="rewards.html">Rewards</a>
+        <a href="earn.html">Earn coins</a>
+        ${adminLink}
+        <button type="button" id="navLogoutButton">Log out</button>
+      </div>
+    </div>
   `;
+
+  const menuButton = qs("#accountMenuButton");
+  const dropdown = qs("#accountDropdown");
+  menuButton?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    const open = dropdown?.classList.toggle("hidden") === false;
+    menuButton.setAttribute("aria-expanded", String(open));
+  });
+
+  if (!window.__skinquestAccountMenuCloseBound) {
+    window.__skinquestAccountMenuCloseBound = true;
+    document.addEventListener("click", (event) => {
+      if (!event.target.closest("[data-account-menu]")) {
+        qs("#accountDropdown")?.classList.add("hidden");
+        qs("#accountMenuButton")?.setAttribute("aria-expanded", "false");
+      }
+    });
+  }
 
   qs("#navLogoutButton")?.addEventListener("click", async () => {
     await sb.auth.signOut();
@@ -536,7 +596,7 @@ function renderRewards() {
             <h2>${escapeHtml(item.name)}</h2>
             <p class="muted reward-description">${escapeHtml(description)}</p>
             <div class="reward-meta">
-              <span class="price">🪙 ${getRewardCost(item).toLocaleString()} coins</span>
+              <span class="price">${coinIcon("coin-icon-small")} ${getRewardCost(item).toLocaleString()} coins</span>
               <span class="stock-pill ${outOfStock ? "stock-out" : ""}">${outOfStock ? "Out of stock" : escapeHtml(stockText)}</span>
               ${total !== null && reserved > 0 ? `<span class="stock-pill reserved-stock">${reserved} reserved</span>` : ""}
             </div>
@@ -603,7 +663,7 @@ async function requestRedeem(rewardId) {
       title: "Redeem reward",
       confirmText: "Redeem",
       cancelText: "Not yet",
-      icon: "🪙"
+      icon: coinIcon("coin-icon-confirm")
     }
   );
   if (!confirmed) return;
