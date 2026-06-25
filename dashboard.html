@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dashboard - SkinQuest</title>
-  <link rel="stylesheet" href="styles.css?v=96" />
+  <link rel="stylesheet" href="styles.css?v=100" />
 </head>
 <body>
 <div id="pageLoader" class="page-loader">
@@ -72,13 +72,13 @@
       <div class="stat-card">
         <span>Level</span>
         <strong id="levelDisplay">1</strong>
-        <p><span id="xpDisplay">0 / 100 coins</span> toward the next level.</p>
+        <p><span id="xpDisplay">0 / 1,000 earned coins</span> toward the next level.</p>
       </div>
     </section>
 
     <section class="panel xp-panel">
       <h2>Level progress</h2>
-      <p class="muted compact-copy">Every 100 lifetime earned coins adds one account level.</p>
+      <p class="muted compact-copy">Every 1,000 earned coins adds one level. Each new level pays a 50 coin bonus.</p>
       <div class="xp-row">
         <span id="levelText">Level 1</span>
         <span id="nextLevelText">Next level</span>
@@ -162,6 +162,6 @@
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js?v=96"></script>
+<script src="app.js?v=100"></script>
 </body>
 </html>

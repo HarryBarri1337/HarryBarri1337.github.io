@@ -1,4 +1,4 @@
-// SkinQuest v9.6 - redeem no-redirect fix, better modals/toasts, trade URL save hardening.
+// SkinQuest v10.0 - background UI, redeem guidance, 1000-coin levels, level rewards.
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -192,14 +192,23 @@ async function ensureProfile(user) {
 async function getTotalEarned(userId) {
   const { data, error } = await sb
     .from("coin_adjustments")
-    .select("amount")
+    .select("amount, reason")
     .eq("user_id", userId);
 
   if (error || !data) return 0;
-  return data.filter((row) => Number(row.amount) > 0).reduce((sum, row) => sum + Number(row.amount || 0), 0);
+  return data
+    .filter((row) => Number(row.amount) > 0 && !String(row.reason || "").toLowerCase().startsWith("level reward"))
+    .reduce((sum, row) => sum + Number(row.amount || 0), 0);
 }
 
-const COINS_PER_LEVEL = 100;
+async function claimLevelRewards() {
+  const { data, error } = await sb.rpc("claim_level_rewards");
+  if (error) throw error;
+  return data || null;
+}
+
+const COINS_PER_LEVEL = 1000;
+const LEVEL_BONUS_COINS = 50;
 
 function calculateLevel(totalEarned) {
   return Math.max(1, Math.floor(Number(totalEarned || 0) / COINS_PER_LEVEL) + 1);
@@ -605,6 +614,55 @@ function renderRewardArt(item) {
   `;
 }
 
+async function updateRewardAccountNotice() {
+  const notice = qs("#rewardAccountNotice");
+  if (!notice) return;
+
+  const user = await getSessionUser();
+  if (!user) {
+    notice.className = "reward-account-notice";
+    notice.innerHTML = `
+      <div>
+        <strong>Sign in before redeeming.</strong>
+        <span>Create an account or sign in so rewards can be connected to you.</span>
+      </div>
+      <button class="button button-primary" type="button" data-open-auth="login">Sign in</button>
+    `;
+    return;
+  }
+
+  try {
+    const profile = await ensureProfile(user);
+    if (!profile?.steam_trade_url || !isValidSteamTradeUrl(profile.steam_trade_url)) {
+      notice.className = "reward-account-notice warning";
+      notice.innerHTML = `
+        <div>
+          <strong>Add your Steam trade URL before redeeming.</strong>
+          <span>SkinQuest needs your Steam trade link so the admin can send your reward after review.</span>
+        </div>
+        <a class="button button-primary" href="dashboard.html#tradeForm">Add trade link</a>
+      `;
+      return;
+    }
+
+    notice.className = "reward-account-notice success";
+    notice.innerHTML = `
+      <div>
+        <strong>Ready to redeem.</strong>
+        <span>Your Steam trade URL is saved. Choose a reward below.</span>
+      </div>
+    `;
+  } catch (error) {
+    notice.className = "reward-account-notice warning";
+    notice.innerHTML = `
+      <div>
+        <strong>Account setup needs attention.</strong>
+        <span>${escapeHtml(error.message || "Could not check your profile.")}</span>
+      </div>
+    `;
+  }
+}
+
 function renderRewards() {
   const grid = qs("#rewardsGrid");
   if (!grid) return;
@@ -703,8 +761,8 @@ async function requestRedeem(rewardId, sourceButton = null) {
 
   if (!profile.steam_trade_url) {
     const goDashboard = await showConfirm(
-      "You need to save your Steam trade URL before redeeming. This lets SkinQuest send the reward after manual review.",
-      { title: "Steam trade URL required", confirmText: "Open Dashboard", cancelText: "Stay on rewards", icon: "↗" }
+      "Before you can redeem, add your Steam trade URL on the Dashboard. Without it, SkinQuest does not know where to send the skin.",
+      { title: "Add your Steam trade link first", confirmText: "Add trade link", cancelText: "Stay on rewards", icon: "↗" }
     );
     if (goDashboard) location.href = "dashboard.html#tradeForm";
     return;
@@ -712,8 +770,8 @@ async function requestRedeem(rewardId, sourceButton = null) {
 
   if (!isValidSteamTradeUrl(profile.steam_trade_url)) {
     const goDashboard = await showConfirm(
-      "Your saved Steam trade URL looks invalid. Open Dashboard and paste the full Steam trade offer link with partner and token.",
-      { title: "Fix Steam trade URL", confirmText: "Open Dashboard", cancelText: "Stay on rewards", icon: "!" }
+      "Your saved Steam trade URL looks incomplete. It must be the full Steam trade offer link with both partner and token.",
+      { title: "Fix your Steam trade link", confirmText: "Fix trade link", cancelText: "Stay on rewards", icon: "!" }
     );
     if (goDashboard) location.href = "dashboard.html#tradeForm";
     return;
@@ -758,12 +816,23 @@ async function requestRedeem(rewardId, sourceButton = null) {
   }
 
   if (error) {
-    return showMessage(`${error.message}\n\nIf this happens only for normal users, run skinquest_v9_6_supabase_patch.sql in Supabase and make sure their Steam trade URL is saved.`, "error");
+    const errorText = String(error.message || "");
+    if (errorText.toLowerCase().includes("trade url") || errorText.toLowerCase().includes("trade link")) {
+      const goDashboard = await showConfirm(
+        "Your reward request was not created because your Steam trade URL is missing or was not saved correctly. Add it on the Dashboard, save it, then try redeeming again.",
+        { title: "Steam trade link required", confirmText: "Open Dashboard", cancelText: "Stay on rewards", icon: "↗" }
+      );
+      if (goDashboard) location.href = "dashboard.html#tradeForm";
+      await updateRewardAccountNotice();
+      return;
+    }
+    return showMessage(`${error.message}\n\nIf this happens only for normal users, run skinquest_v10_supabase_patch.sql in Supabase and make sure their Steam trade URL is saved.`, "error");
   }
 
   showMessage("Redeem request created. Coins were deducted and stock was reserved for manual review.", "success");
   await loadRewards();
   renderRewards();
+  await updateRewardAccountNotice();
   await refreshAll();
 }
 
@@ -797,8 +866,8 @@ async function saveSteamTradeUrlForUser(user, steamTradeUrl) {
     .select("id, steam_trade_url")
     .maybeSingle();
 
-  if (error) throw new Error(`${error.message}. Run skinquest_v9_6_supabase_patch.sql if normal users cannot save trade URLs.`);
-  if (!data) throw new Error("No profile row was updated. Run skinquest_v9_6_supabase_patch.sql, then save the trade URL again.");
+  if (error) throw new Error(`${error.message}. Run skinquest_v10_supabase_patch.sql if normal users cannot save trade URLs.`);
+  if (!data) throw new Error("No profile row was updated. Run skinquest_v10_supabase_patch.sql, then save the trade URL again.");
 }
 
 async function initDashboard() {
@@ -850,7 +919,14 @@ async function refreshDashboard() {
   authSection.classList.add("hidden");
   accountSection.classList.remove("hidden");
 
-  const profile = await ensureProfile(user);
+  let profile = await ensureProfile(user);
+  try {
+    const bonus = await claimLevelRewards();
+    if (Number(bonus?.bonus_awarded || 0) > 0) {
+      showMessage(`Level reward unlocked: +${Number(bonus.bonus_awarded).toLocaleString()} coins.`, "success");
+      profile = await ensureProfile(user);
+    }
+  } catch {}
   const totalEarned = await getTotalEarned(user.id);
   const progress = getLevelProgress(totalEarned);
 
@@ -863,7 +939,7 @@ async function refreshDashboard() {
   setText("#balanceDisplay", Number(profile.points_balance || 0).toLocaleString());
   setText("#totalEarnedDisplay", Number(totalEarned).toLocaleString());
   setText("#levelDisplay", progress.level);
-  setText("#xpDisplay", `${Number(totalEarned - progress.currentFloor).toLocaleString()} / ${COINS_PER_LEVEL.toLocaleString()} coins`);
+  setText("#xpDisplay", `${Number(totalEarned - progress.currentFloor).toLocaleString()} / ${COINS_PER_LEVEL.toLocaleString()} earned coins`);
   setText("#levelText", `Level ${progress.level}`);
   setText("#nextLevelText", `${Number(Math.max(0, progress.nextFloor - totalEarned)).toLocaleString()} coins to Level ${progress.level + 1}`);
 
@@ -1365,6 +1441,7 @@ async function boot() {
     try {
       await loadRewards();
       renderRewards();
+      await updateRewardAccountNotice();
     } catch (error) {
       qs("#rewardsGrid").innerHTML = `<div class="empty-state">${escapeHtml(error.message)}<br><br>Run the v9 Supabase SQL if new reward columns are missing.</div>`;
     }

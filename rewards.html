@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Rewards - SkinQuest</title>
-  <link rel="stylesheet" href="styles.css?v=96" />
+  <link rel="stylesheet" href="styles.css?v=100" />
 </head>
 <body>
 <div id="pageLoader" class="page-loader">
@@ -37,9 +37,11 @@
     <span class="pill">Reward shop</span>
     <h1>Redeem CS2 skins</h1>
     <p>
-      Spend coins on fixed CS2 rewards. v9 reserves stock and deducts coins through a Supabase function, then the admin sends the skin manually.
+      Spend coins on fixed CS2 rewards. Add your Steam trade URL first, then redeem listed skins for manual review.
     </p>
   </section>
+
+  <section id="rewardAccountNotice" class="reward-account-notice hidden"></section>
 
   <section class="shop-toolbar">
     <input id="skinSearch" type="search" placeholder="Search rewards..." />
@@ -102,6 +104,6 @@
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js?v=96"></script>
+<script src="app.js?v=100"></script>
 </body>
 </html>
