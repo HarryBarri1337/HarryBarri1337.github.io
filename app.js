@@ -1,4 +1,4 @@
-// SkinQuest v9 - safer Supabase rewards, admin manager, manual redeem workflow.
+// SkinQuest v9.3 - cleaner UI, fixed loader, safer reward fallbacks.
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -325,13 +325,16 @@ async function updateNavAuthState() {
   const adminLink = isAdmin(user) ? `<a href="admin.html">Admin panel</a>` : "";
 
   actions.innerHTML = `
-    <a class="coin-pill" href="dashboard.html">${coinIcon("coin-icon-small")}<span>${coins.toLocaleString()}</span><span class="coin-pill-label">coins</span></a>
+    <a class="coin-pill" href="dashboard.html" aria-label="Your coin balance">
+      ${coinIcon("coin-icon-small")}
+      <strong>${coins.toLocaleString()}</strong>
+      <span>coins</span>
+    </a>
     <div class="account-menu" data-account-menu>
       <button class="account-trigger" type="button" id="accountMenuButton" aria-haspopup="true" aria-expanded="false">
         <span class="account-avatar">${escapeHtml(userInitial(user))}</span>
         <span class="account-trigger-copy">
-          <strong>Account</strong>
-          <small>${escapeHtml(shortEmail(email))}</small>
+          <strong>${escapeHtml(email.split("@")[0] || "Account")}</strong>
         </span>
         <span class="account-chevron">⌄</span>
       </button>
@@ -438,17 +441,29 @@ async function initOfferwall() {
 }
 
 async function loadRewards() {
-  let query = sb.from("reward_items").select("*").eq("active", true).order("sort_order", { ascending: true }).order("points_coins", { ascending: true });
-  let { data, error } = await query;
+  const attempts = [
+    () => sb.from("reward_items").select("*").eq("active", true).order("sort_order", { ascending: true }).order("points_coins", { ascending: true }),
+    () => sb.from("reward_items").select("*").eq("active", true).order("points_coins", { ascending: true }),
+    () => sb.from("reward_items").select("*").eq("active", true).order("points_cost", { ascending: true }),
+    () => sb.from("reward_items").select("*").eq("active", true)
+  ];
 
-  if (error && String(error.message || "").includes("sort_order")) {
-    const fallback = await sb.from("reward_items").select("*").eq("active", true).order("points_coins", { ascending: true });
-    data = fallback.data;
-    error = fallback.error;
+  let lastError = null;
+  for (const attempt of attempts) {
+    const { data, error } = await attempt();
+    if (!error) {
+      rewardItems = (data || []).sort((a, b) => {
+        const aSort = Number(a.sort_order ?? 0);
+        const bSort = Number(b.sort_order ?? 0);
+        if (aSort !== bSort) return aSort - bSort;
+        return getRewardCost(a) - getRewardCost(b);
+      });
+      return;
+    }
+    lastError = error;
   }
 
-  if (error) throw error;
-  rewardItems = data || [];
+  throw lastError || new Error("Could not load rewards.");
 }
 
 function getRewardRarity(item) {
@@ -1029,6 +1044,7 @@ function getRewardFormPayload() {
   return {
     name: qs("#rewardName")?.value.trim(),
     points_coins: Number(qs("#rewardCost")?.value || 0),
+    points_cost: Number(qs("#rewardCost")?.value || 0),
     image_url: qs("#rewardImage")?.value.trim() || null,
     quantity_total: Number(qs("#rewardTotal")?.value || 0),
     quantity_reserved: Number(qs("#rewardReserved")?.value || 0),
@@ -1065,12 +1081,24 @@ async function loadAdminRewards() {
   const list = qs("#adminRewardsList");
   if (!list) return;
 
-  let { data, error } = await sb
-    .from("reward_items")
-    .select("*")
-    .order("active", { ascending: false })
-    .order("sort_order", { ascending: true })
-    .order("points_coins", { ascending: true });
+  const attempts = [
+    () => sb.from("reward_items").select("*").order("active", { ascending: false }).order("sort_order", { ascending: true }).order("points_coins", { ascending: true }),
+    () => sb.from("reward_items").select("*").order("active", { ascending: false }).order("points_coins", { ascending: true }),
+    () => sb.from("reward_items").select("*").order("active", { ascending: false }).order("points_cost", { ascending: true }),
+    () => sb.from("reward_items").select("*")
+  ];
+
+  let data = null;
+  let error = null;
+  for (const attempt of attempts) {
+    const result = await attempt();
+    if (!result.error) {
+      data = result.data;
+      error = null;
+      break;
+    }
+    error = result.error;
+  }
 
   if (error) {
     list.className = "empty-state";
@@ -1078,7 +1106,13 @@ async function loadAdminRewards() {
     return;
   }
 
-  adminRewardItems = data || [];
+  adminRewardItems = (data || []).sort((a, b) => {
+    if (Boolean(a.active) !== Boolean(b.active)) return a.active ? -1 : 1;
+    const aSort = Number(a.sort_order ?? 0);
+    const bSort = Number(b.sort_order ?? 0);
+    if (aSort !== bSort) return aSort - bSort;
+    return getRewardCost(a) - getRewardCost(b);
+  });
   if (adminRewardItems.length === 0) {
     list.className = "empty-state";
     list.textContent = "No rewards yet.";
