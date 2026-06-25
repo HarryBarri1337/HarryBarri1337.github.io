@@ -1673,3 +1673,271 @@ h1 {
     gap: 4px;
   }
 }
+
+
+/* v9.1 quick polish: custom messages, cleaner layout, less template-looking shine */
+:root {
+  --bg: #080b10;
+  --bg-2: #0d1118;
+  --surface: #111722;
+  --surface-2: #171f2c;
+  --surface-3: #202a39;
+  --brand: #e6a72f;
+  --brand-2: #ffd16a;
+  --shadow: 0 18px 50px rgba(0, 0, 0, 0.34);
+}
+
+body {
+  background:
+    radial-gradient(circle at 78% -10%, rgba(230, 167, 47, 0.10), transparent 34%),
+    linear-gradient(180deg, #0d1118 0%, #080b10 42%, #07090d 100%);
+}
+
+.site-header {
+  border-radius: 14px;
+  box-shadow: 0 12px 38px rgba(0,0,0,0.28);
+}
+
+.brand-mark {
+  border-radius: 10px;
+  background: #e6a72f;
+  box-shadow: none;
+}
+
+h1 {
+  font-size: clamp(2.35rem, 5.2vw, 4.9rem);
+  line-height: .96;
+  letter-spacing: -0.055em;
+}
+
+.hero {
+  padding: 66px 0 44px;
+}
+
+.pill,
+.trust-row span,
+.status-pill,
+.rarity-badge,
+.condition-badge,
+.stock-pill {
+  letter-spacing: .01em;
+}
+
+.hero-card,
+.panel,
+.feature-card,
+.stat-card,
+.reward-card,
+.account-bar {
+  background: rgba(17, 23, 34, 0.88);
+  border-color: rgba(148,163,184,.15);
+  box-shadow: 0 16px 44px rgba(0,0,0,.28);
+}
+
+.feature-card,
+.panel,
+.stat-card {
+  border-radius: 18px;
+}
+
+.button {
+  border-radius: 10px;
+  transition: transform .14s ease, border-color .14s ease, filter .14s ease, background .14s ease;
+}
+
+.button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.button-primary {
+  background: #e6a72f;
+  border-color: rgba(255, 209, 106, .42);
+  box-shadow: 0 10px 24px rgba(230,167,47,.16);
+}
+
+.button-ghost {
+  background: rgba(255,255,255,.035);
+}
+
+.button:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.home-wallet-card .wallet-glow {
+  min-height: 210px;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.05), transparent),
+    rgba(255,255,255,.025);
+  border: 1px solid var(--border);
+}
+
+.coin-core {
+  border-radius: 28px;
+  box-shadow: 0 18px 48px rgba(230,167,47,.20);
+}
+
+.reward-card.steam-item {
+  position: relative;
+  border-radius: 18px;
+}
+
+.reward-card.steam-item::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: rgba(148,163,184,.22);
+}
+.reward-card.rarity-consumer::before { background: #b0c3d9; }
+.reward-card.rarity-industrial::before { background: #5e98d9; }
+.reward-card.rarity-milspec::before { background: #4b69ff; }
+.reward-card.rarity-restricted::before { background: #8847ff; }
+.reward-card.rarity-classified::before { background: #d32ce6; }
+.reward-card.rarity-covert::before { background: #eb4b4b; }
+
+.reward-art {
+  height: 160px;
+  background:
+    radial-gradient(circle at 55% 10%, rgba(255,255,255,.08), transparent 30%),
+    linear-gradient(135deg, #1b2431, #0d121a);
+}
+
+.reward-art.has-image img {
+  max-width: 88%;
+  max-height: 124px;
+  object-fit: contain;
+  filter: drop-shadow(0 22px 20px rgba(0,0,0,.40));
+}
+
+.reward-title-row,
+.reward-meta {
+  flex-wrap: wrap;
+}
+
+.reward-description {
+  min-height: 42px;
+}
+
+.condition-badge,
+.stock-pill {
+  display: inline-flex;
+  width: fit-content;
+  padding: 6px 9px;
+  border-radius: 999px;
+  font-size: .78rem;
+  font-weight: 900;
+  background: rgba(255,255,255,.045);
+  border: 1px solid var(--border);
+  color: #d8dee9;
+}
+
+.stock-out {
+  color: var(--red);
+  border-color: rgba(251,113,133,.32);
+  background: rgba(251,113,133,.08);
+}
+
+.reserved-stock {
+  color: var(--brand-2);
+}
+
+.toast-stack {
+  position: fixed;
+  top: 92px;
+  right: 18px;
+  width: min(390px, calc(100vw - 36px));
+  z-index: 10000;
+  display: grid;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.toast {
+  display: grid;
+  grid-template-columns: 10px 1fr auto;
+  gap: 12px;
+  align-items: start;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(148,163,184,.18);
+  background: rgba(17, 23, 34, .96);
+  box-shadow: 0 22px 70px rgba(0,0,0,.38);
+  backdrop-filter: blur(14px);
+  animation: toastIn .18s ease-out;
+  pointer-events: auto;
+}
+
+.toast.leaving { animation: toastOut .18s ease-in forwards; }
+.toast p { margin: 0; color: #e5e7eb; line-height: 1.45; font-weight: 650; white-space: pre-line; }
+.toast button { border: 0; background: transparent; color: var(--muted); font-size: 1.2rem; cursor: pointer; line-height: 1; }
+.toast-dot { width: 10px; height: 10px; margin-top: 6px; border-radius: 999px; background: var(--brand); }
+.toast-error .toast-dot { background: var(--red); }
+.toast-success .toast-dot { background: var(--green); }
+
+@keyframes toastIn { from { transform: translateY(-8px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes toastOut { to { transform: translateY(-8px); opacity: 0; } }
+
+.confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10001;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(3,7,18,.72);
+  backdrop-filter: blur(10px);
+  animation: fadeIn .14s ease-out;
+}
+
+.confirm-backdrop.leaving { animation: fadeOut .16s ease-in forwards; }
+
+.confirm-modal {
+  width: min(440px, 100%);
+  border-radius: 20px;
+  border: 1px solid rgba(148,163,184,.18);
+  background: #101620;
+  box-shadow: 0 30px 100px rgba(0,0,0,.55);
+  padding: 20px;
+  display: grid;
+  gap: 16px;
+  animation: confirmIn .16s ease-out;
+}
+
+.confirm-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  background: rgba(230,167,47,.13);
+  color: var(--brand-2);
+  border: 1px solid rgba(230,167,47,.25);
+  font-weight: 950;
+}
+
+.confirm-icon.danger {
+  background: rgba(251,113,133,.10);
+  color: var(--red);
+  border-color: rgba(251,113,133,.28);
+}
+
+.confirm-copy h2 { margin: 0 0 8px; font-size: 1.35rem; letter-spacing: -.02em; }
+.confirm-copy p { margin: 0; color: var(--muted); line-height: 1.55; white-space: pre-line; }
+.confirm-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.button-danger { background: rgba(251,113,133,.13); color: #fecdd3; border-color: rgba(251,113,133,.30); }
+.button-danger:hover { background: rgba(251,113,133,.18); }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fadeOut { to { opacity: 0; } }
+@keyframes confirmIn { from { transform: translateY(8px) scale(.985); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+
+@media (max-width: 640px) {
+  .toast-stack { top: 76px; right: 12px; width: calc(100vw - 24px); }
+  .confirm-actions { display: grid; grid-template-columns: 1fr; }
+  .hero { padding-top: 44px; }
+}

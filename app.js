@@ -34,8 +34,69 @@ function formatDate(value) {
   return new Date(value).toLocaleString();
 }
 
-function showMessage(message) {
-  alert(message);
+function getToastStack() {
+  let stack = qs("#toastStack");
+  if (!stack) {
+    stack = document.createElement("div");
+    stack.id = "toastStack";
+    stack.className = "toast-stack";
+    document.body.appendChild(stack);
+  }
+  return stack;
+}
+
+function showMessage(message, type = "info") {
+  const stack = getToastStack();
+  const toast = document.createElement("div");
+  toast.className = `toast toast-${type}`;
+  toast.innerHTML = `
+    <div class="toast-dot"></div>
+    <p>${escapeHtml(message)}</p>
+    <button type="button" aria-label="Close message">×</button>
+  `;
+  stack.appendChild(toast);
+
+  const close = () => {
+    toast.classList.add("leaving");
+    setTimeout(() => toast.remove(), 180);
+  };
+
+  toast.querySelector("button")?.addEventListener("click", close);
+  setTimeout(close, Math.max(3200, Math.min(9000, String(message || "").length * 55)));
+}
+
+function showConfirm(message, options = {}) {
+  return new Promise((resolve) => {
+    const backdrop = document.createElement("div");
+    backdrop.className = "confirm-backdrop";
+    backdrop.innerHTML = `
+      <div class="confirm-modal" role="dialog" aria-modal="true">
+        <div class="confirm-icon ${options.danger ? "danger" : ""}">${options.icon || "SQ"}</div>
+        <div class="confirm-copy">
+          <h2>${escapeHtml(options.title || "Confirm action")}</h2>
+          <p>${escapeHtml(message)}</p>
+        </div>
+        <div class="confirm-actions">
+          <button class="button button-ghost" type="button" data-confirm-cancel>${escapeHtml(options.cancelText || "Cancel")}</button>
+          <button class="button ${options.danger ? "button-danger" : "button-primary"}" type="button" data-confirm-ok>${escapeHtml(options.confirmText || "Confirm")}</button>
+        </div>
+      </div>
+    `;
+
+    const done = (value) => {
+      backdrop.classList.add("leaving");
+      setTimeout(() => backdrop.remove(), 160);
+      resolve(value);
+    };
+
+    backdrop.addEventListener("click", (event) => {
+      if (event.target === backdrop) done(false);
+    });
+    backdrop.querySelector("[data-confirm-cancel]")?.addEventListener("click", () => done(false));
+    backdrop.querySelector("[data-confirm-ok]")?.addEventListener("click", () => done(true));
+    document.body.appendChild(backdrop);
+    backdrop.querySelector("[data-confirm-ok]")?.focus();
+  });
 }
 
 function finishPageLoad() {
@@ -535,8 +596,17 @@ async function requestRedeem(rewardId) {
   }
 
   const available = getRewardAvailableStock(reward);
-  const stockLine = available === null ? "" : `\nAvailable after this request: ${Math.max(0, available - 1)}.`;
-  if (!confirm(`Redeem ${reward.name} for ${getRewardCost(reward)} coins?\n\nCoins will be deducted now and held while your request is pending.${stockLine}`)) return;
+  const stockLine = available === null ? "" : ` Available after this request: ${Math.max(0, available - 1)}.`;
+  const confirmed = await showConfirm(
+    `Redeem ${reward.name} for ${getRewardCost(reward).toLocaleString()} coins? Coins are deducted now and held while your request is pending.${stockLine}`,
+    {
+      title: "Redeem reward",
+      confirmText: "Redeem",
+      cancelText: "Not yet",
+      icon: "🪙"
+    }
+  );
+  if (!confirmed) return;
 
   const { error } = await sb.rpc("redeem_reward", { p_reward_id: rewardId });
 
@@ -840,10 +910,18 @@ async function saveRequestStatus(id) {
 
   if (!status) return;
   if (["rejected", "refunded", "cancelled"].includes(status)) {
-    if (!confirm("This status will refund coins and release reserved stock if it has not already been done. Continue?")) return;
+    const confirmed = await showConfirm(
+      "This will refund coins and release reserved stock if it has not already been done.",
+      { title: "Refund request?", confirmText: "Yes, refund", cancelText: "Cancel", danger: true, icon: "↩" }
+    );
+    if (!confirmed) return;
   }
   if (status === "completed") {
-    if (!confirm("Mark this request completed? This finalizes stock if it has not already been done.")) return;
+    const confirmed = await showConfirm(
+      "This marks the request as completed and finalizes stock if it has not already been done.",
+      { title: "Complete request?", confirmText: "Mark completed", cancelText: "Cancel", icon: "✓" }
+    );
+    if (!confirmed) return;
   }
 
   const { error } = await sb.rpc("admin_update_redemption_status", {
