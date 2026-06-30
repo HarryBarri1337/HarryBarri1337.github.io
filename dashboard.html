@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Track your SkinQuest coins, level progress, Steam trade URL, reward requests, and recent activity." />
   <title>Dashboard - SkinQuest</title>
-  <link rel="stylesheet" href="styles.css?v=101" />
+  <link rel="stylesheet" href="styles.css?v=102" />
 </head>
 <body>
 <div id="pageLoader" class="page-loader">
@@ -88,7 +89,7 @@
 
     <section class="panel">
       <h2>Steam trade URL</h2>
-      <p class="muted">Save your trade URL so rewards can be sent after review.</p>
+      <p class="muted">Save your trade URL so rewards can be sent after review. SkinQuest will never ask for your Steam password, Steam Guard code, or API key.</p>
       <form id="tradeForm" class="form-row trade-row">
         <input id="tradeUrl" type="url" placeholder="https://steamcommunity.com/tradeoffer/new/?partner=...&token=..." />
         <a class="button button-ghost" target="_blank" rel="noopener" href="https://steamcommunity.com/my/tradeoffers/privacy#trade_offer_access_url">Find trade link</a>
@@ -122,7 +123,7 @@
   <div class="footer-links">
     <a href="terms.html">Terms</a>
     <a href="privacy.html">Privacy</a>
-    <a href="how-it-works.html">Support</a>
+    <a href="how-it-works.html">Help</a>
   </div>
   <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike.</p>
 </footer>
@@ -140,9 +141,18 @@
       <button class="auth-tab" data-auth-tab="login">Sign in</button>
     </div>
 
-    <button class="button google-button" id="googleLoginButton" type="button">
-      <span>G</span> Continue with Google
-    </button>
+    <div class="auth-provider-grid" aria-label="Future sign-in options">
+      <button class="button auth-provider-button steam-button" id="steamLoginButton" type="button">
+        <span>ST</span>
+        <strong>Sign in with Steam</strong>
+        <small>v11</small>
+      </button>
+      <button class="button auth-provider-button google-button" id="googleLoginButton" type="button">
+        <span>G</span>
+        <strong>Continue with Google</strong>
+        <small>v11</small>
+      </button>
+    </div>
 
     <div class="divider"><span>or use email</span></div>
 
@@ -162,6 +172,6 @@
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js?v=101"></script>
+<script src="app.js?v=102"></script>
 </body>
 </html>

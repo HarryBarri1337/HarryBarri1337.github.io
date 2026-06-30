@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="SkinQuest privacy information covering account data, Steam trade URLs, offerwall providers, and support contact." />
   <title>Privacy - SkinQuest</title>
-  <link rel="stylesheet" href="styles.css?v=101" />
+  <link rel="stylesheet" href="styles.css?v=102" />
 </head>
 <body>
 <div id="pageLoader" class="page-loader">
@@ -33,14 +34,43 @@
 </header>
 
 <main class="page legal">
-  <h1>Privacy Policy</h1>
-  <p>This is placeholder text. Replace it before launch.</p>
-  <h2>Data collected</h2>
-  <p>Potential data includes account ID, Steam trade URL, reward history, and offerwall completion events.</p>
-  <h2>Offerwall providers</h2>
-  <p>Survey providers may collect additional information under their own privacy policies.</p>
-  <h2>Contact</h2>
-  <p>Add your support email here before launch.</p>
+  <section class="page-heading compact-heading">
+    <span class="pill">Last updated: June 30, 2026</span>
+    <h1>Privacy Policy</h1>
+    <p>This page explains what information SkinQuest uses to run accounts, coins, rewards, and manual Steam trades.</p>
+  </section>
+
+  <section class="legal-grid">
+    <article class="panel">
+      <h2>1. Account data</h2>
+      <p class="muted">SkinQuest may store your account email, user ID, coin balance, level progress, coin history, reward requests, and account status through Supabase Authentication and database services.</p>
+    </article>
+
+    <article class="panel">
+      <h2>2. Steam trade URL</h2>
+      <p class="muted">If you save a Steam trade URL, it is used so approved rewards can be sent by manual trade offer. SkinQuest does not need your Steam password, Steam Guard code, or Steam API key.</p>
+    </article>
+
+    <article class="panel">
+      <h2>3. Offerwall providers</h2>
+      <p class="muted">Partner offerwall providers may collect information needed to show and verify tasks. Their own privacy policies and rules apply when you open their offers.</p>
+    </article>
+
+    <article class="panel">
+      <h2>4. Reward review data</h2>
+      <p class="muted">Admins may view reward requests, trade links, statuses, notes, and coin movements so rewards can be reviewed, sent, completed, rejected, or refunded.</p>
+    </article>
+
+    <article class="panel">
+      <h2>5. Security</h2>
+      <p class="muted">Do not send private Steam credentials to anyone. SkinQuest will never ask for your password, Steam Guard code, or API key. If a message asks for those, treat it as unsafe.</p>
+    </article>
+
+    <article class="panel">
+      <h2>6. Contact</h2>
+      <p class="muted">A domain support email can be added here before public launch. Until then, use the official contact method provided by the SkinQuest team.</p>
+    </article>
+  </section>
 </main>
 
 <footer class="site-footer">
@@ -51,7 +81,7 @@
   <div class="footer-links">
     <a href="terms.html">Terms</a>
     <a href="privacy.html">Privacy</a>
-    <a href="how-it-works.html">Support</a>
+    <a href="how-it-works.html">Help</a>
   </div>
   <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike.</p>
 </footer>
@@ -69,9 +99,18 @@
       <button class="auth-tab" data-auth-tab="login">Sign in</button>
     </div>
 
-    <button class="button google-button" id="googleLoginButton" type="button">
-      <span>G</span> Continue with Google
-    </button>
+    <div class="auth-provider-grid" aria-label="Future sign-in options">
+      <button class="button auth-provider-button steam-button" id="steamLoginButton" type="button">
+        <span>ST</span>
+        <strong>Sign in with Steam</strong>
+        <small>v11</small>
+      </button>
+      <button class="button auth-provider-button google-button" id="googleLoginButton" type="button">
+        <span>G</span>
+        <strong>Continue with Google</strong>
+        <small>v11</small>
+      </button>
+    </div>
 
     <div class="divider"><span>or use email</span></div>
 
@@ -91,6 +130,6 @@
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js?v=101"></script>
+<script src="app.js?v=102"></script>
 </body>
 </html>

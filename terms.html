@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="SkinQuest terms for account use, partner tasks, fixed rewards, fair use, and Steam trade review." />
   <title>Terms - SkinQuest</title>
-  <link rel="stylesheet" href="styles.css?v=101" />
+  <link rel="stylesheet" href="styles.css?v=102" />
 </head>
 <body>
 <div id="pageLoader" class="page-loader">
@@ -33,14 +34,43 @@
 </header>
 
 <main class="page legal">
-  <h1>Terms of Service</h1>
-  <p>This is placeholder text. Replace it before launch.</p>
-  <h2>No affiliation</h2>
-  <p>SkinQuest is not affiliated with Valve, Steam, or Counter-Strike.</p>
-  <h2>Survey honesty</h2>
-  <p>Users must answer surveys truthfully. Fraud, bots, VPN abuse, and fake accounts may lead to account removal.</p>
-  <h2>Rewards</h2>
-  <p>Rewards are subject to availability and manual review.</p>
+  <section class="page-heading compact-heading">
+    <span class="pill">Last updated: June 30, 2026</span>
+    <h1>Terms of Service</h1>
+    <p>These terms explain the basic rules for using SkinQuest during the current reward-platform setup.</p>
+  </section>
+
+  <section class="legal-grid">
+    <article class="panel">
+      <h2>1. What SkinQuest is</h2>
+      <p class="muted">SkinQuest lets users earn coins through free partner tasks and redeem fixed CS2 rewards when stock is available. SkinQuest does not accept deposits, sell coins, run cases, run roulette, or offer randomized gambling rewards.</p>
+    </article>
+
+    <article class="panel">
+      <h2>2. Account rules</h2>
+      <p class="muted">You are responsible for your account activity. Do not create duplicate accounts, use bots, automate offers, abuse VPNs, or provide fake survey answers. Suspicious activity may lead to denied coins, rejected rewards, or account removal.</p>
+    </article>
+
+    <article class="panel">
+      <h2>3. Offerwall completions</h2>
+      <p class="muted">Coins are credited only after a partner provider confirms a task. Some offers may be delayed, rejected, limited by country or device, or reversed by the provider. SkinQuest cannot guarantee that every attempted offer will credit.</p>
+    </article>
+
+    <article class="panel">
+      <h2>4. Rewards and stock</h2>
+      <p class="muted">Rewards have fixed coin prices and limited stock. Redeem requests are manually reviewed. If a request is rejected, refunded, or cancelled, coins may be returned according to the status shown on your dashboard.</p>
+    </article>
+
+    <article class="panel">
+      <h2>5. Steam trade links</h2>
+      <p class="muted">You must provide a valid Steam trade URL to receive approved rewards. SkinQuest only needs your public trade URL. Never share your Steam password, Steam Guard code, Steam API key, or login credentials.</p>
+    </article>
+
+    <article class="panel">
+      <h2>6. No affiliation</h2>
+      <p class="muted">SkinQuest is not affiliated with Valve, Steam, Counter-Strike, or any official CS2 marketplace. All trademarks belong to their respective owners.</p>
+    </article>
+  </section>
 </main>
 
 <footer class="site-footer">
@@ -51,7 +81,7 @@
   <div class="footer-links">
     <a href="terms.html">Terms</a>
     <a href="privacy.html">Privacy</a>
-    <a href="how-it-works.html">Support</a>
+    <a href="how-it-works.html">Help</a>
   </div>
   <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike.</p>
 </footer>
@@ -69,9 +99,18 @@
       <button class="auth-tab" data-auth-tab="login">Sign in</button>
     </div>
 
-    <button class="button google-button" id="googleLoginButton" type="button">
-      <span>G</span> Continue with Google
-    </button>
+    <div class="auth-provider-grid" aria-label="Future sign-in options">
+      <button class="button auth-provider-button steam-button" id="steamLoginButton" type="button">
+        <span>ST</span>
+        <strong>Sign in with Steam</strong>
+        <small>v11</small>
+      </button>
+      <button class="button auth-provider-button google-button" id="googleLoginButton" type="button">
+        <span>G</span>
+        <strong>Continue with Google</strong>
+        <small>v11</small>
+      </button>
+    </div>
 
     <div class="divider"><span>or use email</span></div>
 
@@ -91,6 +130,6 @@
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js?v=101"></script>
+<script src="app.js?v=102"></script>
 </body>
 </html>

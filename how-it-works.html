@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Learn how SkinQuest works: free partner tasks, fixed rewards, manual Steam trade review, and no gambling mechanics." />
   <title>How it works - SkinQuest</title>
-  <link rel="stylesheet" href="styles.css?v=101" />
+  <link rel="stylesheet" href="styles.css?v=102" />
 </head>
 <body>
 <div id="pageLoader" class="page-loader">
@@ -35,9 +36,9 @@
 <main class="page how-page">
   <section class="page-heading compact-heading">
     <span class="pill">Guide</span>
-    <h1>How It Works</h1>
+    <h1>How SkinQuest works</h1>
     <p>
-      SkinQuest is a fixed-reward site: earn coins from verified offers, choose a listed CS2 reward, and receive it through a manual Steam trade after review.
+      Earn free coins through partner tasks, choose fixed CS2 rewards, and receive approved rewards through manual Steam trades. No deposits, no cases, no roulette.
     </p>
     <div class="hero-actions">
       <a class="button button-primary" href="earn.html">Start earning</a>
@@ -47,9 +48,9 @@
 
   <section class="how-overview panel">
     <div>
-      <span class="pill">No cases · No roulette</span>
-      <h2>Pick exactly what you want</h2>
-      <p class="muted">Rewards are listed with a fixed coin price and available stock. When you redeem, the item is reserved while the request is reviewed.</p>
+      <span class="pill">Fixed rewards only</span>
+      <h2>Pick the reward you want</h2>
+      <p class="muted">Rewards are listed with fixed coin prices and stock. When you redeem, the item is reserved while an admin reviews the request.</p>
     </div>
     <div class="how-summary-grid">
       <div><strong>1</strong><span>create account</span></div>
@@ -63,41 +64,41 @@
     <article class="feature-card how-step-card">
       <span class="step-number">01</span>
       <h2>Create your account</h2>
-      <p>Sign up and confirm your email. Your account stores coins, reward requests, and your saved Steam trade URL.</p>
+      <p>Sign up and confirm your email. Your account stores your coins, level progress, reward requests, and saved Steam trade URL.</p>
     </article>
     <article class="feature-card how-step-card">
       <span class="step-number">02</span>
-      <h2>Complete offers</h2>
-      <p>Open a connected offerwall from the Earn page. Coins are added after the provider confirms the completion.</p>
+      <h2>Complete partner tasks</h2>
+      <p>Open the Earn page and complete available tasks honestly. Coins are added only after the provider confirms the completion.</p>
     </article>
     <article class="feature-card how-step-card">
       <span class="step-number">03</span>
-      <h2>Choose a reward</h2>
-      <p>Spend coins on a listed reward. Stock is reserved while the request is waiting for review.</p>
+      <h2>Save your trade URL</h2>
+      <p>Add your Steam trade URL on the Dashboard. SkinQuest never needs your Steam password, Steam Guard code, or API key.</p>
     </article>
     <article class="feature-card how-step-card">
       <span class="step-number">04</span>
-      <h2>Receive the trade</h2>
-      <p>The admin checks the request and sends the skin manually through your Steam trade URL.</p>
+      <h2>Redeem a fixed reward</h2>
+      <p>Choose a listed reward with a fixed coin price. The request is manually reviewed and then sent through a Steam trade offer if approved.</p>
     </article>
   </section>
 
   <section class="faq-grid">
-    <article class="panel faq-card">
-      <h2>Why do I need a Steam trade URL?</h2>
-      <p class="muted">It lets the reward be sent without adding anyone as a friend on Steam. Save it on your dashboard before redeeming.</p>
+    <article class="panel">
+      <h2>Do I need to deposit?</h2>
+      <p class="muted">No. SkinQuest does not accept deposits and coins cannot be purchased.</p>
     </article>
-    <article class="panel faq-card">
-      <h2>How long does delivery take?</h2>
-      <p class="muted">Rewards are manual at the start, so delivery is not instant. Check your dashboard for request status updates.</p>
+    <article class="panel">
+      <h2>Are rewards random?</h2>
+      <p class="muted">No. Rewards are fixed listings with fixed coin prices. No cases, no roulette, no random drops.</p>
     </article>
-    <article class="panel faq-card">
-      <h2>Can a request be rejected?</h2>
-      <p class="muted">Yes. If something is wrong, the request can be rejected or refunded and the reserved stock is released.</p>
+    <article class="panel">
+      <h2>Why did I not receive coins?</h2>
+      <p class="muted">Offerwall completions must be confirmed by the provider. Some offers can be delayed, rejected, or limited by country or device.</p>
     </article>
-    <article class="panel faq-card">
-      <h2>Is this gambling?</h2>
-      <p class="muted">No. Rewards are fixed listings with fixed prices. There are no random cases, spins, or betting features.</p>
+    <article class="panel">
+      <h2>Can rewards run out?</h2>
+      <p class="muted">Yes. Rewards are limited and can go out of stock. Out-of-stock rewards are shown at the bottom of the reward shop.</p>
     </article>
   </section>
 </main>
@@ -110,7 +111,7 @@
   <div class="footer-links">
     <a href="terms.html">Terms</a>
     <a href="privacy.html">Privacy</a>
-    <a href="how-it-works.html">Support</a>
+    <a href="how-it-works.html">Help</a>
   </div>
   <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike.</p>
 </footer>
@@ -128,9 +129,18 @@
       <button class="auth-tab" data-auth-tab="login">Sign in</button>
     </div>
 
-    <button class="button google-button" id="googleLoginButton" type="button">
-      <span>G</span> Continue with Google
-    </button>
+    <div class="auth-provider-grid" aria-label="Future sign-in options">
+      <button class="button auth-provider-button steam-button" id="steamLoginButton" type="button">
+        <span>ST</span>
+        <strong>Sign in with Steam</strong>
+        <small>v11</small>
+      </button>
+      <button class="button auth-provider-button google-button" id="googleLoginButton" type="button">
+        <span>G</span>
+        <strong>Continue with Google</strong>
+        <small>v11</small>
+      </button>
+    </div>
 
     <div class="divider"><span>or use email</span></div>
 
@@ -150,6 +160,6 @@
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js?v=101"></script>
+<script src="app.js?v=102"></script>
 </body>
 </html>

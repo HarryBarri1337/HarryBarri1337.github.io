@@ -1,4 +1,4 @@
-// SkinQuest v10.0 - background UI, redeem guidance, 1000-coin levels, level rewards.
+// SkinQuest v10.2 - trust polish, mobile nav cleanup, reward sorting, v11 auth placeholders.
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -168,7 +168,7 @@ async function ensureProfile(user) {
 
   if (!selectError && existing) return existing;
 
-  // v9.4 fallback: lets normal users get a profile even if direct insert RLS is too strict.
+  // Fallback: lets normal users get a profile even if direct insert RLS is too strict.
   const { data: rpcProfile, error: rpcError } = await sb.rpc("ensure_skinquest_profile");
   if (!rpcError && rpcProfile) {
     return Array.isArray(rpcProfile) ? rpcProfile[0] : rpcProfile;
@@ -236,8 +236,33 @@ function updateAdminVisibility(user) {
 function initNav() {
   const toggle = qs("[data-nav-toggle]");
   const nav = qs("[data-nav]");
+
+  const setOpen = (open) => {
+    if (!nav || !toggle) return;
+    nav.classList.toggle("open", open);
+    toggle.classList.toggle("open", open);
+    toggle.setAttribute("aria-expanded", String(open));
+    toggle.setAttribute("aria-label", open ? "Close navigation" : "Open navigation");
+  };
+
   if (toggle && nav) {
-    toggle.addEventListener("click", () => nav.classList.toggle("open"));
+    toggle.setAttribute("aria-expanded", "false");
+    toggle.addEventListener("click", (event) => {
+      event.stopPropagation();
+      setOpen(!nav.classList.contains("open"));
+    });
+
+    nav.querySelectorAll("a").forEach((link) => {
+      link.addEventListener("click", () => setOpen(false));
+    });
+
+    document.addEventListener("click", (event) => {
+      if (!event.target.closest(".site-header")) setOpen(false);
+    });
+
+    window.addEventListener("resize", () => {
+      if (window.innerWidth > 1080) setOpen(false);
+    });
   }
 
   const current = location.pathname.split("/").pop() || "index.html";
@@ -347,7 +372,11 @@ function initAuthModal() {
   });
 
   qs("#googleLoginButton")?.addEventListener("click", () => {
-    showMessage("Google sign-in is not connected yet. Steam login can be added later.");
+    showMessage("Google sign-in is planned for v11. Use email sign-in for now.");
+  });
+
+  qs("#steamLoginButton")?.addEventListener("click", () => {
+    showMessage("Steam sign-in is planned for v11. Use email sign-in for now.");
   });
 }
 
@@ -563,7 +592,7 @@ function shortSkinName(name = "") {
 }
 
 function getRewardImage(item) {
-  return item.image_url || item.image || item.icon_url || "";
+  return String(item.image_url || item.image || item.icon_url || "").replaceAll("\\", "/");
 }
 
 function getRewardCondition(item) {
@@ -663,21 +692,47 @@ async function updateRewardAccountNotice() {
   }
 }
 
+function getRewardStockSortValue(item) {
+  const available = getRewardAvailableStock(item);
+  if (available === null) return 999999;
+  return available;
+}
+
+function sortRewardsForShop(items, sortValue) {
+  return [...items].sort((a, b) => {
+    const aOut = rewardIsOutOfStock(a) ? 1 : 0;
+    const bOut = rewardIsOutOfStock(b) ? 1 : 0;
+    if (aOut !== bOut) return aOut - bOut;
+
+    if (sortValue === "price-asc") return getRewardCost(a) - getRewardCost(b);
+    if (sortValue === "price-desc") return getRewardCost(b) - getRewardCost(a);
+    if (sortValue === "stock-desc") return getRewardStockSortValue(b) - getRewardStockSortValue(a);
+    if (sortValue === "name-asc") return String(a.name || "").localeCompare(String(b.name || ""));
+
+    const aSort = Number(a.sort_order ?? 0);
+    const bSort = Number(b.sort_order ?? 0);
+    if (aSort !== bSort) return aSort - bSort;
+    return getRewardCost(a) - getRewardCost(b);
+  });
+}
+
 function renderRewards() {
   const grid = qs("#rewardsGrid");
   if (!grid) return;
 
   const search = qs("#skinSearch");
   const filter = qs("#priceFilter");
+  const sort = qs("#sortFilter");
 
   function apply() {
-    const query = (search?.value || "").toLowerCase();
+    const query = (search?.value || "").toLowerCase().trim();
     const priceFilter = filter?.value || "all";
+    const sortValue = sort?.value || "featured";
 
     const filtered = rewardItems.filter((item) => {
       const haystack = [item.name, item.description, item.rarity, item.condition, item.market_name].filter(Boolean).join(" ").toLowerCase();
       const cost = getRewardCost(item);
-      const matchesSearch = haystack.includes(query);
+      const matchesSearch = !query || haystack.includes(query);
       const matchesPrice =
         priceFilter === "all" ||
         (priceFilter === "low" && cost < 500) ||
@@ -687,12 +742,14 @@ function renderRewards() {
       return matchesSearch && matchesPrice;
     });
 
-    if (filtered.length === 0) {
-      grid.innerHTML = `<div class="empty-state">No rewards found.</div>`;
+    const sorted = sortRewardsForShop(filtered, sortValue);
+
+    if (sorted.length === 0) {
+      grid.innerHTML = `<div class="empty-state">No rewards found. Try another search or price filter.</div>`;
       return;
     }
 
-    grid.innerHTML = filtered.map((item) => {
+    grid.innerHTML = sorted.map((item) => {
       const rarity = getRewardRarity(item);
       const condition = getRewardCondition(item);
       const total = getRewardTotalStock(item);
@@ -738,6 +795,7 @@ function renderRewards() {
 
   search?.addEventListener("input", apply);
   filter?.addEventListener("change", apply);
+  sort?.addEventListener("change", apply);
   apply();
 }
 
@@ -752,7 +810,7 @@ async function requestRedeem(rewardId, sourceButton = null) {
   try {
     profile = await ensureProfile(user);
   } catch (error) {
-    showMessage(`Could not prepare your account profile: ${error.message}. Run the v9.4 Supabase patch if this happens for normal users.`, "error");
+    showMessage("Could not prepare your account profile. Please refresh and try again, or contact support if it keeps happening.", "error");
     return;
   }
 
@@ -826,7 +884,7 @@ async function requestRedeem(rewardId, sourceButton = null) {
       await updateRewardAccountNotice();
       return;
     }
-    return showMessage(`${error.message}\n\nIf this happens only for normal users, run skinquest_v10_supabase_patch.sql in Supabase and make sure their Steam trade URL is saved.`, "error");
+    return showMessage("Could not create the redeem request. Please refresh, check your trade link, and try again.", "error");
   }
 
   showMessage("Redeem request created. Coins were deducted and stock was reserved for manual review.", "success");
@@ -853,11 +911,11 @@ function isValidSteamTradeUrl(url) {
 async function saveSteamTradeUrlForUser(user, steamTradeUrl) {
   if (!user?.id) throw new Error("You need to sign in first.");
 
-  // v9.6 preferred route. This avoids the silent '0 rows updated' problem when a profile row is missing.
+  // Preferred route. This avoids the silent '0 rows updated' problem when a profile row is missing.
   const { error: rpcError } = await sb.rpc("save_skinquest_trade_url", { p_trade_url: steamTradeUrl });
   if (!rpcError) return;
 
-  // Fallback for users who have not run the v9.6 SQL yet.
+  // Fallback route if the RPC is unavailable.
   await ensureProfile(user);
   const { data, error } = await sb
     .from("profiles")
@@ -866,8 +924,8 @@ async function saveSteamTradeUrlForUser(user, steamTradeUrl) {
     .select("id, steam_trade_url")
     .maybeSingle();
 
-  if (error) throw new Error(`${error.message}. Run skinquest_v10_supabase_patch.sql if normal users cannot save trade URLs.`);
-  if (!data) throw new Error("No profile row was updated. Run skinquest_v10_supabase_patch.sql, then save the trade URL again.");
+  if (error) throw new Error("Could not save your Steam trade URL. Please try again.");
+  if (!data) throw new Error("Could not save your Steam trade URL. Refresh the page and try again.");
 }
 
 async function initDashboard() {
@@ -1122,7 +1180,7 @@ function initAdminCoinForm() {
       p_reason: reason
     });
 
-    if (error) return showMessage(`${error.message} Run skinquest_v9_4_supabase_patch.sql if the admin coin RPC is missing.`, "error");
+    if (error) return showMessage(`Could not adjust coins: ${error.message}`, "error");
     showMessage("Coin adjustment saved.", "success");
     form.reset();
   });
@@ -1175,7 +1233,7 @@ async function loadAdminRequests() {
 
   if (error) {
     list.className = "empty-state";
-    list.textContent = `${error.message} Run skinquest_v9_supabase_upgrade.sql if admin access/policies are missing.`;
+    list.textContent = `Could not load admin requests: ${error.message}`;
     return;
   }
 
@@ -1266,7 +1324,7 @@ async function saveRequestStatus(id) {
     p_trade_offer_url: tradeOfferUrl
   });
 
-  if (error) return showMessage(`${error.message}\n\nRun skinquest_v9_supabase_upgrade.sql if the admin RPC is missing.`);
+  if (error) return showMessage(`Could not update request status: ${error.message}`, "error");
 
   showMessage(`Request marked ${formatStatus(status)}.`);
   await loadAdminRequests();
@@ -1329,7 +1387,7 @@ async function saveAdminReward() {
     : sb.from("reward_items").insert(payload);
 
   const { error } = await query;
-  if (error) return showMessage(`${error.message}\n\nRun skinquest_v9_supabase_upgrade.sql if reward admin policies/columns are missing.`);
+  if (error) return showMessage(`Could not save reward: ${error.message}`, "error");
 
   showMessage(id ? "Reward updated." : "Reward created.");
   setRewardForm(null);
@@ -1362,7 +1420,7 @@ async function loadAdminRewards() {
 
   if (error) {
     list.className = "empty-state";
-    list.textContent = `${error.message} Run skinquest_v9_supabase_upgrade.sql if admin reward access is missing.`;
+    list.textContent = `Could not load admin rewards: ${error.message}`;
     return;
   }
 
@@ -1443,7 +1501,7 @@ async function boot() {
       renderRewards();
       await updateRewardAccountNotice();
     } catch (error) {
-      qs("#rewardsGrid").innerHTML = `<div class="empty-state">${escapeHtml(error.message)}<br><br>Run the v9 Supabase SQL if new reward columns are missing.</div>`;
+      qs("#rewardsGrid").innerHTML = `<div class="empty-state">Could not load rewards right now. Please refresh and try again.</div>`;
     }
   }
 

@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Earn free SkinQuest coins through partner tasks and redeem fixed CS2 rewards. No deposits, no cases, no roulette." />
   <title>SkinQuest - Earn CS2 Skins</title>
-  <link rel="stylesheet" href="styles.css?v=101" />
+  <link rel="stylesheet" href="styles.css?v=102" />
 </head>
 <body>
 <div id="pageLoader" class="page-loader">
@@ -36,9 +37,9 @@
   <section class="hero hero-split">
     <div class="hero-copy">
       <span class="pill">Fixed CS2 rewards</span>
-      <h1>Do offers. Stack coins. Pick a skin.</h1>
+      <h1>Earn coins. Redeem real CS2 rewards.</h1>
       <p>
-        Complete partner offers, earn SkinQuest coins, and redeem listed CS2 skins through manual Steam trades.
+        Complete free partner tasks, collect SkinQuest coins, and redeem fixed rewards through manual Steam trades. No deposits, no cases, no roulette.
       </p>
 
       <div class="hero-actions" data-guest-home>
@@ -62,10 +63,10 @@
     <div class="hero-card pro-card home-wallet-card">
       <div class="card-topline">
         <span>Your wallet</span>
-        <strong>BETA</strong>
+        <strong>WALLET</strong>
       </div>
       <div class="wallet-glow">
-        <div class="coin-core"><img src="assets/interface/coin_logo.png" alt="SkinQuest coin" /></div>
+        <div class="coin-core coin-core-clean" aria-hidden="true"><span></span></div>
       </div>
       <div class="mini-stats">
         <div><strong data-home-coins>0</strong><span>coins</span></div>
@@ -102,7 +103,7 @@
   <div class="footer-links">
     <a href="terms.html">Terms</a>
     <a href="privacy.html">Privacy</a>
-    <a href="how-it-works.html">Support</a>
+    <a href="how-it-works.html">Help</a>
   </div>
   <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike.</p>
 </footer>
@@ -120,9 +121,18 @@
       <button class="auth-tab" data-auth-tab="login">Sign in</button>
     </div>
 
-    <button class="button google-button" id="googleLoginButton" type="button">
-      <span>G</span> Continue with Google
-    </button>
+    <div class="auth-provider-grid" aria-label="Future sign-in options">
+      <button class="button auth-provider-button steam-button" id="steamLoginButton" type="button">
+        <span>ST</span>
+        <strong>Sign in with Steam</strong>
+        <small>v11</small>
+      </button>
+      <button class="button auth-provider-button google-button" id="googleLoginButton" type="button">
+        <span>G</span>
+        <strong>Continue with Google</strong>
+        <small>v11</small>
+      </button>
+    </div>
 
     <div class="divider"><span>or use email</span></div>
 
@@ -142,6 +152,6 @@
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js?v=101"></script>
+<script src="app.js?v=102"></script>
 </body>
 </html>
