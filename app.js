@@ -137,7 +137,7 @@ function showConfirm(message, options = {}) {
 function finishPageLoad() {
   const loader = qs("#pageLoader");
   if (!loader) return;
-  setTimeout(() => loader.classList.add("done"), 180);
+  loader.classList.add("done");
 }
 
 async function getSessionUser() {
@@ -984,7 +984,9 @@ async function refreshDashboard() {
       showMessage(`Level reward unlocked: +${Number(bonus.bonus_awarded).toLocaleString()} coins.`, "success");
       profile = await ensureProfile(user);
     }
-  } catch {}
+  } catch (error) {
+    console.warn("Level reward check failed:", error);
+  }
   const totalEarned = await getTotalEarned(user.id);
   const progress = getLevelProgress(totalEarned);
 
@@ -1490,6 +1492,7 @@ async function refreshAll() {
 async function boot() {
   initNav();
   initAuthModal();
+  finishPageLoad();
   await updateNavAuthState();
   await updateHomeAuthState();
   await initAuthConfirmPage();

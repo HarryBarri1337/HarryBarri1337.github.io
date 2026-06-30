@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="Track your SkinQuest coins, level progress, Steam trade URL, reward requests, and recent activity." />
   <title>Dashboard - SkinQuest</title>
-  <link rel="stylesheet" href="styles.css?v=102" />
+  <link rel="stylesheet" href="styles.css?v=103" />
 </head>
 <body>
 <div id="pageLoader" class="page-loader">
@@ -55,9 +55,12 @@
 
   <section id="accountSection" class="hidden">
     <section class="dashboard-grid">
-      <div class="stat-card">
-        <span>Available coins</span>
-        <strong id="balanceDisplay">0</strong>
+      <div class="stat-card wallet-stat-card">
+        <span>Wallet</span>
+        <div class="wallet-balance-line">
+          <img class="dashboard-wallet-coin" src="assets/interface/coin_logo.png" alt="" onerror="this.style.display='none'" />
+          <strong id="balanceDisplay">0</strong>
+        </div>
         <p>Ready to spend on listed rewards.</p>
       </div>
       <div class="stat-card">
@@ -172,6 +175,6 @@
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js?v=102"></script>
+<script src="app.js?v=103"></script>
 </body>
 </html>
