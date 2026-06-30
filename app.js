@@ -1,4 +1,4 @@
-// SkinQuest v10.2 - trust polish, mobile nav cleanup, reward sorting, v11 auth placeholders.
+// SkinQuest v11.1 - account settings, support widget cleanup, SQL hardening.
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -6,11 +6,13 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const ADMIN_EMAILS = ["harrygotesson@gmail.com"];
 const CPX_APP_ID = 33831;
+const SUPPORT_EMAIL = ""; // Add support@your-domain when the inbox is ready. If empty, the widget copies a ready-to-send support draft.
 
 let rewardItems = [];
 let adminRewardItems = [];
 let currentUser = null;
 let currentProfile = null;
+let currentIsAdmin = false;
 
 function qs(selector) {
   return document.querySelector(selector);
@@ -147,6 +149,18 @@ async function getSessionUser() {
 }
 
 function isAdmin(user) {
+  const email = (user?.email || "").toLowerCase();
+  return currentIsAdmin || ADMIN_EMAILS.includes(email);
+}
+
+async function fetchAdminStatus(user) {
+  if (!user?.id) return false;
+  try {
+    const { data, error } = await sb.rpc("is_admin");
+    if (!error && typeof data === "boolean") return data;
+  } catch {}
+
+  // Development fallback until admin_users is enabled through the final SQL setup.
   const email = (user?.email || "").toLowerCase();
   return ADMIN_EMAILS.includes(email);
 }
@@ -372,11 +386,11 @@ function initAuthModal() {
   });
 
   qs("#googleLoginButton")?.addEventListener("click", () => {
-    showMessage("Google sign-in is planned for v11. Use email sign-in for now.");
+    showMessage("Google sign-in is planned for version 11.5. Use email sign-in for now.");
   });
 
   qs("#steamLoginButton")?.addEventListener("click", () => {
-    showMessage("Steam sign-in is planned for v11. Use email sign-in for now.");
+    showMessage("Steam sign-in is planned for version 11.5. Use email sign-in for now.");
   });
 }
 
@@ -384,6 +398,7 @@ async function updateNavAuthState() {
   const actions = qs("#navAuthActions");
   const user = await getSessionUser();
   currentUser = user;
+  currentIsAdmin = await fetchAdminStatus(user);
   updateAdminVisibility(user);
 
   if (!actions) return;
@@ -429,6 +444,7 @@ async function updateNavAuthState() {
           </div>
         </div>
         <a href="dashboard.html">Dashboard</a>
+        <a href="settings.html">Settings</a>
         <a href="rewards.html">Rewards</a>
         <a href="earn.html">Earn coins</a>
         ${adminLink}
@@ -928,6 +944,226 @@ async function saveSteamTradeUrlForUser(user, steamTradeUrl) {
   if (!data) throw new Error("Could not save your Steam trade URL. Refresh the page and try again.");
 }
 
+
+function getStoredNotificationPreferences(userId) {
+  const defaults = {
+    reward_updates: true,
+    offer_issues: true,
+    product_updates: false
+  };
+  if (!userId) return defaults;
+  try {
+    const stored = JSON.parse(localStorage.getItem(`skinquest_notification_preferences_${userId}`) || "{}");
+    return { ...defaults, ...stored };
+  } catch {
+    return defaults;
+  }
+}
+
+function saveStoredNotificationPreferences(userId, prefs) {
+  if (!userId) return;
+  localStorage.setItem(`skinquest_notification_preferences_${userId}`, JSON.stringify(prefs));
+}
+
+async function trySaveNotificationPreferences(user, prefs) {
+  saveStoredNotificationPreferences(user.id, prefs);
+
+  // Final v11 SQL includes this RPC. Older databases can ignore the failure safely.
+  try {
+    await sb.rpc("save_account_settings", {
+      p_notification_reward_updates: !!prefs.reward_updates,
+      p_notification_offer_issues: !!prefs.offer_issues,
+      p_notification_product_updates: !!prefs.product_updates
+    });
+  } catch {}
+}
+
+function updateReadiness(profile, user) {
+  const readyEmail = qs("#readyEmail");
+  const readyTrade = qs("#readyTrade");
+  const readyServices = qs("#readyServices");
+
+  readyEmail?.classList.toggle("is-ready", !!user?.email);
+  readyEmail?.classList.toggle("is-warning", !user?.email);
+
+  const hasTrade = !!profile?.steam_trade_url && isValidSteamTradeUrl(profile.steam_trade_url);
+  readyTrade?.classList.toggle("is-ready", hasTrade);
+  readyTrade?.classList.toggle("is-warning", !hasTrade);
+
+  readyServices?.classList.add("is-muted");
+}
+
+async function initSettingsPage() {
+  if (!qs("#settingsAuthSection") && !qs("#notificationSettingsForm")) return;
+
+  qsa("[data-future-service]").forEach((button) => {
+    button.addEventListener("click", () => {
+      showMessage(`${button.dataset.futureService} linking is planned for version 11.5.`);
+    });
+  });
+
+  qs("#notificationSettingsForm")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const user = await getSessionUser();
+    if (!user) return openAuthModal("login");
+
+    const prefs = {
+      reward_updates: !!qs("#notifyRewardUpdates")?.checked,
+      offer_issues: !!qs("#notifyOfferIssues")?.checked,
+      product_updates: !!qs("#notifyProductUpdates")?.checked
+    };
+
+    await trySaveNotificationPreferences(user, prefs);
+    showMessage("Notification preferences saved.", "success");
+  });
+
+  await refreshSettingsPage();
+}
+
+async function refreshSettingsPage() {
+  const authSection = qs("#settingsAuthSection");
+  const accountSection = qs("#settingsAccountSection");
+  if (!authSection || !accountSection) return;
+
+  const user = await getSessionUser();
+  if (!user) {
+    authSection.classList.remove("hidden");
+    accountSection.classList.add("hidden");
+    return;
+  }
+
+  authSection.classList.add("hidden");
+  accountSection.classList.remove("hidden");
+
+  const profile = await ensureProfile(user).catch(() => null);
+  const storedPrefs = getStoredNotificationPreferences(user.id);
+  const prefs = {
+    reward_updates: profile?.notification_reward_updates ?? storedPrefs.reward_updates,
+    offer_issues: profile?.notification_offer_issues ?? storedPrefs.offer_issues,
+    product_updates: profile?.notification_product_updates ?? storedPrefs.product_updates
+  };
+
+  const email = user.email || "Account";
+  const shortId = user.id ? `${user.id.slice(0, 8)}...${user.id.slice(-6)}` : "Unknown id";
+
+  const avatar = qs("#settingsAvatar");
+  if (avatar) avatar.textContent = userInitial(user);
+  const emailEl = qs("#settingsEmail");
+  if (emailEl) emailEl.textContent = email;
+  const idEl = qs("#settingsUserId");
+  if (idEl) idEl.textContent = `User ID: ${shortId}`;
+
+  const tradeUrl = qs("#tradeUrl");
+  if (tradeUrl) tradeUrl.value = profile?.steam_trade_url || "";
+
+  const setChecked = (selector, value) => {
+    const el = qs(selector);
+    if (el) el.checked = !!value;
+  };
+  setChecked("#notifyRewardUpdates", prefs.reward_updates);
+  setChecked("#notifyOfferIssues", prefs.offer_issues);
+  setChecked("#notifyProductUpdates", prefs.product_updates);
+}
+
+function initSupportWidget() {
+  if (document.querySelector("[data-support-widget]")) return;
+
+  const shell = document.createElement("div");
+  shell.className = "support-widget";
+  shell.dataset.supportWidget = "true";
+  shell.innerHTML = `
+    <button class="support-fab" type="button" aria-expanded="false" aria-label="Open support" data-support-toggle>
+      <span>?</span>
+    </button>
+    <section class="support-panel hidden" aria-label="Support panel" data-support-panel>
+      <div class="support-panel-head">
+        <div>
+          <strong>Need help?</strong>
+          <p>Support usually replies within 24h.</p>
+        </div>
+        <button type="button" aria-label="Close support" data-support-close>×</button>
+      </div>
+      <form class="support-form" data-support-form>
+        <label>Topic
+          <select data-support-topic>
+            <option>Coins did not arrive</option>
+            <option>Reward request</option>
+            <option>Trade URL problem</option>
+            <option>Account issue</option>
+            <option>Other</option>
+          </select>
+        </label>
+        <label>Message
+          <textarea data-support-message rows="4" placeholder="Tell us what happened. Include reward name, offer, or trade details if relevant."></textarea>
+        </label>
+        <button class="button button-primary" type="submit">Prepare message</button>
+        <p class="fine-print">Creates a ready-to-send message with your account details.</p>
+      </form>
+    </section>
+  `;
+
+  document.body.appendChild(shell);
+
+  const toggle = shell.querySelector("[data-support-toggle]");
+  const panel = shell.querySelector("[data-support-panel]");
+  const close = shell.querySelector("[data-support-close]");
+  const setOpen = (open) => {
+    panel.classList.toggle("hidden", !open);
+    toggle.setAttribute("aria-expanded", String(open));
+  };
+
+  toggle.addEventListener("click", () => setOpen(panel.classList.contains("hidden")));
+  close.addEventListener("click", () => setOpen(false));
+
+  shell.querySelector("[data-support-form]")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const topic = shell.querySelector("[data-support-topic]")?.value || "Support request";
+    const message = shell.querySelector("[data-support-message]")?.value.trim();
+    if (!message) return showMessage("Write a short message before sending support.", "error");
+
+    const user = await getSessionUser();
+    const draft = [
+      `Topic: ${topic}`,
+      `Account: ${user?.email || "Not signed in"}`,
+      `Page: ${location.href}`,
+      "",
+      message
+    ].join("\n");
+
+    if (user?.id) {
+      try {
+        const { error } = await sb.from("support_requests").insert({
+          user_id: user.id,
+          topic,
+          message,
+          page_url: location.href
+        });
+        if (!error) {
+          showMessage("Support request saved. The team can review it from Supabase/admin tools.", "success");
+          shell.querySelector("[data-support-message]").value = "";
+          setOpen(false);
+          return;
+        }
+      } catch {}
+    }
+
+    try {
+      await navigator.clipboard?.writeText(draft);
+    } catch {}
+
+    if (SUPPORT_EMAIL) {
+      const subject = encodeURIComponent(`SkinQuest support - ${topic}`);
+      const body = encodeURIComponent(draft);
+      location.href = `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`;
+      showMessage("Opening your email app with the support message.", "success");
+    } else {
+      showMessage("Support message copied. Send it to the SkinQuest team through the current support channel.", "success");
+    }
+
+    shell.querySelector("[data-support-message]").value = "";
+  });
+}
+
 async function initDashboard() {
   const tradeForm = qs("#tradeForm");
   if (tradeForm) {
@@ -1008,6 +1244,7 @@ async function refreshDashboard() {
 
   const tradeUrl = qs("#tradeUrl");
   if (tradeUrl) tradeUrl.value = profile.steam_trade_url || "";
+  updateReadiness(profile, user);
 
   const { data: redemptions, error } = await sb
     .from("redemption_requests")
@@ -1195,6 +1432,8 @@ async function initAdmin() {
   if (!locked || !panel || !list) return;
 
   const user = await getSessionUser();
+  currentIsAdmin = await fetchAdminStatus(user);
+  updateAdminVisibility(user);
 
   if (!isAdmin(user)) {
     locked.classList.remove("hidden");
@@ -1485,6 +1724,7 @@ async function refreshAll() {
   await updateNavAuthState();
   await updateHomeAuthState();
   await refreshDashboard();
+  await refreshSettingsPage();
   await initOfferwall();
   await initAdmin();
 }
@@ -1492,6 +1732,7 @@ async function refreshAll() {
 async function boot() {
   initNav();
   initAuthModal();
+  initSupportWidget();
   finishPageLoad();
   await updateNavAuthState();
   await updateHomeAuthState();
@@ -1509,6 +1750,7 @@ async function boot() {
   }
 
   await initDashboard();
+  await initSettingsPage();
   await initAdmin();
   finishPageLoad();
 }

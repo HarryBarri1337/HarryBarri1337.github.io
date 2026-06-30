@@ -1,4 +1,4 @@
-/* SkinQuest v10.2 - clean marketplace UI, trust polish and mobile improvements */
+/* SkinQuest v11.1 - clean marketplace UI, account settings, linked services and support widget */
 
 :root {
   --bg: #0b0f16;
@@ -1118,7 +1118,7 @@ label { display: grid; gap: 7px; color: #d8e1ee; font-weight: 800; }
   .history-show-more { width: 100%; }
 }
 
-/* v10.0 visual system: full-page background and cleaner app surfaces */
+/* Visual system: full-page background and cleaner app surfaces */
 body {
   background: #050811;
   position: relative;
@@ -1247,7 +1247,7 @@ main.hero {
   .reward-account-notice .button { width: 100%; }
 }
 
-/* v10.1 header alignment + fixed reward image frames */
+/* Header alignment + fixed reward image frames */
 .nav-actions {
   align-items: center;
 }
@@ -1354,7 +1354,7 @@ main.hero {
   }
 }
 
-/* v10.2 trust polish + mobile makeover */
+/* v11.1 trust polish + mobile makeover */
 .auth-provider-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1553,7 +1553,7 @@ main.hero {
   .stock-pill { width: 100%; justify-content: center; }
 }
 
-/* v10.3 cleaner wallet + faster navigation polish */
+/* v11.1 cleaner wallet + faster navigation polish */
 .page-loader {
   inset: 0 0 auto 0;
   height: 3px;
@@ -1653,4 +1653,219 @@ main.hero {
   .home-account-card { min-height: 0; }
   .wallet-summary { margin: 18px 0 14px; padding: 16px; }
   .wallet-notes { display: grid; grid-template-columns: 1fr; }
+}
+
+/* v11.1 account settings, linked services and support widget */
+.settings-stack {
+  display: grid;
+  gap: 18px;
+}
+.settings-profile-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.settings-profile-card h2 {
+  margin: 8px 0 4px;
+  font-size: clamp(1.45rem, 3vw, 2.1rem);
+  letter-spacing: -.035em;
+}
+.linked-services-grid,
+.readiness-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+.linked-service,
+.readiness-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 88px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 17px;
+  background: rgba(255,255,255,.035);
+}
+.linked-service-icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 14px;
+  background: rgba(255,255,255,.065);
+  border: 1px solid rgba(255,255,255,.08);
+  font-weight: 950;
+  font-size: .78rem;
+}
+.linked-service div:nth-child(2),
+.readiness-item div { min-width: 0; }
+.linked-service strong,
+.readiness-item strong { display: block; }
+.linked-service p,
+.readiness-item span {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: .88rem;
+  line-height: 1.35;
+}
+.linked-service > span {
+  margin-left: auto;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: rgba(53,201,139,.12);
+  border: 1px solid rgba(53,201,139,.24);
+  color: #a9f3d1;
+  font-size: .74rem;
+  font-weight: 900;
+}
+.linked-service .button {
+  margin-left: auto;
+  min-height: 36px;
+  padding: 0 11px;
+}
+.linked-service.is-planned { opacity: .88; }
+.readiness-item {
+  display: block;
+  position: relative;
+  padding-left: 46px;
+}
+.readiness-item::before {
+  content: "•";
+  position: absolute;
+  left: 16px;
+  top: 18px;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  color: var(--muted);
+  background: rgba(255,255,255,.06);
+}
+.readiness-item.is-ready::before {
+  content: "✓";
+  background: rgba(53,201,139,.14);
+  color: #a9f3d1;
+}
+.readiness-item.is-warning::before {
+  content: "!";
+  background: rgba(244,201,93,.14);
+  color: var(--brand-2);
+}
+.readiness-item.is-muted { opacity: .78; }
+.settings-toggle-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+.settings-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(255,255,255,.03);
+}
+.settings-toggle span { display: grid; gap: 4px; }
+.settings-toggle small {
+  color: var(--muted);
+  line-height: 1.35;
+}
+.settings-toggle input {
+  width: 46px;
+  height: 26px;
+  accent-color: var(--brand);
+  flex: 0 0 auto;
+}
+.danger-zone-lite {
+  border-color: rgba(244,111,125,.18);
+}
+.support-widget {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 120;
+}
+.support-fab {
+  width: 58px;
+  height: 58px;
+  border: 1px solid rgba(246,207,114,.34);
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(180deg, rgba(232,179,77,.94), rgba(154,98,36,.95));
+  color: #16100a;
+  box-shadow: 0 18px 50px rgba(0,0,0,.35);
+  cursor: pointer;
+}
+.support-fab span {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(255,255,255,.55);
+  font-weight: 950;
+  font-size: 1.1rem;
+}
+.support-panel {
+  position: absolute;
+  right: 0;
+  bottom: 72px;
+  width: min(360px, calc(100vw - 28px));
+  padding: 16px;
+  border: 1px solid rgba(226,232,240,.16);
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(22,31,47,.98), rgba(12,18,28,.98));
+  box-shadow: 0 24px 80px rgba(0,0,0,.42);
+  backdrop-filter: blur(16px);
+}
+.support-panel-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.support-panel-head strong { display: block; font-size: 1.05rem; }
+.support-panel-head p { margin: 3px 0 0; color: var(--muted); font-size: .86rem; }
+.support-panel-head button {
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(255,255,255,.045);
+  color: var(--text);
+  cursor: pointer;
+}
+.support-form {
+  display: grid;
+  gap: 10px;
+}
+.support-form label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-weight: 800;
+  font-size: .84rem;
+}
+.support-form textarea { resize: vertical; min-height: 96px; }
+.support-form .button { width: 100%; }
+@media (max-width: 920px) {
+  .linked-services-grid,
+  .readiness-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .settings-profile-card { align-items: flex-start; }
+  .linked-service { align-items: flex-start; flex-wrap: wrap; }
+  .linked-service .button,
+  .linked-service > span { margin-left: 54px; }
+  .settings-toggle { align-items: flex-start; }
+  .support-widget { right: 12px; bottom: 12px; }
+  .support-fab { width: 54px; height: 54px; }
+  .support-panel { bottom: 66px; }
 }

@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Track your SkinQuest coins, level progress, Steam trade URL, reward requests, and recent activity." />
-  <title>Dashboard - SkinQuest</title>
+  <meta name="description" content="Manage your SkinQuest linked services, notification preferences, Steam trade URL, and account settings." />
+  <title>Settings - SkinQuest</title>
   <link rel="stylesheet" href="styles.css?v=111" />
 </head>
 <body>
@@ -34,66 +34,81 @@
   </div>
 </header>
 
-<main class="page">
-  <section class="page-heading dashboard-heading">
-    <h1>Your Dashboard</h1>
-    <p>
-      Track your coins, reward requests, Steam trade link, and recent activity.
-    </p>
+<main class="page settings-page">
+  <section class="page-heading compact-heading">
+    <span class="pill">Account control</span>
+    <h1>Settings</h1>
+    <p>Manage your SkinQuest account, linked services, trade URL, and future notification preferences.</p>
   </section>
 
-  <section class="locked-dashboard" id="authSection">
+  <section class="locked-dashboard" id="settingsAuthSection">
     <div class="panel locked-panel">
       <span class="pill">Login required</span>
-      <h2>You need an account to open the dashboard</h2>
-      <p class="muted">Create an account or sign in to see your coins, Steam trade URL, and redeem requests.</p>
+      <h2>You need an account to change settings</h2>
+      <p class="muted">Sign in to manage linked services, notifications, and reward delivery settings.</p>
       <div class="hero-actions">
-        <button class="button button-primary" data-open-auth="signup">Create account</button>
-        <button class="button button-ghost" data-open-auth="login">Sign in</button>
+        <button class="button button-primary" data-open-auth="login">Sign in</button>
+        <button class="button button-ghost" data-open-auth="signup">Create account</button>
       </div>
     </div>
   </section>
 
-  <section id="accountSection" class="hidden">
-    <section class="dashboard-grid">
-      <div class="stat-card wallet-stat-card">
-        <span>Wallet</span>
-        <div class="wallet-balance-line">
-          <img class="dashboard-wallet-coin" src="assets/interface/coin_logo.png" alt="" onerror="this.style.display='none'" />
-          <strong id="balanceDisplay">0</strong>
+  <section id="settingsAccountSection" class="hidden settings-stack">
+    <section class="panel settings-profile-panel">
+      <div class="settings-profile-card">
+        <span class="account-avatar large" id="settingsAvatar">S</span>
+        <div>
+          <span class="pill">SkinQuest account</span>
+          <h2 id="settingsEmail">Account</h2>
+          <p class="muted" id="settingsUserId">Signed in and ready.</p>
         </div>
-        <p>Ready to spend on listed rewards.</p>
       </div>
-      <div class="stat-card">
-        <span>Open requests</span>
-        <strong id="pendingDisplay">0</strong>
-        <p>Pending, reviewing, or trade sent.</p>
-      </div>
-      <div class="stat-card">
-        <span>Lifetime earned</span>
-        <strong id="totalEarnedDisplay">0</strong>
-        <p>All confirmed positive coin credits.</p>
-      </div>
-      <div class="stat-card">
-        <span>Level</span>
-        <strong id="levelDisplay">1</strong>
-        <p><span id="xpDisplay">0 / 1,000 earned coins</span> toward the next level.</p>
-      </div>
-    </section>
-
-    <section class="panel xp-panel">
-      <h2>Level progress</h2>
-      <p class="muted compact-copy">Every 1,000 earned coins adds one level. Each new level pays a 50 coin bonus.</p>
-      <div class="xp-row">
-        <span id="levelText">Level 1</span>
-        <span id="nextLevelText">Next level</span>
-      </div>
-      <div class="xp-bar"><span id="xpBarFill"></span></div>
     </section>
 
     <section class="panel">
-      <h2>Steam trade URL</h2>
-      <p class="muted">Save your trade URL so rewards can be sent after review. SkinQuest will never ask for your Steam password, Steam Guard code, or API key.</p>
+      <div class="section-headline">
+        <div>
+          <span class="pill">Linked services</span>
+          <h2>Connected accounts</h2>
+          <p class="muted">The layout is ready for Steam and Google when auth is enabled in version 11.5.</p>
+        </div>
+      </div>
+      <div class="linked-services-grid">
+        <article class="linked-service is-connected" id="linkedEmailService">
+          <div class="linked-service-icon">@</div>
+          <div>
+            <strong>Email</strong>
+            <p>Primary login method</p>
+          </div>
+          <span>Connected</span>
+        </article>
+        <article class="linked-service is-planned" id="linkedGoogleService">
+          <div class="linked-service-icon">G</div>
+          <div>
+            <strong>Google</strong>
+            <p>Planned sign-in option</p>
+          </div>
+          <button class="button button-ghost" type="button" data-future-service="Google">11.5</button>
+        </article>
+        <article class="linked-service is-planned" id="linkedSteamService">
+          <div class="linked-service-icon">ST</div>
+          <div>
+            <strong>Steam</strong>
+            <p>Future Steam identity link</p>
+          </div>
+          <button class="button button-ghost" type="button" data-future-service="Steam">11.5</button>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="section-headline">
+        <div>
+          <span class="pill">Reward delivery</span>
+          <h2>Steam trade URL</h2>
+          <p class="muted">Use your Steam trade URL only. Never share your Steam password, Steam Guard code, or API key.</p>
+        </div>
+      </div>
       <form id="tradeForm" class="form-row trade-row">
         <input id="tradeUrl" type="url" placeholder="https://steamcommunity.com/tradeoffer/new/?partner=...&token=..." />
         <a class="button button-ghost" target="_blank" rel="noopener" href="https://steamcommunity.com/my/tradeoffers/privacy#trade_offer_access_url">Find trade link</a>
@@ -101,38 +116,35 @@
       </form>
     </section>
 
-
-
-    <section class="panel account-readiness-panel">
+    <section class="panel">
       <div class="section-headline">
         <div>
-          <span class="pill">Account setup</span>
-          <h2>Ready checklist</h2>
-          <p class="muted">Small setup steps that make redeeming smoother.</p>
+          <span class="pill">Notifications</span>
+          <h2>Notification preferences</h2>
+          <p class="muted">These preferences are saved to your account when available and backed up in this browser.</p>
         </div>
-        <a class="button button-ghost" href="settings.html">Open settings</a>
       </div>
-      <div class="readiness-grid">
-        <div class="readiness-item" id="readyEmail"><strong>Email account</strong><span>Signed in with email</span></div>
-        <div class="readiness-item" id="readyTrade"><strong>Trade URL</strong><span>Add it before redeeming</span></div>
-        <div class="readiness-item is-muted" id="readyServices"><strong>Linked services</strong><span>Steam and Google planned for 11.5</span></div>
-      </div>
+      <form id="notificationSettingsForm" class="settings-toggle-list">
+        <label class="settings-toggle">
+          <span><strong>Reward updates</strong><small>Request reviewed, trade sent, completed, rejected, or refunded.</small></span>
+          <input id="notifyRewardUpdates" type="checkbox" checked />
+        </label>
+        <label class="settings-toggle">
+          <span><strong>Offer issues</strong><small>Delayed or rejected offerwall completions and reward support.</small></span>
+          <input id="notifyOfferIssues" type="checkbox" checked />
+        </label>
+        <label class="settings-toggle">
+          <span><strong>Product updates</strong><small>Future platform updates, new features, and important reward changes.</small></span>
+          <input id="notifyProductUpdates" type="checkbox" />
+        </label>
+        <button class="button button-primary" type="submit">Save preferences</button>
+      </form>
     </section>
 
-    <section class="panel">
-      <h2>Redeem requests</h2>
-      <p class="muted">Statuses update when the admin reviews, sends, completes, rejects, or refunds your request.</p>
-      <div id="redeemHistory" class="empty-state">
-        No redeem history yet.
-      </div>
-    </section>
-
-    <section class="panel">
-      <h2>Coin history</h2>
-      <p class="muted">Showing your latest coin movements. Use Show more for older activity.</p>
-      <div id="coinHistory" class="empty-state">
-        No coin history yet.
-      </div>
+    <section class="panel danger-zone-lite">
+      <span class="pill">Security</span>
+      <h2>Account safety</h2>
+      <p class="muted">SkinQuest staff should never ask for your Steam password, Steam Guard code, API key, or access to your Steam account. Rewards only require a public Steam trade URL.</p>
     </section>
   </section>
 </main>
