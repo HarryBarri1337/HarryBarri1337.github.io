@@ -1,10 +1,10 @@
-// SkinQuest v11.2 - account settings, support widget cleanup, SQL hardening.
+// SkinQuest v11.3 - test-phase loading polish, mobile header cleanup and settings spacing.
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const ADMIN_EMAILS = []; // v11.2: admin access must come from Supabase admin_users via is_admin().
+const ADMIN_EMAILS = []; // v11.3: admin access must come from Supabase admin_users via is_admin().
 const CPX_APP_ID = 33831;
 const SUPPORT_EMAIL = ""; // Optional mailto fallback. Supabase support_requests is used first for signed-in users.
 
@@ -385,11 +385,11 @@ function initAuthModal() {
   });
 
   qs("#googleLoginButton")?.addEventListener("click", () => {
-    showMessage("Google sign-in is planned for version 11.5. Use email sign-in for now.");
+    showMessage("Google sign-in is planned for version 12. Use email sign-in for now.");
   });
 
   qs("#steamLoginButton")?.addEventListener("click", () => {
-    showMessage("Steam sign-in is planned for version 11.5. Use email sign-in for now.");
+    showMessage("Steam sign-in is planned for version 12. Use email sign-in for now.");
   });
 }
 
@@ -482,17 +482,21 @@ async function updateHomeAuthState() {
   const authed = qs("[data-user-home]");
   if (!guest || !authed) return;
 
+  const setHomeStats = (coins = "—", level = "—", pending = "—") => {
+    const homeCoins = qs("[data-home-coins]");
+    const homeLevel = qs("[data-home-level]");
+    const homePending = qs("[data-home-pending]");
+    if (homeCoins) homeCoins.textContent = coins;
+    if (homeLevel) homeLevel.textContent = level;
+    if (homePending) homePending.textContent = pending;
+  };
+
+  setHomeStats();
   const user = await getSessionUser();
 
   if (!user) {
     guest.classList.remove("hidden");
     authed.classList.add("hidden");
-    const homeCoins = qs("[data-home-coins]");
-    const homeLevel = qs("[data-home-level]");
-    const homePending = qs("[data-home-pending]");
-    if (homeCoins) homeCoins.textContent = "0";
-    if (homeLevel) homeLevel.textContent = "1";
-    if (homePending) homePending.textContent = "0";
     return;
   }
 
@@ -507,13 +511,14 @@ async function updateHomeAuthState() {
       .select("status")
       .eq("user_id", user.id);
 
-    const homeCoins = qs("[data-home-coins]");
-    const homeLevel = qs("[data-home-level]");
-    const homePending = qs("[data-home-pending]");
-    if (homeCoins) homeCoins.textContent = Number(profile.points_balance || 0).toLocaleString();
-    if (homeLevel) homeLevel.textContent = calculateLevel(totalEarned);
-    if (homePending) homePending.textContent = (redemptions || []).filter((item) => ["pending", "reviewing", "trade_sent"].includes(item.status)).length;
-  } catch {}
+    setHomeStats(
+      Number(profile.points_balance || 0).toLocaleString(),
+      String(calculateLevel(totalEarned)),
+      String((redemptions || []).filter((item) => ["pending", "reviewing", "trade_sent"].includes(item.status)).length)
+    );
+  } catch {
+    setHomeStats();
+  }
 }
 
 async function initOfferwall() {
@@ -985,7 +990,7 @@ async function initSettingsPage() {
 
   qsa("[data-future-service]").forEach((button) => {
     button.addEventListener("click", () => {
-      showMessage(`${button.dataset.futureService} linking is planned for version 11.5.`);
+      showMessage(`${button.dataset.futureService} linking is planned for version 12.`);
     });
   });
 
@@ -1013,16 +1018,17 @@ async function refreshSettingsPage() {
   const loadingSection = qs("#settingsLoadingSection");
   if (!authSection || !accountSection) return;
 
+  loadingSection?.classList.remove("hidden");
+  authSection.classList.add("hidden");
+  accountSection.classList.add("hidden");
+
   const user = await getSessionUser();
-  loadingSection?.classList.add("hidden");
   if (!user) {
+    loadingSection?.classList.add("hidden");
     authSection.classList.remove("hidden");
     accountSection.classList.add("hidden");
     return;
   }
-
-  authSection.classList.add("hidden");
-  accountSection.classList.remove("hidden");
 
   const profile = await ensureProfile(user).catch(() => null);
   const storedPrefs = getStoredNotificationPreferences(user.id);
@@ -1052,6 +1058,10 @@ async function refreshSettingsPage() {
   setChecked("#notifyRewardUpdates", prefs.reward_updates);
   setChecked("#notifyOfferIssues", prefs.offer_issues);
   setChecked("#notifyProductUpdates", prefs.product_updates);
+
+  loadingSection?.classList.add("hidden");
+  authSection.classList.add("hidden");
+  accountSection.classList.remove("hidden");
 }
 
 function initSupportWidget() {
@@ -1194,17 +1204,18 @@ async function refreshDashboard() {
   const loadingSection = qs("#dashboardLoadingSection");
   if (!authSection || !accountSection) return;
 
+  loadingSection?.classList.remove("hidden");
+  authSection.classList.add("hidden");
+  accountSection.classList.add("hidden");
+
   const user = await getSessionUser();
-  loadingSection?.classList.add("hidden");
 
   if (!user) {
+    loadingSection?.classList.add("hidden");
     authSection.classList.remove("hidden");
     accountSection.classList.add("hidden");
     return;
   }
-
-  authSection.classList.add("hidden");
-  accountSection.classList.remove("hidden");
 
   let profile = await ensureProfile(user);
   try {
@@ -1246,9 +1257,15 @@ async function refreshDashboard() {
   if (!error) {
     setText("#pendingDisplay", (redemptions || []).filter((item) => ["pending", "reviewing", "trade_sent"].includes(item.status)).length);
     renderRedeemHistory(redemptions || []);
+  } else {
+    setText("#pendingDisplay", "—");
   }
 
   await renderCoinHistory(user.id);
+
+  loadingSection?.classList.add("hidden");
+  authSection.classList.add("hidden");
+  accountSection.classList.remove("hidden");
 }
 
 function renderRedeemHistory(redemptions) {
@@ -1736,7 +1753,6 @@ async function boot() {
   initNav();
   initAuthModal();
   initSupportWidget();
-  finishPageLoad();
   await updateNavAuthState();
   await updateHomeAuthState();
   await initAuthConfirmPage();

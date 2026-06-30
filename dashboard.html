@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="Track your SkinQuest wallet, level progress, reward requests, and recent activity." />
   <title>Dashboard - SkinQuest</title>
-  <link rel="stylesheet" href="styles.css?v=112" />
+  <link rel="stylesheet" href="styles.css?v=113" />
 </head>
 <body>
 <div id="pageLoader" class="page-loader">
@@ -44,8 +44,9 @@
   <section class="auth-check-panel" id="dashboardLoadingSection">
     <div class="panel locked-panel">
       <span class="pill">Checking account</span>
+      <div class="account-loading-animation" aria-hidden="true"><span></span><span></span><span></span></div>
       <h2>Loading your dashboard</h2>
-      <p class="muted">Checking your SkinQuest session before showing account details.</p>
+      <p class="muted">Preparing your wallet, level, and reward history.</p>
     </div>
   </section>
 
@@ -67,24 +68,24 @@
         <span>Wallet</span>
         <div class="wallet-balance-line">
           <img class="dashboard-wallet-coin" src="assets/interface/coin_logo.png" alt="" onerror="this.style.display='none'" />
-          <strong id="balanceDisplay">0</strong>
+          <strong id="balanceDisplay">—</strong>
         </div>
         <p>Ready to spend on listed rewards.</p>
       </div>
       <div class="stat-card">
         <span>Open requests</span>
-        <strong id="pendingDisplay">0</strong>
+        <strong id="pendingDisplay">—</strong>
         <p>Pending, reviewing, or trade sent.</p>
       </div>
       <div class="stat-card">
         <span>Lifetime earned</span>
-        <strong id="totalEarnedDisplay">0</strong>
+        <strong id="totalEarnedDisplay">—</strong>
         <p>All confirmed positive coin credits.</p>
       </div>
       <div class="stat-card">
         <span>Level</span>
-        <strong id="levelDisplay">1</strong>
-        <p><span id="xpDisplay">0 / 1,000 earned coins</span> toward the next level.</p>
+        <strong id="levelDisplay">—</strong>
+        <p><span id="xpDisplay">Loading progress</span> toward the next level.</p>
       </div>
     </section>
 
@@ -92,7 +93,7 @@
       <h2>Level progress</h2>
       <p class="muted compact-copy">Every 1,000 earned coins adds one level. Each new level pays a 50 coin bonus.</p>
       <div class="xp-row">
-        <span id="levelText">Level 1</span>
+        <span id="levelText">Level —</span>
         <span id="nextLevelText">Next level</span>
       </div>
       <div class="xp-bar"><span id="xpBarFill"></span></div>
@@ -155,12 +156,12 @@
       <button class="button auth-provider-button steam-button" id="steamLoginButton" type="button">
         <span>ST</span>
         <strong>Sign in with Steam</strong>
-        <small>11.5</small>
+        <small>v12</small>
       </button>
       <button class="button auth-provider-button google-button" id="googleLoginButton" type="button">
         <span>G</span>
         <strong>Continue with Google</strong>
-        <small>11.5</small>
+        <small>v12</small>
       </button>
     </div>
 
@@ -182,6 +183,6 @@
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js?v=112"></script>
+<script src="app.js?v=113"></script>
 </body>
 </html>

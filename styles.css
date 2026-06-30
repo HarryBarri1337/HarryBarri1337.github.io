@@ -1,4 +1,4 @@
-/* SkinQuest v11.2 - clean marketplace UI, account settings, linked services and support widget */
+/* SkinQuest v11.3 - clean marketplace UI, account settings, support widget and loading polish */
 
 :root {
   --bg: #0b0f16;
@@ -1354,7 +1354,7 @@ main.hero {
   }
 }
 
-/* v11.2 trust polish + mobile makeover */
+/* v11.3 trust polish + mobile makeover */
 .auth-provider-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1553,7 +1553,7 @@ main.hero {
   .stock-pill { width: 100%; justify-content: center; }
 }
 
-/* v11.2 cleaner wallet + faster navigation polish */
+/* v11.3 cleaner wallet + navigation polish */
 .page-loader {
   inset: 0 0 auto 0;
   height: 3px;
@@ -1655,7 +1655,7 @@ main.hero {
   .wallet-notes { display: grid; grid-template-columns: 1fr; }
 }
 
-/* v11.2 account settings, linked services and support widget */
+/* v11.3 account settings, linked services and support widget */
 .settings-stack {
   display: grid;
   gap: 18px;
@@ -1870,7 +1870,7 @@ main.hero {
   .support-panel { bottom: 66px; }
 }
 
-/* v11.2 test-phase polish: auth-state stability, support animation, mobile alignment */
+/* v11.3 test-phase polish: data-loading stability, support animation, mobile alignment */
 .page-loader { display: none !important; }
 
 .nav-actions.auth-loading {
@@ -1982,4 +1982,117 @@ main.hero {
   .wallet-balance-line { gap: 8px; }
   .dashboard-wallet-coin { width: 32px; height: 32px; }
   .support-panel { width: min(360px, calc(100vw - 24px)); }
+}
+
+/* v11.3 loading + mobile header + settings spacing fixes */
+.page-loader {
+  display: block !important;
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: 3px;
+  z-index: 9999;
+  opacity: 1;
+  visibility: visible;
+}
+.page-loader.done {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 160ms ease, visibility 160ms ease;
+}
+.account-loading-animation {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 4px 0 10px;
+}
+.account-loading-animation span {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--brand-2);
+  box-shadow: 0 0 0 6px rgba(232,179,77,.08);
+  animation: loadingDots 850ms ease-in-out infinite;
+}
+.account-loading-animation span:nth-child(2) { animation-delay: 120ms; }
+.account-loading-animation span:nth-child(3) { animation-delay: 240ms; }
+@keyframes loadingDots {
+  0%, 100% { opacity: .35; transform: translateY(0) scale(.85); }
+  50% { opacity: 1; transform: translateY(-3px) scale(1); }
+}
+.settings-page .section-headline .pill,
+.settings-page .settings-profile-card .pill,
+.settings-page .page-heading .pill {
+  display: inline-flex;
+  margin-bottom: 10px;
+}
+.settings-page .section-headline h2,
+.settings-page .settings-profile-card h2 {
+  margin-top: 0;
+}
+.settings-page .section-headline p {
+  margin-top: 7px;
+}
+@media (max-width: 1080px) {
+  .site-header {
+    grid-template-columns: auto 42px minmax(0, 1fr);
+    grid-template-areas:
+      "brand toggle actions"
+      "nav nav nav";
+  }
+  .site-header .brand { grid-area: brand; min-width: 0; }
+  .site-header .nav-toggle { grid-area: toggle; justify-self: center; }
+  .site-header .site-nav { grid-area: nav; grid-column: auto; }
+  .site-header .nav-actions {
+    grid-area: actions;
+    grid-column: auto;
+    width: auto;
+    min-width: 0;
+    border-top: 0;
+    padding-top: 0;
+    justify-content: flex-end;
+  }
+}
+@media (max-width: 760px) {
+  .site-header {
+    min-height: 58px;
+    gap: 8px;
+  }
+  .site-header .brand { gap: 8px; }
+  .nav-actions.auth-loading { min-height: 42px; }
+  .auth-skeleton { width: 118px; height: 40px; }
+  .nav-actions .coin-pill { display: none; }
+  .account-trigger {
+    min-width: 0;
+    width: auto;
+    max-width: 155px;
+    padding: 5px 8px;
+    justify-content: flex-start;
+  }
+  .account-trigger-copy strong {
+    max-width: 72px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .account-avatar { width: 31px; height: 31px; }
+}
+@media (max-width: 560px) {
+  .site-header {
+    grid-template-columns: minmax(108px, auto) 40px minmax(92px, 1fr);
+  }
+  .brand-mark { width: 32px; height: 32px; }
+  .brand span:last-child { max-width: 92px; }
+  .nav-actions,
+  .nav-actions:has(.coin-pill) {
+    display: flex;
+    grid-template-columns: none;
+    gap: 6px;
+    align-items: center;
+    justify-content: flex-end;
+  }
+  .nav-login { padding: 8px 4px; font-size: .82rem; }
+  .nav-cta { min-height: 38px; padding: 0 10px; font-size: .82rem; }
+  .account-trigger { max-width: 128px; min-height: 40px; }
+  .account-trigger-copy strong { max-width: 55px; }
 }
