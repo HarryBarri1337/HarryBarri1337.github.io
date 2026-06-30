@@ -1,4 +1,4 @@
--- SkinQuest full Supabase setup v11.1
+-- SkinQuest full Supabase setup v11.2
 -- Run this in Supabase SQL Editor before public testing.
 -- It creates the tables, RLS policies, and RPC functions used by the v11 frontend.
 

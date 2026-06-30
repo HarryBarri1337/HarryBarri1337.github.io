@@ -1,12 +1,12 @@
-// SkinQuest v11.1 - account settings, support widget cleanup, SQL hardening.
+// SkinQuest v11.2 - account settings, support widget cleanup, SQL hardening.
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const ADMIN_EMAILS = ["harrygotesson@gmail.com"];
+const ADMIN_EMAILS = []; // v11.2: admin access must come from Supabase admin_users via is_admin().
 const CPX_APP_ID = 33831;
-const SUPPORT_EMAIL = ""; // Add support@your-domain when the inbox is ready. If empty, the widget copies a ready-to-send support draft.
+const SUPPORT_EMAIL = ""; // Optional mailto fallback. Supabase support_requests is used first for signed-in users.
 
 let rewardItems = [];
 let adminRewardItems = [];
@@ -149,8 +149,7 @@ async function getSessionUser() {
 }
 
 function isAdmin(user) {
-  const email = (user?.email || "").toLowerCase();
-  return currentIsAdmin || ADMIN_EMAILS.includes(email);
+  return !!user?.id && !!currentIsAdmin;
 }
 
 async function fetchAdminStatus(user) {
@@ -158,11 +157,11 @@ async function fetchAdminStatus(user) {
   try {
     const { data, error } = await sb.rpc("is_admin");
     if (!error && typeof data === "boolean") return data;
-  } catch {}
+  } catch (error) {
+    console.warn("Admin status check failed:", error);
+  }
 
-  // Development fallback until admin_users is enabled through the final SQL setup.
-  const email = (user?.email || "").toLowerCase();
-  return ADMIN_EMAILS.includes(email);
+  return false;
 }
 
 async function requireUser() {
@@ -402,6 +401,7 @@ async function updateNavAuthState() {
   updateAdminVisibility(user);
 
   if (!actions) return;
+  actions.classList.remove("auth-loading");
 
   if (!user) {
     actions.innerHTML = `
@@ -685,18 +685,13 @@ async function updateRewardAccountNotice() {
           <strong>Add your Steam trade URL before redeeming.</strong>
           <span>SkinQuest needs your Steam trade link so the admin can send your reward after review.</span>
         </div>
-        <a class="button button-primary" href="dashboard.html#tradeForm">Add trade link</a>
+        <a class="button button-primary" href="settings.html#tradeForm">Add trade link</a>
       `;
       return;
     }
 
-    notice.className = "reward-account-notice success";
-    notice.innerHTML = `
-      <div>
-        <strong>Ready to redeem.</strong>
-        <span>Your Steam trade URL is saved. Choose a reward below.</span>
-      </div>
-    `;
+    notice.className = "reward-account-notice hidden";
+    notice.innerHTML = "";
   } catch (error) {
     notice.className = "reward-account-notice warning";
     notice.innerHTML = `
@@ -743,7 +738,7 @@ function renderRewards() {
   function apply() {
     const query = (search?.value || "").toLowerCase().trim();
     const priceFilter = filter?.value || "all";
-    const sortValue = sort?.value || "featured";
+    const sortValue = sort?.value || "price-desc";
 
     const filtered = rewardItems.filter((item) => {
       const haystack = [item.name, item.description, item.rarity, item.condition, item.market_name].filter(Boolean).join(" ").toLowerCase();
@@ -835,10 +830,10 @@ async function requestRedeem(rewardId, sourceButton = null) {
 
   if (!profile.steam_trade_url) {
     const goDashboard = await showConfirm(
-      "Before you can redeem, add your Steam trade URL on the Dashboard. Without it, SkinQuest does not know where to send the skin.",
+      "Before you can redeem, add your Steam trade URL in Settings. Without it, SkinQuest does not know where to send the skin.",
       { title: "Add your Steam trade link first", confirmText: "Add trade link", cancelText: "Stay on rewards", icon: "↗" }
     );
-    if (goDashboard) location.href = "dashboard.html#tradeForm";
+    if (goDashboard) location.href = "settings.html#tradeForm";
     return;
   }
 
@@ -847,7 +842,7 @@ async function requestRedeem(rewardId, sourceButton = null) {
       "Your saved Steam trade URL looks incomplete. It must be the full Steam trade offer link with both partner and token.",
       { title: "Fix your Steam trade link", confirmText: "Fix trade link", cancelText: "Stay on rewards", icon: "!" }
     );
-    if (goDashboard) location.href = "dashboard.html#tradeForm";
+    if (goDashboard) location.href = "settings.html#tradeForm";
     return;
   }
 
@@ -896,7 +891,7 @@ async function requestRedeem(rewardId, sourceButton = null) {
         "Your reward request was not created because your Steam trade URL is missing or was not saved correctly. Add it on the Dashboard, save it, then try redeeming again.",
         { title: "Steam trade link required", confirmText: "Open Dashboard", cancelText: "Stay on rewards", icon: "↗" }
       );
-      if (goDashboard) location.href = "dashboard.html#tradeForm";
+      if (goDashboard) location.href = "settings.html#tradeForm";
       await updateRewardAccountNotice();
       return;
     }
@@ -978,19 +973,11 @@ async function trySaveNotificationPreferences(user, prefs) {
   } catch {}
 }
 
-function updateReadiness(profile, user) {
-  const readyEmail = qs("#readyEmail");
-  const readyTrade = qs("#readyTrade");
-  const readyServices = qs("#readyServices");
-
-  readyEmail?.classList.toggle("is-ready", !!user?.email);
-  readyEmail?.classList.toggle("is-warning", !user?.email);
-
+function updateRedeemBlocker(profile) {
+  const panel = qs("#redeemBlockerPanel");
+  if (!panel) return;
   const hasTrade = !!profile?.steam_trade_url && isValidSteamTradeUrl(profile.steam_trade_url);
-  readyTrade?.classList.toggle("is-ready", hasTrade);
-  readyTrade?.classList.toggle("is-warning", !hasTrade);
-
-  readyServices?.classList.add("is-muted");
+  panel.classList.toggle("hidden", hasTrade);
 }
 
 async function initSettingsPage() {
@@ -1023,9 +1010,11 @@ async function initSettingsPage() {
 async function refreshSettingsPage() {
   const authSection = qs("#settingsAuthSection");
   const accountSection = qs("#settingsAccountSection");
+  const loadingSection = qs("#settingsLoadingSection");
   if (!authSection || !accountSection) return;
 
   const user = await getSessionUser();
+  loadingSection?.classList.add("hidden");
   if (!user) {
     authSection.classList.remove("hidden");
     accountSection.classList.add("hidden");
@@ -1075,7 +1064,7 @@ function initSupportWidget() {
     <button class="support-fab" type="button" aria-expanded="false" aria-label="Open support" data-support-toggle>
       <span>?</span>
     </button>
-    <section class="support-panel hidden" aria-label="Support panel" data-support-panel>
+    <section class="support-panel" aria-label="Support panel" aria-hidden="true" data-support-panel>
       <div class="support-panel-head">
         <div>
           <strong>Need help?</strong>
@@ -1096,8 +1085,8 @@ function initSupportWidget() {
         <label>Message
           <textarea data-support-message rows="4" placeholder="Tell us what happened. Include reward name, offer, or trade details if relevant."></textarea>
         </label>
-        <button class="button button-primary" type="submit">Prepare message</button>
-        <p class="fine-print">Creates a ready-to-send message with your account details.</p>
+        <button class="button button-primary" type="submit">Send request</button>
+        <p class="fine-print">Signed-in requests are saved to support. Support usually replies within 24h.</p>
       </form>
     </section>
   `;
@@ -1108,11 +1097,13 @@ function initSupportWidget() {
   const panel = shell.querySelector("[data-support-panel]");
   const close = shell.querySelector("[data-support-close]");
   const setOpen = (open) => {
-    panel.classList.toggle("hidden", !open);
+    panel.classList.toggle("open", open);
+    panel.setAttribute("aria-hidden", String(!open));
+    toggle.classList.toggle("open", open);
     toggle.setAttribute("aria-expanded", String(open));
   };
 
-  toggle.addEventListener("click", () => setOpen(panel.classList.contains("hidden")));
+  toggle.addEventListener("click", () => setOpen(!panel.classList.contains("open")));
   close.addEventListener("click", () => setOpen(false));
 
   shell.querySelector("[data-support-form]")?.addEventListener("submit", async (event) => {
@@ -1139,7 +1130,7 @@ function initSupportWidget() {
           page_url: location.href
         });
         if (!error) {
-          showMessage("Support request saved. The team can review it from Supabase/admin tools.", "success");
+          showMessage("Support request sent. Support usually replies within 24h.", "success");
           shell.querySelector("[data-support-message]").value = "";
           setOpen(false);
           return;
@@ -1200,9 +1191,11 @@ async function initDashboard() {
 async function refreshDashboard() {
   const authSection = qs("#authSection");
   const accountSection = qs("#accountSection");
+  const loadingSection = qs("#dashboardLoadingSection");
   if (!authSection || !accountSection) return;
 
   const user = await getSessionUser();
+  loadingSection?.classList.add("hidden");
 
   if (!user) {
     authSection.classList.remove("hidden");
@@ -1242,9 +1235,7 @@ async function refreshDashboard() {
   const xpBar = qs("#xpBarFill");
   if (xpBar) xpBar.style.width = `${progress.progress}%`;
 
-  const tradeUrl = qs("#tradeUrl");
-  if (tradeUrl) tradeUrl.value = profile.steam_trade_url || "";
-  updateReadiness(profile, user);
+  updateRedeemBlocker(profile);
 
   const { data: redemptions, error } = await sb
     .from("redemption_requests")
@@ -1270,9 +1261,8 @@ function renderRedeemHistory(redemptions) {
     return;
   }
 
-  redeemHistory.className = "redeem-list";
-  redeemHistory.innerHTML = redemptions.map((item) => `
-    <div class="redeem-row">
+  const rows = redemptions.map((item, index) => `
+    <div class="redeem-row ${index >= 5 ? "redeem-extra hidden" : ""}">
       <div>
         <strong>${escapeHtml(item.reward_name)}</strong>
         <p class="muted">${formatDate(item.created_at)} · ${getRequestCost(item).toLocaleString()} coins</p>
@@ -1282,6 +1272,19 @@ function renderRedeemHistory(redemptions) {
       <span class="status-pill status-${escapeHtml(item.status)}">${escapeHtml(formatStatus(item.status))}</span>
     </div>
   `).join("");
+
+  const showMore = redemptions.length > 5 ? `
+    <button class="button button-ghost history-show-more" type="button" data-show-more-redeems>
+      Show more
+    </button>
+  ` : "";
+
+  redeemHistory.className = "redeem-list";
+  redeemHistory.innerHTML = `${rows}${showMore}`;
+  redeemHistory.querySelector("[data-show-more-redeems]")?.addEventListener("click", (event) => {
+    redeemHistory.querySelectorAll(".redeem-extra").forEach((row) => row.classList.remove("hidden"));
+    event.currentTarget.remove();
+  });
 }
 
 async function renderCoinHistory(userId) {

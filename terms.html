@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="SkinQuest terms for account use, partner tasks, fixed rewards, fair use, and Steam trade review." />
   <title>Terms - SkinQuest</title>
-  <link rel="stylesheet" href="styles.css?v=111" />
+  <link rel="stylesheet" href="styles.css?v=112" />
 </head>
 <body>
 <div id="pageLoader" class="page-loader">
@@ -28,9 +28,8 @@
     <a href="admin.html">Admin</a>
     <a href="how-it-works.html">How it works</a>
   </nav>
-  <div class="nav-actions" id="navAuthActions">
-    <button class="nav-login" data-open-auth="login">Sign in</button>
-    <button class="button button-primary nav-cta" data-open-auth="signup">Sign up</button>
+  <div class="nav-actions auth-loading" id="navAuthActions" aria-live="polite">
+    <span class="auth-skeleton" aria-hidden="true"></span>
   </div>
 </header>
 
@@ -131,6 +130,6 @@
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js?v=111"></script>
+<script src="app.js?v=112"></script>
 </body>
 </html>

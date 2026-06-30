@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Track your SkinQuest coins, level progress, Steam trade URL, reward requests, and recent activity." />
+  <meta name="description" content="Track your SkinQuest wallet, level progress, reward requests, and recent activity." />
   <title>Dashboard - SkinQuest</title>
-  <link rel="stylesheet" href="styles.css?v=111" />
+  <link rel="stylesheet" href="styles.css?v=112" />
 </head>
 <body>
 <div id="pageLoader" class="page-loader">
@@ -28,9 +28,8 @@
     <a href="admin.html">Admin</a>
     <a href="how-it-works.html">How it works</a>
   </nav>
-  <div class="nav-actions" id="navAuthActions">
-    <button class="nav-login" data-open-auth="login">Sign in</button>
-    <button class="button button-primary nav-cta" data-open-auth="signup">Sign up</button>
+  <div class="nav-actions auth-loading" id="navAuthActions" aria-live="polite">
+    <span class="auth-skeleton" aria-hidden="true"></span>
   </div>
 </header>
 
@@ -38,15 +37,23 @@
   <section class="page-heading dashboard-heading">
     <h1>Your Dashboard</h1>
     <p>
-      Track your coins, reward requests, Steam trade link, and recent activity.
+      Track your wallet, reward requests, level progress, and recent activity.
     </p>
   </section>
 
-  <section class="locked-dashboard" id="authSection">
+  <section class="auth-check-panel" id="dashboardLoadingSection">
+    <div class="panel locked-panel">
+      <span class="pill">Checking account</span>
+      <h2>Loading your dashboard</h2>
+      <p class="muted">Checking your SkinQuest session before showing account details.</p>
+    </div>
+  </section>
+
+  <section class="locked-dashboard hidden" id="authSection">
     <div class="panel locked-panel">
       <span class="pill">Login required</span>
       <h2>You need an account to open the dashboard</h2>
-      <p class="muted">Create an account or sign in to see your coins, Steam trade URL, and redeem requests.</p>
+      <p class="muted">Create an account or sign in to see your wallet, level, and redeem requests.</p>
       <div class="hero-actions">
         <button class="button button-primary" data-open-auth="signup">Create account</button>
         <button class="button button-ghost" data-open-auth="login">Sign in</button>
@@ -91,32 +98,13 @@
       <div class="xp-bar"><span id="xpBarFill"></span></div>
     </section>
 
-    <section class="panel">
-      <h2>Steam trade URL</h2>
-      <p class="muted">Save your trade URL so rewards can be sent after review. SkinQuest will never ask for your Steam password, Steam Guard code, or API key.</p>
-      <form id="tradeForm" class="form-row trade-row">
-        <input id="tradeUrl" type="url" placeholder="https://steamcommunity.com/tradeoffer/new/?partner=...&token=..." />
-        <a class="button button-ghost" target="_blank" rel="noopener" href="https://steamcommunity.com/my/tradeoffers/privacy#trade_offer_access_url">Find trade link</a>
-        <button class="button button-primary" type="submit">Save</button>
-      </form>
-    </section>
-
-
-
-    <section class="panel account-readiness-panel">
-      <div class="section-headline">
-        <div>
-          <span class="pill">Account setup</span>
-          <h2>Ready checklist</h2>
-          <p class="muted">Small setup steps that make redeeming smoother.</p>
-        </div>
-        <a class="button button-ghost" href="settings.html">Open settings</a>
+    <section class="panel redeem-blocker-panel hidden" id="redeemBlockerPanel">
+      <div>
+        <span class="pill danger-pill">Redeem locked</span>
+        <h2>Add your Steam trade URL before redeeming</h2>
+        <p class="muted">Rewards can only be sent after a valid Steam trade URL is saved in Settings. SkinQuest will never ask for your Steam password, Steam Guard code, or API key.</p>
       </div>
-      <div class="readiness-grid">
-        <div class="readiness-item" id="readyEmail"><strong>Email account</strong><span>Signed in with email</span></div>
-        <div class="readiness-item" id="readyTrade"><strong>Trade URL</strong><span>Add it before redeeming</span></div>
-        <div class="readiness-item is-muted" id="readyServices"><strong>Linked services</strong><span>Steam and Google planned for 11.5</span></div>
-      </div>
+      <a class="button button-primary" href="settings.html#tradeForm">Open Settings</a>
     </section>
 
     <section class="panel">
@@ -194,6 +182,6 @@
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js?v=111"></script>
+<script src="app.js?v=112"></script>
 </body>
 </html>
