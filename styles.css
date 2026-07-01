@@ -1,4 +1,4 @@
-/* SkinQuest v11.4 - clean marketplace UI, account settings, support widget and loading polish */
+/* SkinQuest v11.5 - clean marketplace UI, user flow, admin workflow and support polish */
 
 :root {
   --bg: #0b0f16;
@@ -2197,3 +2197,142 @@ main.hero {
   background: rgba(255,255,255,.04);
 }
 .compact-empty { margin-top: 12px; padding: 12px; }
+
+/* v11.5 user flow, reward actions, admin workflow and changelog polish */
+.site-version {
+  color: var(--muted);
+  text-decoration: none;
+  border-bottom: 1px dashed rgba(255,255,255,.18);
+}
+.site-version:hover { color: var(--text); border-color: rgba(255,170,64,.55); }
+.account-trigger-copy small { display: block; color: var(--muted); font-size: .68rem; line-height: 1.1; margin-top: 2px; }
+.account-dropdown-progress {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 7px 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 14px;
+  background: rgba(255,255,255,.035);
+  margin: 8px 0;
+}
+.account-dropdown-progress span { color: var(--muted); font-size: .78rem; }
+.account-dropdown-progress strong { font-size: .78rem; }
+.account-dropdown-progress .level-pill-track { grid-column: 1 / -1; }
+.get-started-panel { margin-bottom: 18px; }
+.getting-started-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+.setup-step {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 10px;
+  align-items: center;
+  padding: 14px;
+  border-radius: 18px;
+  text-decoration: none;
+  color: var(--text);
+  border: 1px solid rgba(255,255,255,.09);
+  background: rgba(255,255,255,.035);
+}
+.setup-step strong {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: rgba(255,170,64,.13);
+  border: 1px solid rgba(255,170,64,.24);
+  color: var(--accent-strong);
+  grid-row: span 2;
+}
+.setup-step span { font-weight: 900; }
+.setup-step small { color: var(--muted); }
+.setup-step.active { border-color: rgba(255,170,64,.35); background: rgba(255,170,64,.07); }
+.setup-step.complete { border-color: rgba(72, 220, 153, .28); background: rgba(72, 220, 153, .06); }
+.setup-step.complete strong { color: #67e8a8; background: rgba(72, 220, 153, .12); border-color: rgba(72, 220, 153, .30); }
+.reward-actions-smart { gap: 7px; }
+.reward-actions-smart small { color: var(--muted); text-align: center; min-height: 18px; }
+.empty-action-state {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  text-align: center;
+}
+.empty-action-state strong { color: var(--text); font-size: 1rem; }
+.empty-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.admin-inline-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.mini-button {
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.045);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: .74rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+.mini-button:hover { border-color: rgba(255,170,64,.34); background: rgba(255,170,64,.08); }
+.system-status-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.system-status-card {
+  border: 1px solid rgba(255,255,255,.09);
+  background: rgba(255,255,255,.035);
+  border-radius: 18px;
+  padding: 14px;
+  display: grid;
+  gap: 4px;
+}
+.system-status-card span { color: var(--muted); font-size: .78rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; }
+.system-status-card strong { font-size: 1.15rem; }
+.system-status-card small { color: var(--muted); }
+.system-status-card.online { border-color: rgba(72,220,153,.23); }
+.system-status-card.manual { border-color: rgba(255,170,64,.25); }
+.system-status-card.attention { border-color: rgba(255,255,255,.13); }
+.support-context-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 10px 0;
+}
+.support-context-grid span {
+  display: grid;
+  gap: 2px;
+  padding: 9px 10px;
+  border-radius: 12px;
+  background: rgba(255,255,255,.035);
+  border: 1px solid rgba(255,255,255,.07);
+  color: var(--muted);
+  font-size: .76rem;
+  overflow-wrap: anywhere;
+}
+.support-context-grid b { color: var(--text); font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; }
+.changelog-list { display: grid; gap: 14px; }
+.changelog-entry {
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.032);
+}
+.changelog-entry.current { border-color: rgba(255,170,64,.25); background: rgba(255,170,64,.055); }
+.changelog-entry h2 { margin: 8px 0 6px; }
+.changelog-entry p { margin: 0; color: var(--muted); line-height: 1.55; }
+@media (max-width: 760px) {
+  .getting-started-steps,
+  .system-status-grid,
+  .support-context-grid { grid-template-columns: 1fr; }
+  .setup-step { padding: 12px; }
+  .account-trigger-copy small { display: none; }
+}

@@ -1,10 +1,10 @@
-// SkinQuest v11.4 - test-phase admin roles, nav level progress and asset path cleanup.
+// SkinQuest v11.5 - user flow, reward CTAs, admin workflow and changelog polish.
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const ADMIN_EMAILS = []; // v11.4: admin access must come from Supabase admin_users via is_admin().
+const ADMIN_EMAILS = []; // v11.5: admin access must come from Supabase admin_users via is_admin().
 const CPX_APP_ID = 33831;
 const SUPPORT_EMAIL = ""; // Optional mailto fallback. Supabase support_requests is used first for signed-in users.
 
@@ -52,6 +52,37 @@ function shortEmail(email) {
   const [name, domain] = String(email).split("@");
   if (!domain) return email;
   return `${name}@${domain}`;
+}
+
+function copyToClipboard(value, successMessage = "Copied.") {
+  const text = String(value || "").trim();
+  if (!text) {
+    showMessage("Nothing to copy yet.", "error");
+    return Promise.resolve(false);
+  }
+
+  if (navigator.clipboard?.writeText) {
+    return navigator.clipboard.writeText(text)
+      .then(() => { showMessage(successMessage, "success"); return true; })
+      .catch(() => legacyCopyToClipboard(text, successMessage));
+  }
+
+  return Promise.resolve(legacyCopyToClipboard(text, successMessage));
+}
+
+function legacyCopyToClipboard(text, successMessage) {
+  const input = document.createElement("textarea");
+  input.value = text;
+  input.setAttribute("readonly", "");
+  input.style.position = "fixed";
+  input.style.opacity = "0";
+  document.body.appendChild(input);
+  input.select();
+  let copied = false;
+  try { copied = document.execCommand("copy"); } catch {}
+  input.remove();
+  showMessage(copied ? successMessage : "Could not copy automatically. Select and copy manually.", copied ? "success" : "error");
+  return copied;
 }
 
 function getPageUrl(fileName = "index.html") {
@@ -442,12 +473,14 @@ async function updateNavAuthState() {
   const email = user.email || "Account";
   const adminLabel = isOwner(user) ? "Owner panel" : "Admin panel";
   const adminLink = isAdmin(user) ? `<a href="admin.html">${adminLabel}</a>` : "";
-  const levelPill = navLevel ? `
-    <a class="level-pill" href="dashboard.html" aria-label="Level ${navLevel.level} progress">
-      <span class="level-pill-label">Lvl ${navLevel.level}</span>
-      <span class="level-pill-track"><span style="width:${navLevel.progress}%"></span></span>
+  const levelText = navLevel ? `Lvl ${navLevel.level}` : "Lvl —";
+  const levelProgress = navLevel ? navLevel.progress : 0;
+  const levelPill = `
+    <a class="level-pill" href="dashboard.html" aria-label="${escapeHtml(levelText)} progress">
+      <span class="level-pill-label">${escapeHtml(levelText)}</span>
+      <span class="level-pill-track"><span style="width:${levelProgress}%"></span></span>
     </a>
-  ` : "";
+  `;
 
   actions.innerHTML = `
     <a class="coin-pill" href="dashboard.html" aria-label="Your coin balance">
@@ -461,6 +494,7 @@ async function updateNavAuthState() {
         <span class="account-avatar">${escapeHtml(userInitial(user))}</span>
         <span class="account-trigger-copy">
           <strong>${escapeHtml(email.split("@")[0] || "Account")}</strong>
+          <small>${escapeHtml(levelText)}</small>
         </span>
         <span class="account-chevron">⌄</span>
       </button>
@@ -469,8 +503,13 @@ async function updateNavAuthState() {
           <span class="account-avatar large">${escapeHtml(userInitial(user))}</span>
           <div>
             <strong>${escapeHtml(email)}</strong>
-            <small>${coins.toLocaleString()} coins available${isAdmin(user) ? ` · ${escapeHtml(currentAdminRole)}` : ""}</small>
+            <small>${coins.toLocaleString()} coins · ${escapeHtml(levelText)}${isAdmin(user) ? ` · ${escapeHtml(currentAdminRole)}` : ""}</small>
           </div>
+        </div>
+        <div class="account-dropdown-progress" aria-label="Level progress">
+          <span>Level progress</span>
+          <strong>${Math.round(levelProgress)}%</strong>
+          <div class="level-pill-track"><span style="width:${levelProgress}%"></span></div>
         </div>
         <a href="dashboard.html">Dashboard</a>
         <a href="settings.html">Settings</a>
@@ -761,6 +800,29 @@ function sortRewardsForShop(items, sortValue) {
   });
 }
 
+function getRewardActionState(item, profile) {
+  const cost = getRewardCost(item);
+  const balance = Number(profile?.points_balance || 0);
+  const hasUser = !!currentUser?.id;
+  const tradeUrl = profile?.steam_trade_url || "";
+  const hasTrade = !!tradeUrl && isValidSteamTradeUrl(tradeUrl);
+
+  if (rewardIsOutOfStock(item)) {
+    return { disabled: true, label: "Out of stock", note: "This reward is currently unavailable.", action: "out" };
+  }
+  if (!hasUser) {
+    return { disabled: false, label: "Sign in to redeem", note: "Create an account before redeeming.", action: "login" };
+  }
+  if (!hasTrade) {
+    return { disabled: false, label: "Add trade URL", note: "Save your Steam trade URL once to unlock redeeming.", action: "trade" };
+  }
+  if (balance < cost) {
+    const missing = Math.max(0, cost - balance);
+    return { disabled: false, label: "Earn more coins", note: `Need ${missing.toLocaleString()} more coins`, action: "earn" };
+  }
+  return { disabled: false, label: "Redeem", note: "Manual review after request.", action: "redeem" };
+}
+
 function renderRewards() {
   const grid = qs("#rewardsGrid");
   if (!grid) return;
@@ -768,29 +830,53 @@ function renderRewards() {
   const search = qs("#skinSearch");
   const filter = qs("#priceFilter");
   const sort = qs("#sortFilter");
+  const afford = qs("#affordFilter");
 
   function apply() {
     const query = (search?.value || "").toLowerCase().trim();
     const priceFilter = filter?.value || "all";
     const sortValue = sort?.value || "price-desc";
+    const affordValue = afford?.value || "all";
+    const balance = Number(currentProfile?.points_balance || 0);
+    const signedIn = !!currentUser?.id;
 
     const filtered = rewardItems.filter((item) => {
       const haystack = [item.name, item.description, item.rarity, item.condition, item.market_name].filter(Boolean).join(" ").toLowerCase();
       const cost = getRewardCost(item);
+      const available = !rewardIsOutOfStock(item);
       const matchesSearch = !query || haystack.includes(query);
       const matchesPrice =
         priceFilter === "all" ||
         (priceFilter === "low" && cost < 500) ||
         (priceFilter === "mid" && cost >= 500 && cost <= 1200) ||
         (priceFilter === "high" && cost > 1200);
+      const matchesAfford =
+        affordValue === "all" ||
+        (affordValue === "affordable" && signedIn && available && cost <= balance) ||
+        (affordValue === "in-stock" && available) ||
+        (affordValue === "locked" && signedIn && available && cost > balance);
 
-      return matchesSearch && matchesPrice;
+      return matchesSearch && matchesPrice && matchesAfford;
     });
 
     const sorted = sortRewardsForShop(filtered, sortValue);
 
     if (sorted.length === 0) {
-      grid.innerHTML = `<div class="empty-state">No rewards found. Try another search or price filter.</div>`;
+      grid.innerHTML = `
+        <div class="empty-state empty-action-state">
+          <strong>No rewards found.</strong>
+          <span>Try another search, clear filters, or earn more coins.</span>
+          <div class="empty-actions">
+            <button class="button button-ghost" type="button" data-clear-reward-filters>Clear filters</button>
+            <a class="button button-primary" href="earn.html">Earn coins</a>
+          </div>
+        </div>`;
+      qs("[data-clear-reward-filters]")?.addEventListener("click", () => {
+        if (search) search.value = "";
+        if (filter) filter.value = "all";
+        if (afford) afford.value = "all";
+        apply();
+      });
       return;
     }
 
@@ -803,6 +889,7 @@ function renderRewards() {
       const outOfStock = rewardIsOutOfStock(item);
       const stockText = available === null ? "In stock" : `${available} available`;
       const description = item.description || item.market_name || "Manual Steam trade after review";
+      const action = getRewardActionState(item, currentProfile);
 
       return `
         <article class="reward-card steam-item ${rarityClass(item)} ${outOfStock ? "is-out" : ""}">
@@ -819,10 +906,11 @@ function renderRewards() {
               <span class="stock-pill ${outOfStock ? "stock-out" : ""}">${outOfStock ? "Out of stock" : escapeHtml(stockText)}</span>
               ${total !== null && reserved > 0 ? `<span class="stock-pill reserved-stock">${reserved} reserved</span>` : ""}
             </div>
-            <div class="reward-actions">
-              <button class="button button-primary" type="button" data-redeem="${item.id}" ${outOfStock ? "disabled" : ""}>
-                ${outOfStock ? "Unavailable" : "Redeem"}
+            <div class="reward-actions reward-actions-smart">
+              <button class="button ${action.action === "redeem" ? "button-primary" : "button-ghost"}" type="button" data-reward-action="${escapeHtml(action.action)}" data-redeem="${item.id}" ${action.disabled ? "disabled" : ""}>
+                ${escapeHtml(action.label)}
               </button>
+              <small>${escapeHtml(action.note)}</small>
             </div>
           </div>
         </article>
@@ -833,6 +921,11 @@ function renderRewards() {
       button.addEventListener("click", (event) => {
         event.preventDefault();
         event.stopPropagation();
+        const action = button.dataset.rewardAction || "redeem";
+        if (action === "login") return openAuthModal("signup");
+        if (action === "trade") return location.href = "settings.html#tradeForm";
+        if (action === "earn") return location.href = "earn.html";
+        if (action === "out") return;
         requestRedeem(Number(button.dataset.redeem), button);
       });
     });
@@ -841,6 +934,7 @@ function renderRewards() {
   search?.addEventListener("input", apply);
   filter?.addEventListener("change", apply);
   sort?.addEventListener("change", apply);
+  afford?.addEventListener("change", apply);
   apply();
 }
 
@@ -1093,6 +1187,15 @@ async function refreshSettingsPage() {
   accountSection.classList.remove("hidden");
 }
 
+function getSupportContext(user) {
+  return {
+    page_url: location.href,
+    user_agent: navigator.userAgent || null,
+    account_email: user?.email || null,
+    browser_language: navigator.language || null
+  };
+}
+
 function initSupportWidget() {
   if (document.querySelector("[data-support-widget]")) return;
 
@@ -1162,11 +1265,15 @@ function initSupportWidget() {
 
     if (user?.id) {
       try {
+        const context = getSupportContext(user);
         const { error } = await sb.from("support_requests").insert({
           user_id: user.id,
           topic,
           message,
-          page_url: location.href
+          page_url: context.page_url,
+          user_agent: context.user_agent,
+          account_email: context.account_email,
+          browser_language: context.browser_language
         });
         if (!error) {
           showMessage("Support request sent. Support usually replies within 24h.", "success");
@@ -1284,10 +1391,13 @@ async function refreshDashboard() {
     .order("created_at", { ascending: false });
 
   if (!error) {
-    setText("#pendingDisplay", (redemptions || []).filter((item) => ["pending", "reviewing", "trade_sent"].includes(item.status)).length);
-    renderRedeemHistory(redemptions || []);
+    const userRedemptions = redemptions || [];
+    setText("#pendingDisplay", userRedemptions.filter((item) => ["pending", "reviewing", "trade_sent"].includes(item.status)).length);
+    updateGetStartedPanel(profile, totalEarned, userRedemptions);
+    renderRedeemHistory(userRedemptions);
   } else {
     setText("#pendingDisplay", "—");
+    updateGetStartedPanel(profile, totalEarned, []);
   }
 
   await renderCoinHistory(user.id);
@@ -1297,13 +1407,60 @@ async function refreshDashboard() {
   accountSection.classList.remove("hidden");
 }
 
+function updateGetStartedPanel(profile, totalEarned, redemptions = []) {
+  const panel = qs("#getStartedPanel");
+  if (!panel) return;
+
+  const hasTrade = !!profile?.steam_trade_url && isValidSteamTradeUrl(profile.steam_trade_url);
+  const hasEarned = Number(totalEarned || 0) > 0;
+  const hasRedeemed = Array.isArray(redemptions) && redemptions.length > 0;
+
+  if (hasTrade && hasEarned && hasRedeemed) {
+    panel.classList.add("hidden");
+    return;
+  }
+
+  panel.classList.remove("hidden");
+  panel.innerHTML = `
+    <div class="section-headline">
+      <div>
+        <span class="pill">Get started</span>
+        <h2>Set up your reward flow</h2>
+        <p class="muted">Complete these basics so your first redeem request is smooth.</p>
+      </div>
+      <a class="button button-primary" href="${hasTrade ? "earn.html" : "settings.html#tradeForm"}">${hasTrade ? "Earn coins" : "Add trade URL"}</a>
+    </div>
+    <div class="getting-started-steps">
+      <a class="setup-step ${hasTrade ? "complete" : "active"}" href="settings.html#tradeForm">
+        <strong>${hasTrade ? "✓" : "1"}</strong>
+        <span>Save Steam trade URL</span>
+        <small>${hasTrade ? "Ready for rewards" : "Required before redeeming"}</small>
+      </a>
+      <a class="setup-step ${hasEarned ? "complete" : hasTrade ? "active" : ""}" href="earn.html">
+        <strong>${hasEarned ? "✓" : "2"}</strong>
+        <span>Earn coins</span>
+        <small>${hasEarned ? "Coins confirmed" : "Complete partner tasks"}</small>
+      </a>
+      <a class="setup-step ${hasRedeemed ? "complete" : hasEarned ? "active" : ""}" href="rewards.html">
+        <strong>${hasRedeemed ? "✓" : "3"}</strong>
+        <span>Redeem a reward</span>
+        <small>${hasRedeemed ? "Request created" : "Pick a fixed reward"}</small>
+      </a>
+    </div>
+  `;
+}
+
 function renderRedeemHistory(redemptions) {
   const redeemHistory = qs("#redeemHistory");
   if (!redeemHistory) return;
 
   if (!redemptions || redemptions.length === 0) {
-    redeemHistory.className = "empty-state";
-    redeemHistory.innerHTML = "No redeem history yet.";
+    redeemHistory.className = "empty-state empty-action-state";
+    redeemHistory.innerHTML = `
+      <strong>No redeem requests yet.</strong>
+      <span>Once you redeem a reward, your request status appears here.</span>
+      <a class="button button-primary" href="rewards.html">Browse rewards</a>
+    `;
     return;
   }
 
@@ -1351,8 +1508,12 @@ async function renderCoinHistory(userId) {
   }
 
   if (!data || data.length === 0) {
-    coinHistory.className = "empty-state";
-    coinHistory.textContent = "No coin history yet.";
+    coinHistory.className = "empty-state empty-action-state";
+    coinHistory.innerHTML = `
+      <strong>No coin history yet.</strong>
+      <span>Complete your first partner task to start earning coins.</span>
+      <a class="button button-primary" href="earn.html">Earn coins</a>
+    `;
     return;
   }
 
@@ -1543,14 +1704,24 @@ async function loadAdminSupportRequests() {
         </div>
         <strong>${escapeHtml(item.topic || "Support request")}</strong>
         <p>${escapeHtml(item.message || "")}</p>
+        <div class="support-context-grid">
+          <span><b>User</b>${escapeHtml(item.user_id || "Unknown")}</span>
+          <span><b>Email</b>${escapeHtml(item.account_email || "Not captured")}</span>
+          <span><b>Page</b>${escapeHtml(item.page_url || "Unknown")}</span>
+          <span><b>Browser</b>${escapeHtml((item.user_agent || "Unknown").slice(0, 120))}</span>
+        </div>
         ${item.page_url ? `<a class="mini-link" href="${escapeHtml(item.page_url)}" target="_blank" rel="noopener">Open reported page</a>` : ""}
       </div>
       <div class="admin-actions vertical">
+        <button class="button button-ghost" type="button" data-copy="${escapeHtml(item.user_id || "")}" data-copy-label="user id">Copy user ID</button>
+        <button class="button button-ghost" type="button" data-copy="${escapeHtml(item.account_email || "")}" data-copy-label="email">Copy email</button>
         <button class="button button-ghost" type="button" data-support-status="open" data-support-id="${item.id}">Open</button>
         <button class="button button-ghost" type="button" data-support-status="resolved" data-support-id="${item.id}">Resolved</button>
       </div>
     </article>
   `).join("");
+
+  bindCopyButtons(list);
 
   qsa("[data-support-status]").forEach((button) => {
     button.addEventListener("click", async () => {
@@ -1560,8 +1731,60 @@ async function loadAdminSupportRequests() {
         .eq("id", button.dataset.supportId);
       if (updateError) return showMessage(updateError.message, "error");
       await loadAdminSupportRequests();
+      await loadAdminSystemStatus();
     });
   });
+}
+
+function bindCopyButtons(scope = document) {
+  scope.querySelectorAll("[data-copy]").forEach((button) => {
+    if (button.dataset.copyBound === "true") return;
+    button.dataset.copyBound = "true";
+    button.addEventListener("click", () => copyToClipboard(button.dataset.copy || "", `Copied ${button.dataset.copyLabel || "value"}.`));
+  });
+}
+
+function openSafeUrl(url) {
+  const value = String(url || "").trim();
+  if (!value) return showMessage("No link to open yet.", "error");
+  try {
+    const parsed = new URL(value);
+    if (!["http:", "https:"].includes(parsed.protocol)) throw new Error("Unsupported URL");
+    window.open(parsed.href, "_blank", "noopener");
+  } catch {
+    showMessage("That link does not look like a valid URL.", "error");
+  }
+}
+
+async function loadAdminSystemStatus() {
+  const grid = qs("#adminSystemStatus");
+  if (!grid) return;
+
+  let openRequests = "—";
+  let openSupport = "—";
+  let activeRewards = "—";
+
+  try {
+    const { count } = await sb.from("redemption_requests").select("id", { count: "exact", head: true }).in("status", ["pending", "reviewing", "trade_sent"]);
+    openRequests = Number(count || 0).toLocaleString();
+  } catch {}
+
+  try {
+    const { count } = await sb.from("support_requests").select("id", { count: "exact", head: true }).in("status", ["new", "open"]);
+    openSupport = Number(count || 0).toLocaleString();
+  } catch {}
+
+  try {
+    const { count } = await sb.from("reward_items").select("id", { count: "exact", head: true }).eq("active", true);
+    activeRewards = Number(count || 0).toLocaleString();
+  } catch {}
+
+  grid.innerHTML = `
+    <div class="system-status-card online"><span>Offerwall</span><strong>Online</strong><small>CPX link active</small></div>
+    <div class="system-status-card manual"><span>Rewards</span><strong>Manual review</strong><small>${activeRewards} active rewards</small></div>
+    <div class="system-status-card attention"><span>Open requests</span><strong>${openRequests}</strong><small>Pending / reviewing / sent</small></div>
+    <div class="system-status-card support"><span>Support</span><strong>${openSupport}</strong><small>New or open messages</small></div>
+  `;
 }
 
 function initAdminCoinForm() {
@@ -1623,6 +1846,7 @@ async function initAdmin() {
   qs("#refreshAdmin")?.addEventListener("click", async () => {
     await loadAdminRequests();
     await loadAdminSupportRequests();
+    await loadAdminSystemStatus();
     if (owner) {
       await loadAdminUsers();
       await loadAdminRewards();
@@ -1638,6 +1862,7 @@ async function initAdmin() {
 
   await loadAdminRequests();
   await loadAdminSupportRequests();
+  await loadAdminSystemStatus();
   if (owner) {
     await loadAdminUsers();
     await loadAdminRewards();
@@ -1683,6 +1908,11 @@ async function loadAdminRequests() {
         <div class="admin-url-block">
           <label>Steam trade URL</label>
           <p class="admin-url">${escapeHtml(item.steam_trade_url || "No trade URL saved")}</p>
+          <div class="admin-inline-tools">
+            <button class="mini-button" type="button" data-copy="${escapeHtml(item.steam_trade_url || "")}" data-copy-label="trade URL">Copy trade URL</button>
+            <button class="mini-button" type="button" data-open-url="${escapeHtml(item.steam_trade_url || "")}">Open trade URL</button>
+            <button class="mini-button" type="button" data-copy="${escapeHtml(item.user_id || "")}" data-copy-label="user ID">Copy user ID</button>
+          </div>
         </div>
         <div class="admin-grid-form compact">
           <label>Status
@@ -1703,11 +1933,17 @@ async function loadAdminRequests() {
       <div class="admin-actions vertical">
         <button class="button button-primary" type="button" data-admin-save="${item.id}">Save status</button>
         <button class="button button-ghost" type="button" data-admin-quick="trade_sent" data-request-id="${item.id}">Trade sent</button>
+        <button class="button button-ghost" type="button" data-copy="Your SkinQuest reward request for ${escapeHtml(item.reward_name)} has been updated to ${escapeHtml(formatStatus(item.status))}. Please check your SkinQuest dashboard for details." data-copy-label="user update message">Copy user message</button>
         <button class="button button-ghost" type="button" data-admin-quick="completed" data-request-id="${item.id}">Completed</button>
         <button class="button button-danger" type="button" data-admin-quick="rejected" data-request-id="${item.id}">Reject + refund</button>
       </div>
     </article>
   `).join("");
+
+  bindCopyButtons(list);
+  list.querySelectorAll("[data-open-url]").forEach((button) => {
+    button.addEventListener("click", () => openSafeUrl(button.dataset.openUrl || ""));
+  });
 
   qsa("[data-admin-save]").forEach((button) => {
     button.addEventListener("click", () => saveRequestStatus(Number(button.dataset.adminSave)));
@@ -1757,6 +1993,7 @@ async function saveRequestStatus(id) {
   showMessage(`Request marked ${formatStatus(status)}.`);
   await loadAdminRequests();
   await loadAdminRewards();
+  await loadAdminSystemStatus();
 }
 
 function initAdminRewardForm() {
@@ -1913,6 +2150,10 @@ async function refreshAll() {
   await refreshDashboard();
   await refreshSettingsPage();
   await initOfferwall();
+  if (qs("#rewardsGrid")) {
+    renderRewards();
+    await updateRewardAccountNotice();
+  }
   await initAdmin();
 }
 

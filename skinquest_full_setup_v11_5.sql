@@ -1,6 +1,6 @@
--- SkinQuest full Supabase setup v11.4
+-- SkinQuest full Supabase setup v11.5
 -- Run this in Supabase SQL Editor before public testing.
--- It creates the tables, RLS policies, and RPC functions used by the v11.4 frontend.
+-- It creates the tables, RLS policies, and RPC functions used by the v11.5 frontend.
 
 create extension if not exists pgcrypto;
 
@@ -161,11 +161,21 @@ create table if not exists public.support_requests (
   topic text not null,
   message text not null,
   page_url text,
+  user_agent text,
+  account_email text,
+  browser_language text,
   status text not null default 'new',
   admin_note text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.support_requests add column if not exists page_url text;
+alter table public.support_requests add column if not exists user_agent text;
+alter table public.support_requests add column if not exists account_email text;
+alter table public.support_requests add column if not exists browser_language text;
+alter table public.support_requests add column if not exists admin_note text;
+alter table public.support_requests add column if not exists updated_at timestamptz not null default now();
 
 create index if not exists profiles_account_status_idx on public.profiles(account_status);
 create index if not exists reward_items_active_sort_idx on public.reward_items(active, sort_order, points_coins);
