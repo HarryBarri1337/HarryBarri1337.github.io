@@ -1,4 +1,4 @@
-// SkinQuest v11.7 - controlled design polish, preserved background image and cleaner loading states.
+// SkinQuest v11.7.1 - controlled rewards and empty-state polish.
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -14,8 +14,6 @@ let currentUser = null;
 let currentProfile = null;
 let currentIsAdmin = false;
 let currentAdminRole = null;
-
-document.documentElement.classList.add("skinquest-booting");
 
 function qs(selector) {
   return document.querySelector(selector);
@@ -184,9 +182,6 @@ async function confirmAndSignOut() {
 }
 
 function finishPageLoad() {
-  document.documentElement.classList.remove("skinquest-booting");
-  document.documentElement.classList.add("skinquest-ready");
-
   const loader = qs("#pageLoader");
   if (!loader) return;
   loader.classList.add("done");
@@ -840,9 +835,6 @@ function getRewardActionState(item, profile) {
 function renderRewards() {
   const grid = qs("#rewardsGrid");
   if (!grid) return;
-
-  grid.classList.remove("is-loading");
-  grid.setAttribute("aria-busy", "false");
 
   const search = qs("#skinSearch");
   const filter = qs("#priceFilter");
@@ -2186,12 +2178,7 @@ async function boot() {
       renderRewards();
       await updateRewardAccountNotice();
     } catch (error) {
-      const grid = qs("#rewardsGrid");
-      if (grid) {
-        grid.classList.remove("is-loading");
-        grid.setAttribute("aria-busy", "false");
-        grid.innerHTML = `<div class="empty-state">Could not load rewards right now. Please refresh and try again.</div>`;
-      }
+      qs("#rewardsGrid").innerHTML = `<div class="empty-state empty-action-state"><strong>Could not load rewards.</strong><span>Please refresh and try again in a moment.</span></div>`;
     }
   }
 

@@ -1,4 +1,4 @@
-/* SkinQuest v11.6 - clean marketplace UI, nav/auth polish and support workflow */
+/* SkinQuest v11.7.1 - controlled rewards and empty-state polish */
 
 :root {
   --bg: #0b0f16;
@@ -2338,605 +2338,214 @@ main.hero {
 }
 
 
-/* v11.7 real release: controlled design polish, background image preserved */
-:root {
-  --accent-strong: #ffd27a;
-  --glass: rgba(9, 13, 22, 0.78);
-  --glass-2: rgba(16, 23, 35, 0.72);
-  --glass-3: rgba(255,255,255,0.045);
-  --line-soft: rgba(226, 232, 240, 0.13);
-  --line-bright: rgba(246, 207, 114, 0.28);
-  --shadow-soft: 0 16px 48px rgba(0,0,0,0.24);
-  --shadow-lift: 0 24px 76px rgba(0,0,0,0.34);
-}
-
-html.skinquest-booting body { cursor: progress; }
-html.skinquest-ready body { cursor: default; }
-
-body {
-  background: #050811;
-}
-body::before {
-  inset: -18px;
-  z-index: -2;
-  background:
-    linear-gradient(180deg, rgba(7, 10, 16, 0.24), rgba(7, 10, 16, 0.76)),
-    radial-gradient(circle at 12% 14%, rgba(246,207,114,0.12), transparent 18rem),
-    radial-gradient(circle at 88% 18%, rgba(110,168,255,0.12), transparent 23rem),
-    url("assets/interface/site-background.png") center center / cover no-repeat;
-  filter: blur(8px) saturate(1.08) contrast(0.98);
-  transform: scale(1.035);
-}
-body::after {
-  background:
-    radial-gradient(circle at 50% 0%, rgba(91, 141, 232, 0.20), transparent 34rem),
-    radial-gradient(circle at 50% 105%, rgba(232, 179, 77, 0.08), transparent 26rem),
-    linear-gradient(90deg, rgba(4, 7, 12, 0.66), rgba(4, 7, 12, 0.36) 50%, rgba(4, 7, 12, 0.66));
-}
-
-/* Small, clean loading system */
+/* v11.7.1 controlled polish: no top loader, no weird accent lines */
 .page-loader {
-  position: fixed;
-  inset: 16px auto auto 50%;
-  width: auto;
-  height: auto;
-  z-index: 9999;
-  display: block !important;
-  opacity: 1;
-  visibility: visible;
-  pointer-events: none;
-  transform: translateX(-50%);
-  transition: opacity 220ms ease, visibility 220ms ease, transform 220ms ease;
-  background: transparent;
-}
-.page-loader.done {
-  opacity: 0;
-  visibility: hidden;
-  transform: translateX(-50%) translateY(-8px) scale(.98);
-}
-.loader-card {
-  width: auto;
-  min-width: 214px;
-  height: 44px;
-  padding: 8px 12px;
-  border: 1px solid rgba(226,232,240,.15);
-  border-radius: 999px;
-  background: rgba(8, 12, 20, .88);
-  box-shadow: 0 18px 54px rgba(0,0,0,.42);
-  backdrop-filter: blur(16px);
-  display: grid;
-  grid-template-columns: 30px 1fr;
-  align-items: center;
-  gap: 10px;
-}
-.loader-mark {
-  display: grid;
-  width: 30px;
-  height: 30px;
-  border-radius: 999px;
-  font-size: .68rem;
-  color: #fff4cc;
-  border-color: rgba(246,207,114,.22);
-  background: rgba(232,179,77,.10);
-}
-.loader-card::after {
-  content: "Loading SkinQuest";
-  color: #dfe8f6;
-  font-size: .82rem;
-  font-weight: 850;
-  letter-spacing: .01em;
-}
-.loader-line {
-  grid-column: 1 / -1;
-  width: calc(100% - 46px);
-  height: 3px;
-  margin-left: 40px;
-  margin-top: -6px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, transparent, var(--brand), var(--brand-2), transparent);
-  animation: loaderSoftSweep 920ms ease-in-out infinite;
-  transform-origin: center;
-}
-@keyframes loaderSoftSweep {
-  0%, 100% { opacity: .32; transform: scaleX(.42); }
-  50% { opacity: .95; transform: scaleX(1); }
-}
-html.skinquest-booting .auth-loading .auth-skeleton,
-.reward-grid.is-loading .reward-skeleton,
-.account-loading-animation span {
-  will-change: transform, opacity;
+  display: none !important;
 }
 
-/* Header polish */
-.site-header {
-  min-height: 74px;
-  background: rgba(8, 12, 20, 0.82);
-  border-color: rgba(226, 232, 240, 0.13);
-  box-shadow: 0 18px 56px rgba(0,0,0,0.34);
-  backdrop-filter: blur(18px);
+/* smoother email auth tab switching only - no auth redesign */
+.auth-pane:not(.hidden) {
+  animation: authPaneSoftIn 180ms ease both;
 }
-.site-header::after {
-  content: "";
-  position: absolute;
-  left: 20px;
-  right: 20px;
-  bottom: -1px;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(246,207,114,.28), rgba(110,168,255,.20), transparent);
-  pointer-events: none;
+@keyframes authPaneSoftIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
 }
-.brand-mark {
-  background: linear-gradient(180deg, rgba(255,255,255,.085), rgba(255,255,255,.035));
-  border-color: rgba(226,232,240,.14);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.07), 0 10px 22px rgba(0,0,0,.22);
+.auth-tab {
+  transition: background 160ms ease, color 160ms ease, transform 160ms ease;
 }
-.site-nav { gap: 4px; }
-.site-nav a {
-  position: relative;
-  padding: 10px 13px;
-  color: #b5c2d4;
-  transition: color 160ms ease, background 160ms ease, transform 160ms ease;
-}
-.site-nav a:hover,
-.site-nav a.active {
-  color: #f9fbff;
-  background: rgba(255,255,255,.06);
-}
-.site-nav a.active::after,
-.site-nav a:hover::after {
-  content: "";
-  position: absolute;
-  left: 13px;
-  right: 13px;
-  bottom: 4px;
-  height: 2px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, transparent, rgba(246,207,114,.95), transparent);
-}
-.nav-login { color: #bdc9d9; }
-.coin-pill,
-.level-pill,
-.account-trigger {
-  border-color: rgba(226,232,240,.13);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
-}
-.coin-pill {
-  background: linear-gradient(180deg, rgba(232,179,77,.13), rgba(232,179,77,.065));
-  border-color: rgba(232,179,77,.28);
-}
-.account-dropdown {
-  background: rgba(10, 15, 24, .97);
-  border-color: rgba(226,232,240,.14);
-  box-shadow: 0 26px 80px rgba(0,0,0,.52);
-  backdrop-filter: blur(18px);
+.auth-tab:active {
+  transform: scale(.985);
 }
 
-/* Page shell and type hierarchy */
-.page,
-main.hero {
-  position: relative;
-  overflow: hidden;
-  background: linear-gradient(180deg, rgba(9, 13, 21, 0.84), rgba(9, 13, 21, 0.68));
-  border-color: rgba(226,232,240,.12);
-  box-shadow: 0 30px 100px rgba(0,0,0,.36);
-  backdrop-filter: blur(18px);
+/* page heading consistency, without adding big separator lines */
+.page-heading,
+.dashboard-heading,
+.compact-heading {
+  max-width: 780px;
+  padding: 0 0 28px;
 }
-.page::before,
-main.hero::before {
-  content: "";
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(246,207,114,.30), rgba(110,168,255,.22), transparent);
-  pointer-events: none;
+.page-heading .pill,
+.dashboard-heading .pill,
+.compact-heading .pill {
+  margin-bottom: 12px;
 }
-.page > *,
-main.hero > * { position: relative; z-index: 1; }
-h1,
 .page-heading h1,
 .dashboard-heading h1,
 .compact-heading h1 {
+  margin-top: 0;
+  margin-bottom: 12px;
+  line-height: 1.02;
   text-wrap: balance;
-  text-shadow: 0 14px 42px rgba(0,0,0,.22);
 }
-.hero-copy h1 { max-width: 13ch; }
-.hero-copy p,
 .page-heading p,
-.compact-heading p,
 .dashboard-heading p,
-.panel p,
-.feature-card p,
-.provider-card p,
-.stat-card p,
-.reward-description,
-.empty-state,
-.notice {
-  color: #aebbd0;
-}
-.pill {
-  background: linear-gradient(180deg, rgba(246,207,114,.12), rgba(232,179,77,.06));
-  border-color: rgba(246,207,114,.30);
-  color: #f5d98d;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+.compact-heading p {
+  margin-top: 0;
+  color: #b2bfd0;
+  line-height: 1.65;
 }
 
-/* Buttons and forms */
-.button,
-.nav-toggle,
-.auth-tab,
-.mini-button {
-  transition: transform 160ms ease, filter 160ms ease, background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
-}
-.button:hover,
-.nav-toggle:hover,
-.auth-provider-button:hover,
-.mini-button:hover {
-  transform: translateY(-1px);
-}
-.button-primary {
-  box-shadow: 0 12px 26px rgba(232,179,77,.20);
-}
-.button-primary:hover {
-  box-shadow: 0 18px 34px rgba(232,179,77,.27);
-}
-.button-ghost,
-.nav-toggle,
-.auth-provider-button,
-.modal-close,
-.support-panel-head button {
-  background: rgba(255,255,255,.045);
-  border-color: rgba(226,232,240,.12);
-}
-.button-ghost:hover,
-.nav-toggle:hover,
-.auth-provider-button:hover,
-.modal-close:hover,
-.support-panel-head button:hover {
-  background: rgba(255,255,255,.08);
-  border-color: rgba(226,232,240,.18);
-}
-input,
-select,
-textarea {
-  background: rgba(7, 12, 20, 0.90);
-  border-color: rgba(226,232,240,.12);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.035);
-}
-input::placeholder,
-textarea::placeholder { color: #77869a; }
-input:hover,
-select:hover,
-textarea:hover { border-color: rgba(226,232,240,.18); }
-input:focus,
-select:focus,
-textarea:focus {
-  border-color: rgba(246,207,114,.58);
-  box-shadow: 0 0 0 3px rgba(232,179,77,.12), inset 0 1px 0 rgba(255,255,255,.05);
-}
-.shop-toolbar {
-  grid-template-columns: minmax(220px, 1.35fr) repeat(3, minmax(0, 1fr));
-  align-items: stretch;
-}
-
-/* Shared cards */
+/* cleaner panels/cards - softer, no heavy top highlight lines */
 .panel,
-.feature-card,
-.provider-card,
 .stat-card,
+.provider-card,
+.feature-card,
 .reward-card,
-.locked-panel,
 .admin-request,
 .admin-reward-row,
-.legal section,
-.timeline article,
 .empty-state,
-.account-bar,
-.linked-service,
-.settings-toggle,
-.readiness-item,
-.system-status-card,
-.changelog-entry {
-  background: linear-gradient(180deg, rgba(16,23,35,.78), rgba(13,19,30,.70));
-  border-color: rgba(226,232,240,.11);
-  box-shadow: var(--shadow-soft);
+.account-bar {
+  background: linear-gradient(180deg, rgba(16, 23, 35, 0.74), rgba(12, 18, 29, 0.72));
+  border-color: rgba(202, 213, 226, 0.13);
+  box-shadow: 0 14px 42px rgba(0,0,0,0.18);
 }
-.feature-card,
-.provider-card,
 .stat-card,
-.reward-card,
-.admin-reward-row,
-.linked-service,
-.settings-toggle,
-.setup-step,
-.system-status-card {
-  transition: transform 170ms ease, border-color 170ms ease, box-shadow 170ms ease, background 170ms ease;
-}
-.feature-card:hover,
-.provider-card:hover,
-.stat-card:hover,
-.reward-card:hover,
-.admin-reward-row:hover,
-.linked-service:hover,
-.settings-toggle:hover,
-.setup-step:hover,
-.system-status-card:hover {
-  transform: translateY(-2px);
-  border-color: rgba(226,232,240,.18);
-  box-shadow: var(--shadow-lift);
-}
-.panel,
-.feature-card,
 .provider-card,
-.stat-card {
-  overflow: hidden;
+.feature-card,
+.reward-card,
+.admin-request,
+.admin-reward-row {
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
 }
-.panel::before,
-.feature-card::before,
-.provider-card::before,
-.stat-card::before {
-  content: "";
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 1px;
-  background: linear-gradient(90deg, rgba(246,207,114,.26), rgba(110,168,255,.14), transparent 75%);
-  pointer-events: none;
+.stat-card:hover,
+.provider-card:hover,
+.feature-card:hover,
+.reward-card:hover,
+.admin-request:hover,
+.admin-reward-row:hover {
+  transform: translateY(-2px);
+  border-color: rgba(202, 213, 226, 0.22);
+  box-shadow: 0 18px 50px rgba(0,0,0,0.24);
 }
-.step-number {
-  min-width: 40px;
-  min-height: 28px;
-  padding: 0 10px;
-  display: inline-flex;
+
+/* reward shop polish */
+.reward-toolbar {
   align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  background: rgba(232,179,77,.10);
-  border: 1px solid rgba(232,179,77,.18);
 }
-.trust-row span,
-.rarity-badge,
-.condition-badge,
-.stock-pill,
-.status-pill,
-.notice {
-  background: rgba(255,255,255,.052);
-  border-color: rgba(226,232,240,.12);
-}
-
-/* Home page */
-.home-account-card,
-.hero-card {
-  background:
-    radial-gradient(circle at top right, rgba(246,207,114,.10), transparent 38%),
-    linear-gradient(180deg, rgba(16,23,35,.88), rgba(13,19,30,.78));
-}
-.wallet-summary {
-  border-color: rgba(226,232,240,.12);
-  background: rgba(255,255,255,.04);
-}
-.wallet-summary h2 { font-size: clamp(1.55rem, 3vw, 2.05rem); }
-.mini-stats div {
-  background: rgba(255,255,255,.043);
-  border-color: rgba(226,232,240,.10);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.045);
-}
-.mini-stats strong { font-size: 1.36rem; }
-.wallet-notes span {
-  color: #d3deed;
-  border-color: rgba(226,232,240,.11);
-  background: rgba(255,255,255,.043);
-}
-
-/* Dashboard */
-.stat-card span {
-  color: #c6d2e2;
-  text-transform: uppercase;
-  letter-spacing: .08em;
-  font-size: .74rem;
-}
-.stat-card strong {
-  font-size: clamp(2rem, 4vw, 2.5rem);
-  line-height: 1;
-  margin: 8px 0 4px;
-}
-.xp-bar {
-  height: 12px;
-  background: rgba(7,12,20,.86);
-  border-color: rgba(226,232,240,.10);
-}
-.xp-bar span {
-  background: linear-gradient(90deg, #e8b34d, #ffd27a, #6ea8ff);
-  box-shadow: 0 0 18px rgba(232,179,77,.18);
-}
-.account-bar,
-.redeem-blocker-panel,
-.reward-account-notice,
-.settings-profile-card,
-.provider-main-card,
-.changelog-entry.current {
-  background:
-    radial-gradient(circle at top right, rgba(246,207,114,.10), transparent 34%),
-    linear-gradient(180deg, rgba(19,27,41,.84), rgba(13,19,30,.76));
-}
-.coin-history-row,
-.redeem-row,
-.admin-support-row,
-.admin-user-row,
-.setup-step,
-.support-context-grid span,
-.account-dropdown-progress {
-  background: rgba(255,255,255,.040);
-  border-color: rgba(226,232,240,.10);
-}
-
-/* Rewards shop */
-.reward-grid { align-items: stretch; }
 .reward-card {
-  border-radius: 21px;
+  border-radius: 20px;
   overflow: hidden;
 }
 .reward-card::before {
-  height: 4px;
-  opacity: .95;
+  height: 2px;
+  opacity: .85;
 }
 .reward-art {
-  height: 218px;
-  min-height: 218px;
   background:
-    radial-gradient(circle at 50% 0%, rgba(110,168,255,.17), transparent 54%),
-    radial-gradient(circle at 0% 100%, rgba(246,207,114,.13), transparent 45%),
-    linear-gradient(180deg, rgba(255,255,255,.060), rgba(255,255,255,.025));
+    radial-gradient(circle at 50% 20%, rgba(110, 168, 255, 0.13), transparent 52%),
+    linear-gradient(180deg, rgba(255,255,255,0.055), rgba(255,255,255,0.018));
 }
 .reward-art::after {
   content: "";
   position: absolute;
   left: 16%;
   right: 16%;
-  bottom: 15px;
+  bottom: 18px;
   height: 24px;
   border-radius: 999px;
-  background: radial-gradient(circle, rgba(0,0,0,.34), transparent 68%);
-  filter: blur(10px);
-  opacity: .70;
+  background: rgba(0,0,0,.22);
+  filter: blur(14px);
+  opacity: .55;
   pointer-events: none;
 }
-.reward-art img {
+.reward-art img,
+.skin-abbrev {
   position: relative;
   z-index: 1;
-  transition: transform 180ms ease, filter 180ms ease;
 }
-.reward-card:hover .reward-art img {
-  transform: translateY(-2px) scale(1.018);
-  filter: drop-shadow(0 24px 26px rgba(0,0,0,.34));
+.reward-info {
+  padding: 18px;
+  gap: 12px;
 }
-.reward-info { gap: 14px; }
-.reward-info h2 { font-size: 1.12rem; }
-.reward-meta { align-items: center; gap: 10px; }
-.price { font-size: 1.05rem; }
-.reward-actions .button { width: 100%; }
+.reward-info h2 {
+  line-height: 1.25;
+}
+.reward-title-row {
+  min-height: 28px;
+}
+.rarity-badge,
+.condition-badge,
+.stock-pill,
+.status-pill {
+  background: rgba(255,255,255,0.052);
+  border-color: rgba(202, 213, 226, 0.13);
+}
+.price {
+  padding: 7px 10px 7px 7px;
+  border-radius: 999px;
+  background: rgba(232, 179, 77, 0.09);
+  border: 1px solid rgba(232, 179, 77, 0.20);
+}
+.reward-actions-smart {
+  display: grid;
+  gap: 8px;
+  margin-top: 2px;
+}
+.reward-actions-smart .button {
+  width: 100%;
+}
 .reward-actions-smart small {
-  color: #8f9eb2;
+  color: var(--muted-2);
+  text-align: center;
   line-height: 1.35;
 }
-.reward-toolbar {
-  grid-template-columns: minmax(220px, 1.35fr) repeat(3, minmax(0, 1fr));
-  padding: 12px;
-  border: 1px solid rgba(226,232,240,.10);
-  border-radius: 18px;
-  background: rgba(255,255,255,.030);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.035);
+.reward-card.is-out {
+  opacity: .72;
 }
-.reward-skeleton {
-  min-height: 420px;
-  border: 1px solid rgba(226,232,240,.10);
-  border-radius: 21px;
-  background: linear-gradient(180deg, rgba(16,23,35,.70), rgba(13,19,30,.62));
-  box-shadow: var(--shadow-soft);
-  padding: 18px;
+.reward-card.is-out .reward-art {
+  filter: grayscale(.55);
+}
+.reward-card.is-out .button {
+  cursor: not-allowed;
+}
+
+/* empty states polish */
+.empty-state {
+  min-height: 88px;
+  padding: 22px;
+  border-style: solid;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(246, 207, 114, 0.055), transparent 18rem),
+    rgba(255,255,255,0.025);
+}
+.empty-action-state {
   display: grid;
-  grid-template-rows: 190px auto auto 1fr;
-  gap: 14px;
-  overflow: hidden;
+  justify-items: center;
+  gap: 11px;
+  text-align: center;
 }
-.reward-skeleton span,
-.reward-skeleton strong,
-.reward-skeleton p,
-.reward-skeleton em {
-  display: block;
-  border-radius: 14px;
-  background: linear-gradient(90deg, rgba(255,255,255,.04), rgba(255,255,255,.09), rgba(255,255,255,.04));
-  background-size: 220% 100%;
-  animation: skeletonSweep 1.05s ease-in-out infinite;
+.empty-action-state::before {
+  content: "SQ";
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  border: 1px solid rgba(232,179,77,.24);
+  background: rgba(232,179,77,.085);
+  color: var(--brand-2);
+  font-size: .72rem;
+  font-weight: 950;
+  letter-spacing: -.02em;
 }
-.reward-skeleton span { height: 190px; }
-.reward-skeleton strong { height: 22px; width: 70%; }
-.reward-skeleton p { height: 42px; width: 100%; margin: 0; }
-.reward-skeleton em { height: 44px; width: 100%; align-self: end; }
-.reward-grid.is-loading { min-height: 420px; }
-
-/* Earn/how/settings/admin polish */
-.provider-logo,
-.linked-service-icon,
-.account-avatar {
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+.empty-action-state strong {
+  color: var(--text);
+  font-size: 1.03rem;
 }
-.provider-card ul { color: #aebbd0; }
-.how-summary-grid div {
-  background: rgba(255,255,255,.045);
-  border-color: rgba(226,232,240,.11);
+.empty-action-state span {
+  max-width: 440px;
+  color: var(--muted);
+  line-height: 1.5;
 }
-.how-summary-grid strong { color: #ffd27a; }
-.auth-modal,
-.confirm-modal,
-.toast,
-.support-panel {
-  background: linear-gradient(180deg, rgba(20,30,47,.98), rgba(10,15,24,.98));
-  border-color: rgba(226,232,240,.16);
-  box-shadow: 0 26px 90px rgba(0,0,0,.52);
+.empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 2px;
 }
-.auth-tabs {
-  background: rgba(7,12,20,.72);
-  border-color: rgba(226,232,240,.10);
-}
-.auth-tab.active {
-  background: rgba(255,255,255,.085);
-}
-.support-fab {
-  box-shadow: 0 18px 58px rgba(0,0,0,.38), 0 0 0 6px rgba(232,179,77,.08);
-}
-
-.site-footer {
-  position: relative;
-  overflow: hidden;
-  background: rgba(8, 12, 20, 0.82);
-  border-color: rgba(226,232,240,.12);
-  box-shadow: 0 24px 74px rgba(0,0,0,.31);
-  backdrop-filter: blur(18px);
-}
-.site-footer::before {
-  content: "";
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(246,207,114,.30), transparent);
-}
-.footer-links a { color: #c4cfdd; }
-.footer-links a:hover { color: #ffffff; }
-
-@media (max-width: 1080px) {
-  .shop-toolbar,
-  .reward-toolbar {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-@media (max-width: 760px) {
-  .page-loader {
-    top: 10px;
-  }
-  .loader-card {
-    min-width: 188px;
-    height: 40px;
-  }
-  .loader-card::after { font-size: .78rem; }
-  .site-header { min-height: 62px; }
-  .site-header::after { left: 12px; right: 12px; }
-  .page,
-  main.hero,
-  .site-footer { border-radius: 20px; }
-  .shop-toolbar,
-  .reward-toolbar { grid-template-columns: 1fr; padding: 10px; }
-  .hero-copy h1 { max-width: none; }
-  .reward-art { height: 190px; min-height: 190px; }
-  .reward-skeleton { min-height: 360px; grid-template-rows: 160px auto auto 1fr; }
-  .reward-skeleton span { height: 160px; }
-}
-@media (max-width: 560px) {
-  .page-loader { display: none !important; }
-  .feature-grid,
-  .provider-grid,
-  .reward-grid,
-  .dashboard-grid,
-  .faq-grid,
-  .how-step-grid { gap: 14px; }
-  .mini-stats { grid-template-columns: 1fr; }
-  .wallet-notes { display: grid; grid-template-columns: 1fr; }
+.empty-action-state > .button,
+.empty-actions .button {
+  min-width: 132px;
 }
