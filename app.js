@@ -1,4 +1,4 @@
-// SkinQuest v11.7 - logo and reward shop filter/sort polish.
+// SkinQuest v11.8 - reward filters, settings polish and larger logo.
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -832,14 +832,114 @@ function getRewardActionState(item, profile) {
   return { disabled: false, label: "Redeem", note: "Manual review after request.", action: "redeem" };
 }
 
+const REWARD_SHOP_PREFS_KEY = "skinquest_reward_shop_preferences";
+const REWARD_SORT_LABELS = {
+  "price-desc": "Price: high to low",
+  "price-asc": "Price: low to high",
+  featured: "Featured",
+  "stock-desc": "Most stock first",
+  "name-asc": "Name: A to Z"
+};
+
+function getRewardShopPreferences() {
+  const defaults = {
+    default_sort: "price-desc",
+    show_out_of_stock: true,
+    compact_cards: false
+  };
+  try {
+    const stored = JSON.parse(localStorage.getItem(REWARD_SHOP_PREFS_KEY) || "{}");
+    const merged = { ...defaults, ...stored };
+    if (!REWARD_SORT_LABELS[merged.default_sort]) merged.default_sort = defaults.default_sort;
+    merged.show_out_of_stock = merged.show_out_of_stock !== false;
+    merged.compact_cards = !!merged.compact_cards;
+    return merged;
+  } catch {
+    return defaults;
+  }
+}
+
+function saveRewardShopPreferences(partial) {
+  const next = { ...getRewardShopPreferences(), ...partial };
+  if (!REWARD_SORT_LABELS[next.default_sort]) next.default_sort = "price-desc";
+  localStorage.setItem(REWARD_SHOP_PREFS_KEY, JSON.stringify(next));
+  applyRewardShopVisualPreferences(next);
+  return next;
+}
+
+function applyRewardShopVisualPreferences(prefs = getRewardShopPreferences()) {
+  document.documentElement.classList.toggle("compact-reward-cards", !!prefs.compact_cards);
+}
+
+function setActiveRewardSort(value) {
+  const safeValue = REWARD_SORT_LABELS[value] ? value : "price-desc";
+  const trigger = qs("#sortFilter");
+  const label = qs("[data-sort-label]");
+  if (trigger) trigger.dataset.value = safeValue;
+  if (label) label.textContent = REWARD_SORT_LABELS[safeValue];
+  qsa("[data-sort-value]").forEach((option) => {
+    const active = option.dataset.sortValue === safeValue;
+    option.classList.toggle("active", active);
+    option.setAttribute("aria-selected", String(active));
+  });
+}
+
+function setRewardSortMenuOpen(open) {
+  const dropdown = qs("[data-sort-dropdown]");
+  const trigger = qs("#sortFilter");
+  if (!dropdown || !trigger) return;
+  dropdown.classList.toggle("open", !!open);
+  trigger.setAttribute("aria-expanded", String(!!open));
+}
+
+function getActiveAvailabilityFilter() {
+  return qs("[data-afford-filter].active")?.dataset.affordFilter || "all";
+}
+
+function setActiveAvailabilityFilter(value) {
+  qsa("[data-afford-filter]").forEach((button) => {
+    const active = button.dataset.affordFilter === value;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+}
+
+function hasActiveRewardFilters() {
+  return !!(
+    (qs("#skinSearch")?.value || "").trim() ||
+    (qs("#minPriceFilter")?.value || "").trim() ||
+    (qs("#maxPriceFilter")?.value || "").trim() ||
+    getActiveAvailabilityFilter() !== "all"
+  );
+}
+
+function clearRewardFilterControls() {
+  const search = qs("#skinSearch");
+  const minPrice = qs("#minPriceFilter");
+  const maxPrice = qs("#maxPriceFilter");
+  if (search) search.value = "";
+  if (minPrice) minPrice.value = "";
+  if (maxPrice) maxPrice.value = "";
+  setActiveAvailabilityFilter("all");
+}
+
 function renderRewards() {
   const grid = qs("#rewardsGrid");
   if (!grid) return;
 
   const search = qs("#skinSearch");
-  const filter = qs("#priceFilter");
+  const minPrice = qs("#minPriceFilter");
+  const maxPrice = qs("#maxPriceFilter");
   const sort = qs("#sortFilter");
-  const afford = qs("#affordFilter");
+  const resultCount = qs("#rewardResultCount");
+  const clearFilters = qs("#clearRewardFilters");
+  const prefs = getRewardShopPreferences();
+  applyRewardShopVisualPreferences(prefs);
+
+  if (!grid.dataset.rewardPrefsHydrated) {
+    setActiveRewardSort(prefs.default_sort);
+    grid.dataset.rewardPrefsHydrated = "true";
+  }
 
   function apply(animate = false) {
     if (animate) grid.classList.add("is-refreshing");
@@ -850,38 +950,49 @@ function renderRewards() {
     };
 
     const query = (search?.value || "").toLowerCase().trim();
-    const priceFilter = filter?.value || "all";
-    const sortValue = sort?.value || "price-desc";
-    const affordValue = afford?.value || "all";
+    const minValue = Number(minPrice?.value || "");
+    const maxValue = Number(maxPrice?.value || "");
+    const hasMin = (minPrice?.value || "").trim() !== "" && Number.isFinite(minValue);
+    const hasMax = (maxPrice?.value || "").trim() !== "" && Number.isFinite(maxValue);
+    const sortValue = sort?.dataset.value || prefs.default_sort || "price-desc";
+    const affordValue = getActiveAvailabilityFilter();
     const balance = Number(currentProfile?.points_balance || 0);
     const signedIn = !!currentUser?.id;
+    const activePrefs = getRewardShopPreferences();
 
     const filtered = rewardItems.filter((item) => {
       const haystack = [item.name, item.description, item.rarity, item.condition, item.market_name].filter(Boolean).join(" ").toLowerCase();
       const cost = getRewardCost(item);
       const available = !rewardIsOutOfStock(item);
       const matchesSearch = !query || haystack.includes(query);
-      const matchesPrice =
-        priceFilter === "all" ||
-        (priceFilter === "low" && cost < 500) ||
-        (priceFilter === "mid" && cost >= 500 && cost <= 1200) ||
-        (priceFilter === "high" && cost > 1200);
+      const matchesMin = !hasMin || cost >= minValue;
+      const matchesMax = !hasMax || cost <= maxValue;
+      const matchesVisibility = activePrefs.show_out_of_stock || available;
       const matchesAfford =
         affordValue === "all" ||
         (affordValue === "affordable" && signedIn && available && cost <= balance) ||
         (affordValue === "in-stock" && available) ||
         (affordValue === "locked" && signedIn && available && cost > balance);
 
-      return matchesSearch && matchesPrice && matchesAfford;
+      return matchesSearch && matchesMin && matchesMax && matchesVisibility && matchesAfford;
     });
 
     const sorted = sortRewardsForShop(filtered, sortValue);
+    if (resultCount) {
+      const total = rewardItems.length;
+      resultCount.textContent = total === 0
+        ? "No rewards loaded yet"
+        : sorted.length === total
+          ? `Showing ${sorted.length.toLocaleString()} rewards`
+          : `Showing ${sorted.length.toLocaleString()} of ${total.toLocaleString()} rewards`;
+    }
+    clearFilters?.classList.toggle("hidden", !hasActiveRewardFilters());
 
     if (sorted.length === 0) {
       grid.innerHTML = `
         <div class="empty-state empty-action-state">
           <strong>No rewards found.</strong>
-          <span>Try another search, clear filters, or earn more coins.</span>
+          <span>Try another search, change your coin range, or clear the active filters.</span>
           <div class="empty-actions">
             <button class="button button-ghost" type="button" data-clear-reward-filters>Clear filters</button>
             <a class="button button-primary" href="earn.html">Earn coins</a>
@@ -889,10 +1000,7 @@ function renderRewards() {
         </div>`;
       settleGrid();
       qs("[data-clear-reward-filters]")?.addEventListener("click", () => {
-        if (search) search.value = "";
-        if (filter) filter.value = "all";
-        if (afford) afford.value = "all";
-        if (sort) sort.value = "price-desc";
+        clearRewardFilterControls();
         window.__skinquestRewardApply?.(true);
       });
       return;
@@ -956,12 +1064,48 @@ function renderRewards() {
     const scheduleApply = () => window.__skinquestRewardApply?.(true);
     const scheduleSearchApply = () => {
       window.clearTimeout(window.__skinquestRewardSearchTimer);
-      window.__skinquestRewardSearchTimer = window.setTimeout(scheduleApply, 110);
+      window.__skinquestRewardSearchTimer = window.setTimeout(scheduleApply, 120);
     };
+
     search?.addEventListener("input", scheduleSearchApply);
-    filter?.addEventListener("change", scheduleApply);
-    sort?.addEventListener("change", scheduleApply);
-    afford?.addEventListener("change", scheduleApply);
+    minPrice?.addEventListener("input", scheduleSearchApply);
+    maxPrice?.addEventListener("input", scheduleSearchApply);
+    clearFilters?.addEventListener("click", () => {
+      clearRewardFilterControls();
+      scheduleApply();
+    });
+
+    qsa("[data-afford-filter]").forEach((button) => {
+      button.addEventListener("click", () => {
+        setActiveAvailabilityFilter(button.dataset.affordFilter || "all");
+        scheduleApply();
+      });
+    });
+
+    sort?.addEventListener("click", (event) => {
+      event.preventDefault();
+      setRewardSortMenuOpen(!qs("[data-sort-dropdown]")?.classList.contains("open"));
+    });
+
+    qsa("[data-sort-value]").forEach((option) => {
+      option.addEventListener("click", (event) => {
+        event.preventDefault();
+        const value = option.dataset.sortValue || "price-desc";
+        setActiveRewardSort(value);
+        saveRewardShopPreferences({ default_sort: value });
+        setRewardSortMenuOpen(false);
+        scheduleApply();
+      });
+    });
+
+    document.addEventListener("click", (event) => {
+      const dropdown = qs("[data-sort-dropdown]");
+      if (dropdown && !dropdown.contains(event.target)) setRewardSortMenuOpen(false);
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") setRewardSortMenuOpen(false);
+    });
   }
   apply(false);
 }
@@ -1136,12 +1280,52 @@ function updateRedeemBlocker(profile) {
   panel.classList.toggle("hidden", hasTrade);
 }
 
+
+function hydrateRewardShopSettingsControls() {
+  const prefs = getRewardShopPreferences();
+  const showOut = qs("#rewardShowOutOfStock");
+  const compact = qs("#rewardCompactCards");
+  if (showOut) showOut.checked = !!prefs.show_out_of_stock;
+  if (compact) compact.checked = !!prefs.compact_cards;
+  qsa("[data-reward-default-sort]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.rewardDefaultSort === prefs.default_sort);
+  });
+}
+
+function getSelectedRewardDefaultSort() {
+  return qs("[data-reward-default-sort].active")?.dataset.rewardDefaultSort || getRewardShopPreferences().default_sort;
+}
+
 async function initSettingsPage() {
   if (!qs("#settingsAuthSection") && !qs("#notificationSettingsForm")) return;
 
   qsa("[data-future-service]").forEach((button) => {
     button.addEventListener("click", () => {
-      showMessage(`${button.dataset.futureService} linking is planned for version 12.`);
+      showMessage(`${button.dataset.futureService} linking is planned for a later version.`);
+    });
+  });
+
+  qsa("[data-reward-default-sort]").forEach((button) => {
+    button.addEventListener("click", () => {
+      qsa("[data-reward-default-sort]").forEach((item) => item.classList.remove("active"));
+      button.classList.add("active");
+    });
+  });
+
+  qs("#rewardShopSettingsForm")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    saveRewardShopPreferences({
+      default_sort: getSelectedRewardDefaultSort(),
+      show_out_of_stock: !!qs("#rewardShowOutOfStock")?.checked,
+      compact_cards: !!qs("#rewardCompactCards")?.checked
+    });
+    hydrateRewardShopSettingsControls();
+    showMessage("Reward browsing preferences saved.", "success");
+  });
+
+  qsa("[data-open-support-shortcut]").forEach((button) => {
+    button.addEventListener("click", () => {
+      document.querySelector("[data-support-toggle]")?.click();
     });
   });
 
@@ -1198,6 +1382,23 @@ async function refreshSettingsPage() {
   if (emailEl) emailEl.textContent = email;
   const idEl = qs("#settingsUserId");
   if (idEl) idEl.textContent = `User ID: ${shortId}`;
+
+  const tradeReady = !!profile?.steam_trade_url && isValidSteamTradeUrl(profile.steam_trade_url);
+  const setReadyItem = (itemSelector, textSelector, state, text) => {
+    const item = qs(itemSelector);
+    const textEl = qs(textSelector);
+    if (textEl) textEl.textContent = text;
+    if (item) {
+      item.classList.toggle("is-ready", state === "ready");
+      item.classList.toggle("is-warning", state === "warning");
+      item.classList.toggle("is-muted", state === "muted");
+    }
+  };
+  setReadyItem("#readinessEmailItem", "#readinessEmailText", "ready", "Connected and signed in");
+  setReadyItem("#readinessTradeItem", "#readinessTradeText", tradeReady ? "ready" : "warning", tradeReady ? "Saved and valid" : "Missing or incomplete");
+  setReadyItem("#readinessRedeemItem", "#readinessRedeemText", tradeReady ? "ready" : "warning", tradeReady ? "Ready to redeem rewards" : "Add trade URL before redeeming");
+
+  hydrateRewardShopSettingsControls();
 
   const tradeUrl = qs("#tradeUrl");
   if (tradeUrl) tradeUrl.value = profile?.steam_trade_url || "";
@@ -2183,6 +2384,7 @@ async function refreshAll() {
 }
 
 async function boot() {
+  applyRewardShopVisualPreferences();
   initNav();
   initAuthModal();
   initSupportWidget();

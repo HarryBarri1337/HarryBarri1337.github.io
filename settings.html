@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="Manage your SkinQuest linked services, notification preferences, Steam trade URL, and account settings." />
   <title>Settings - SkinQuest</title>
-  <link rel="stylesheet" href="styles.css?v=117" />
+  <link rel="stylesheet" href="styles.css?v=118" />
 </head>
 <body>
 <div id="pageLoader" class="page-loader">
@@ -72,12 +72,36 @@
       </div>
     </section>
 
+    <section class="panel settings-readiness-panel">
+      <div class="section-headline">
+        <div>
+          <span class="pill">Account readiness</span>
+          <h2>Redeem setup</h2>
+          <p class="muted">A quick check of the things needed before SkinQuest can send rewards.</p>
+        </div>
+      </div>
+      <div class="readiness-grid settings-status-grid">
+        <article class="readiness-item is-ready" id="readinessEmailItem">
+          <strong>Email login</strong>
+          <span id="readinessEmailText">Connected</span>
+        </article>
+        <article class="readiness-item" id="readinessTradeItem">
+          <strong>Steam trade URL</strong>
+          <span id="readinessTradeText">Checking...</span>
+        </article>
+        <article class="readiness-item" id="readinessRedeemItem">
+          <strong>Redeem status</strong>
+          <span id="readinessRedeemText">Checking...</span>
+        </article>
+      </div>
+    </section>
+
     <section class="panel">
       <div class="section-headline">
         <div>
           <span class="pill">Linked services</span>
           <h2>Connected accounts</h2>
-          <p class="muted">The layout is ready for Steam and Google when auth is enabled in version 12.</p>
+          <p class="muted">Email is active now. Extra sign-in methods can be connected later when they are ready.</p>
         </div>
       </div>
       <div class="linked-services-grid">
@@ -93,17 +117,17 @@
           <div class="linked-service-icon">G</div>
           <div>
             <strong>Google</strong>
-            <p>Planned for version 12</p>
+            <p>Coming later</p>
           </div>
-          <button class="button button-ghost" type="button" data-future-service="Google">v12</button>
+          <span>Later</span>
         </article>
         <article class="linked-service is-planned" id="linkedSteamService">
           <div class="linked-service-icon">ST</div>
           <div>
             <strong>Steam</strong>
-            <p>Planned for version 12</p>
+            <p>Coming later</p>
           </div>
-          <button class="button button-ghost" type="button" data-future-service="Steam">v12</button>
+          <span>Later</span>
         </article>
       </div>
     </section>
@@ -148,10 +172,63 @@
       </form>
     </section>
 
-    <section class="panel danger-zone-lite">
+    <section class="panel">
+      <div class="section-headline">
+        <div>
+          <span class="pill">Reward shop</span>
+          <h2>Reward browsing preferences</h2>
+          <p class="muted">These are saved in this browser and make the reward page open the way you like it.</p>
+        </div>
+      </div>
+      <form id="rewardShopSettingsForm" class="settings-toggle-list reward-settings-form">
+        <div class="settings-choice-field">
+          <span class="settings-field-label">Default reward sort</span>
+          <div class="settings-choice-grid" role="group" aria-label="Default reward sort">
+            <button class="settings-choice active" type="button" data-reward-default-sort="price-desc">High to low</button>
+            <button class="settings-choice" type="button" data-reward-default-sort="price-asc">Low to high</button>
+            <button class="settings-choice" type="button" data-reward-default-sort="featured">Featured</button>
+            <button class="settings-choice" type="button" data-reward-default-sort="stock-desc">Most stock</button>
+            <button class="settings-choice" type="button" data-reward-default-sort="name-asc">A to Z</button>
+          </div>
+        </div>
+        <label class="settings-toggle">
+          <span><strong>Show out-of-stock rewards</strong><small>Keep unavailable rewards visible at the bottom of the shop.</small></span>
+          <input id="rewardShowOutOfStock" type="checkbox" checked />
+        </label>
+        <label class="settings-toggle">
+          <span><strong>Compact reward cards</strong><small>Use shorter reward cards when browsing many skins.</small></span>
+          <input id="rewardCompactCards" type="checkbox" />
+        </label>
+        <button class="button button-primary" type="submit">Save reward preferences</button>
+      </form>
+    </section>
+
+    <section class="panel settings-quick-actions">
+      <div class="section-headline">
+        <div>
+          <span class="pill">Shortcuts</span>
+          <h2>Quick actions</h2>
+          <p class="muted">Jump to the pages you are most likely to need while testing the site.</p>
+        </div>
+      </div>
+      <div class="quick-action-grid">
+        <a class="button button-ghost" href="dashboard.html">Open Dashboard</a>
+        <a class="button button-ghost" href="rewards.html">Open Rewards</a>
+        <button class="button button-ghost" type="button" data-open-support-shortcut>Contact Support</button>
+        <a class="button button-ghost" href="how-it-works.html">How it works</a>
+      </div>
+    </section>
+
+    <section class="panel danger-zone-lite security-checklist-panel">
       <span class="pill">Security</span>
       <h2>Account safety</h2>
-      <p class="muted">SkinQuest staff should never ask for your Steam password, Steam Guard code, API key, or access to your Steam account. Rewards only require a public Steam trade URL.</p>
+      <p class="muted">SkinQuest rewards only need your public Steam trade URL. Never share account access details with anyone.</p>
+      <div class="security-checklist">
+        <span>Never share your Steam password</span>
+        <span>Never share your Steam Guard code</span>
+        <span>Never paste your Steam API key</span>
+        <span>Only save the public trade offer URL</span>
+      </div>
     </section>
   </section>
 </main>
@@ -166,7 +243,7 @@
     <a href="privacy.html">Privacy</a>
     <a href="how-it-works.html">Help</a>
   </div>
-  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="changelog.html">v11.7</a></p>
+  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="changelog.html">v11.8</a></p>
 </footer>
 <div class="modal-backdrop hidden" id="authModal">
   <div class="auth-modal" role="dialog" aria-modal="true">
@@ -213,6 +290,6 @@
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js?v=117"></script>
+<script src="app.js?v=118"></script>
 </body>
 </html>

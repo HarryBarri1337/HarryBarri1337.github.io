@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="Browse fixed CS2 reward listings, check stock, sort by price, and redeem with SkinQuest coins after saving a Steam trade URL." />
   <title>Rewards - SkinQuest</title>
-  <link rel="stylesheet" href="styles.css?v=117" />
+  <link rel="stylesheet" href="styles.css?v=118" />
 </head>
 <body>
 <div id="pageLoader" class="page-loader">
@@ -43,39 +43,52 @@
 
   <section id="rewardAccountNotice" class="reward-account-notice hidden"></section>
 
-  <section class="shop-toolbar reward-toolbar" aria-label="Reward filters">
+  <section class="shop-toolbar reward-toolbar reward-toolbar-v118" aria-label="Reward filters">
     <div class="filter-control filter-search">
       <label for="skinSearch">Search</label>
       <input id="skinSearch" type="search" placeholder="Search rewards..." autocomplete="off" />
     </div>
-    <div class="filter-control">
-      <label for="priceFilter">Price</label>
-      <select id="priceFilter" aria-label="Filter rewards by price">
-        <option value="all">All prices</option>
-        <option value="low">Under 500 coins</option>
-        <option value="mid">500-1200 coins</option>
-        <option value="high">1200+ coins</option>
-      </select>
+
+    <div class="filter-control filter-price-range">
+      <label>Price range</label>
+      <div class="price-range-fields" aria-label="Reward price range">
+        <input id="minPriceFilter" type="number" min="0" step="1" inputmode="numeric" placeholder="Min coins" aria-label="Minimum reward price" />
+        <span class="range-divider">to</span>
+        <input id="maxPriceFilter" type="number" min="0" step="1" inputmode="numeric" placeholder="Max coins" aria-label="Maximum reward price" />
+      </div>
     </div>
-    <div class="filter-control">
-      <label for="affordFilter">Availability</label>
-      <select id="affordFilter" aria-label="Filter rewards by availability">
-        <option value="all">All rewards</option>
-        <option value="affordable">Can afford</option>
-        <option value="in-stock">In stock</option>
-        <option value="locked">Need more coins</option>
-      </select>
+
+    <div class="filter-control filter-availability">
+      <span class="filter-label">Availability</span>
+      <div class="filter-chip-group" role="group" aria-label="Filter rewards by availability">
+        <button class="filter-chip active" type="button" data-afford-filter="all">All rewards</button>
+        <button class="filter-chip" type="button" data-afford-filter="affordable">Can afford</button>
+        <button class="filter-chip" type="button" data-afford-filter="in-stock">In stock</button>
+        <button class="filter-chip" type="button" data-afford-filter="locked">Need more coins</button>
+      </div>
     </div>
-    <div class="filter-control">
-      <label for="sortFilter">Sort</label>
-      <select id="sortFilter" aria-label="Sort rewards">
-        <option value="price-desc" selected>Price: high to low</option>
-        <option value="price-asc">Price: low to high</option>
-        <option value="featured">Featured</option>
-        <option value="stock-desc">Most stock first</option>
-        <option value="name-asc">Name: A to Z</option>
-      </select>
+
+    <div class="filter-control filter-sort">
+      <span class="filter-label">Sort</span>
+      <div class="custom-select" data-sort-dropdown>
+        <button id="sortFilter" class="custom-select-trigger" type="button" data-value="price-desc" aria-haspopup="listbox" aria-expanded="false">
+          <span data-sort-label>Price: high to low</span>
+          <span class="select-chevron" aria-hidden="true">⌄</span>
+        </button>
+        <div class="custom-select-menu" role="listbox" aria-label="Sort rewards">
+          <button class="custom-select-option active" type="button" role="option" aria-selected="true" data-sort-value="price-desc">Price: high to low</button>
+          <button class="custom-select-option" type="button" role="option" aria-selected="false" data-sort-value="price-asc">Price: low to high</button>
+          <button class="custom-select-option" type="button" role="option" aria-selected="false" data-sort-value="featured">Featured</button>
+          <button class="custom-select-option" type="button" role="option" aria-selected="false" data-sort-value="stock-desc">Most stock first</button>
+          <button class="custom-select-option" type="button" role="option" aria-selected="false" data-sort-value="name-asc">Name: A to Z</button>
+        </div>
+      </div>
     </div>
+  </section>
+
+  <section class="reward-shop-status" aria-live="polite">
+    <span id="rewardResultCount">Loading rewards...</span>
+    <button id="clearRewardFilters" class="mini-button clear-filters-button hidden" type="button">Clear filters</button>
   </section>
 
   <section class="reward-grid" id="rewardsGrid"></section>
@@ -91,7 +104,7 @@
     <a href="privacy.html">Privacy</a>
     <a href="how-it-works.html">Help</a>
   </div>
-  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="changelog.html">v11.7</a></p>
+  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="changelog.html">v11.8</a></p>
 </footer>
 <div class="modal-backdrop hidden" id="authModal">
   <div class="auth-modal" role="dialog" aria-modal="true">
@@ -138,6 +151,6 @@
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js?v=117"></script>
+<script src="app.js?v=118"></script>
 </body>
 </html>

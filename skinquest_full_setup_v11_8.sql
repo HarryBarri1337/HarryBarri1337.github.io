@@ -1,6 +1,6 @@
--- SkinQuest full Supabase setup v11.7
+-- SkinQuest full Supabase setup v11.8
 -- Run this in Supabase SQL Editor before public testing.
--- It creates the tables, RLS policies, and RPC functions used by the v11.7 frontend.
+-- It creates the tables, RLS policies, and RPC functions used by the v11.8 frontend.
 
 create extension if not exists pgcrypto;
 
