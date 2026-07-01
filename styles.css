@@ -1,4 +1,4 @@
-/* SkinQuest v11.6 - clean marketplace UI, nav/auth polish and support workflow */
+/* SkinQuest v11.7 - logo and reward shop toolbar polish */
 
 :root {
   --bg: #0b0f16;
@@ -2335,4 +2335,132 @@ main.hero {
   .support-context-grid { grid-template-columns: 1fr; }
   .setup-step { padding: 12px; }
   .account-trigger-copy small { display: none; }
+}
+
+/* v11.7 brand logo + reward shop toolbar polish */
+.brand {
+  min-width: 0;
+}
+.brand-logo {
+  display: block;
+  width: auto;
+  height: 42px;
+  max-width: 210px;
+  object-fit: contain;
+}
+.brand-fallback {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.shop-toolbar.reward-toolbar {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(150px, 0.55fr) minmax(170px, 0.65fr) minmax(190px, 0.7fr);
+  gap: 12px;
+  align-items: end;
+  margin: 0 0 20px;
+  padding: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.028));
+  box-shadow: 0 16px 34px rgba(0,0,0,.20);
+}
+.filter-control {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  position: relative;
+}
+.filter-control label {
+  color: var(--muted);
+  font-size: .76rem;
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.filter-control input,
+.filter-control select {
+  min-height: 46px;
+  border-radius: 13px;
+  border-color: rgba(148, 163, 184, 0.20);
+  background: rgba(11, 15, 22, 0.66);
+  transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+.filter-control input:hover,
+.filter-control select:hover {
+  border-color: rgba(148, 163, 184, 0.34);
+  background: rgba(11, 15, 22, 0.82);
+}
+.filter-control input:focus,
+.filter-control select:focus {
+  transform: translateY(-1px);
+}
+.filter-control select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 38px;
+  cursor: pointer;
+}
+.filter-control:not(.filter-search)::after {
+  content: "⌄";
+  position: absolute;
+  right: 13px;
+  bottom: 12px;
+  color: var(--muted);
+  pointer-events: none;
+  font-weight: 900;
+  transition: transform 160ms ease, color 160ms ease;
+}
+.filter-control:not(.filter-search):focus-within::after {
+  transform: translateY(-1px);
+  color: var(--brand-2);
+}
+.reward-grid {
+  transition: opacity 150ms ease, transform 150ms ease;
+}
+.reward-grid.is-refreshing {
+  opacity: .72;
+  transform: translateY(3px);
+}
+.reward-card {
+  animation: rewardCardIn 180ms ease both;
+}
+@keyframes rewardCardIn {
+  from { opacity: .72; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 1180px) {
+  .shop-toolbar.reward-toolbar {
+    grid-template-columns: minmax(0, 1.2fr) minmax(145px, .8fr) minmax(160px, .9fr) minmax(180px, .9fr);
+  }
+  .brand-logo { max-width: 180px; height: 40px; }
+}
+
+@media (max-width: 900px) {
+  .shop-toolbar.reward-toolbar {
+    grid-template-columns: 1fr 1fr;
+  }
+  .filter-search {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 760px) {
+  .brand-logo { height: 36px; max-width: 170px; }
+  .shop-toolbar.reward-toolbar {
+    grid-template-columns: 1fr;
+    padding: 12px;
+    gap: 10px;
+  }
+  .filter-search {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 560px) {
+  .brand-logo { max-width: 145px; }
 }

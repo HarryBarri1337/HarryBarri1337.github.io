@@ -1,4 +1,4 @@
-// SkinQuest v11.6 - auth copy, cleaner navigation and logout confirmation polish.
+// SkinQuest v11.7 - logo and reward shop filter/sort polish.
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -841,7 +841,14 @@ function renderRewards() {
   const sort = qs("#sortFilter");
   const afford = qs("#affordFilter");
 
-  function apply() {
+  function apply(animate = false) {
+    if (animate) grid.classList.add("is-refreshing");
+    const settleGrid = () => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => grid.classList.remove("is-refreshing"));
+      });
+    };
+
     const query = (search?.value || "").toLowerCase().trim();
     const priceFilter = filter?.value || "all";
     const sortValue = sort?.value || "price-desc";
@@ -880,11 +887,13 @@ function renderRewards() {
             <a class="button button-primary" href="earn.html">Earn coins</a>
           </div>
         </div>`;
+      settleGrid();
       qs("[data-clear-reward-filters]")?.addEventListener("click", () => {
         if (search) search.value = "";
         if (filter) filter.value = "all";
         if (afford) afford.value = "all";
-        apply();
+        if (sort) sort.value = "price-desc";
+        window.__skinquestRewardApply?.(true);
       });
       return;
     }
@@ -938,13 +947,23 @@ function renderRewards() {
         requestRedeem(Number(button.dataset.redeem), button);
       });
     });
+    settleGrid();
   }
 
-  search?.addEventListener("input", apply);
-  filter?.addEventListener("change", apply);
-  sort?.addEventListener("change", apply);
-  afford?.addEventListener("change", apply);
-  apply();
+  window.__skinquestRewardApply = apply;
+  if (!grid.dataset.rewardFiltersBound) {
+    grid.dataset.rewardFiltersBound = "true";
+    const scheduleApply = () => window.__skinquestRewardApply?.(true);
+    const scheduleSearchApply = () => {
+      window.clearTimeout(window.__skinquestRewardSearchTimer);
+      window.__skinquestRewardSearchTimer = window.setTimeout(scheduleApply, 110);
+    };
+    search?.addEventListener("input", scheduleSearchApply);
+    filter?.addEventListener("change", scheduleApply);
+    sort?.addEventListener("change", scheduleApply);
+    afford?.addEventListener("change", scheduleApply);
+  }
+  apply(false);
 }
 
 async function requestRedeem(rewardId, sourceButton = null) {
