@@ -1,4 +1,4 @@
-/* SkinQuest v11.5 - clean marketplace UI, user flow, admin workflow and support polish */
+/* SkinQuest v11.6 - clean marketplace UI, nav/auth polish and support workflow */
 
 :root {
   --bg: #0b0f16;
@@ -2198,7 +2198,7 @@ main.hero {
 }
 .compact-empty { margin-top: 12px; padding: 12px; }
 
-/* v11.5 user flow, reward actions, admin workflow and changelog polish */
+/* v11.6 auth, nav and logout polish */
 .site-version {
   color: var(--muted);
   text-decoration: none;

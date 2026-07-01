@@ -1,10 +1,10 @@
-// SkinQuest v11.5 - user flow, reward CTAs, admin workflow and changelog polish.
+// SkinQuest v11.6 - auth copy, cleaner navigation and logout confirmation polish.
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const ADMIN_EMAILS = []; // v11.5: admin access must come from Supabase admin_users via is_admin().
+const ADMIN_EMAILS = []; // v11.6: admin access must come from Supabase admin_users via is_admin().
 const CPX_APP_ID = 33831;
 const SUPPORT_EMAIL = ""; // Optional mailto fallback. Supabase support_requests is used first for signed-in users.
 
@@ -166,6 +166,19 @@ function showConfirm(message, options = {}) {
     requestAnimationFrame(() => backdrop.classList.add("show"));
     setTimeout(() => backdrop.querySelector("[data-confirm-ok]")?.focus(), 80);
   });
+}
+
+async function confirmAndSignOut() {
+  const confirmed = await showConfirm("Are you sure you want to log out of SkinQuest?", {
+    title: "Log out?",
+    confirmText: "Log out",
+    cancelText: "Stay signed in",
+    icon: "↪",
+    danger: true
+  });
+  if (!confirmed) return;
+  await sb.auth.signOut();
+  location.href = "index.html";
 }
 
 function finishPageLoad() {
@@ -416,7 +429,12 @@ function initAuthModal() {
       return;
     }
 
-    showMessage("Account created. Check your inbox and click the SkinQuest confirmation link.", "success");
+    const noNewIdentity = data?.user && Array.isArray(data.user.identities) && data.user.identities.length === 0;
+    if (noNewIdentity) {
+      showMessage("This email may already have a SkinQuest account. Try signing in instead.", "error");
+    } else {
+      showMessage("Check your inbox for a confirmation link. If you already have an account, use Sign in instead.", "success");
+    }
     setAuthMode("login");
   });
 
@@ -494,7 +512,6 @@ async function updateNavAuthState() {
         <span class="account-avatar">${escapeHtml(userInitial(user))}</span>
         <span class="account-trigger-copy">
           <strong>${escapeHtml(email.split("@")[0] || "Account")}</strong>
-          <small>${escapeHtml(levelText)}</small>
         </span>
         <span class="account-chevron">⌄</span>
       </button>
@@ -503,13 +520,8 @@ async function updateNavAuthState() {
           <span class="account-avatar large">${escapeHtml(userInitial(user))}</span>
           <div>
             <strong>${escapeHtml(email)}</strong>
-            <small>${coins.toLocaleString()} coins · ${escapeHtml(levelText)}${isAdmin(user) ? ` · ${escapeHtml(currentAdminRole)}` : ""}</small>
+            <small>${coins.toLocaleString()} coins${isAdmin(user) ? ` · ${escapeHtml(currentAdminRole)}` : ""}</small>
           </div>
-        </div>
-        <div class="account-dropdown-progress" aria-label="Level progress">
-          <span>Level progress</span>
-          <strong>${Math.round(levelProgress)}%</strong>
-          <div class="level-pill-track"><span style="width:${levelProgress}%"></span></div>
         </div>
         <a href="dashboard.html">Dashboard</a>
         <a href="settings.html">Settings</a>
@@ -539,10 +551,7 @@ async function updateNavAuthState() {
     });
   }
 
-  qs("#navLogoutButton")?.addEventListener("click", async () => {
-    await sb.auth.signOut();
-    location.href = "index.html";
-  });
+  qs("#navLogoutButton")?.addEventListener("click", confirmAndSignOut);
 }
 
 async function updateHomeAuthState() {
@@ -1326,10 +1335,7 @@ async function initDashboard() {
     });
   }
 
-  qs("#logoutButton")?.addEventListener("click", async () => {
-    await sb.auth.signOut();
-    location.href = "index.html";
-  });
+  qs("#logoutButton")?.addEventListener("click", confirmAndSignOut);
 
   await refreshDashboard();
 }
