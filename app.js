@@ -1,4 +1,4 @@
-// SkinQuest v11.8.1 - reward filter polish hotfix.
+// SkinQuest v11.8.2 - pre-meeting polish hotfix.
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -977,8 +977,7 @@ function renderRewards() {
       const matchesAfford =
         affordValue === "all" ||
         (affordValue === "affordable" && signedIn && available && cost <= balance) ||
-        (affordValue === "in-stock" && available) ||
-        (affordValue === "locked" && signedIn && available && cost > balance);
+        (affordValue === "in-stock" && available);
 
       return matchesSearch && matchesMin && matchesMax && matchesVisibility && matchesAfford;
     });
@@ -1194,8 +1193,8 @@ async function requestRedeem(rewardId, sourceButton = null) {
     const errorText = String(error.message || "");
     if (errorText.toLowerCase().includes("trade url") || errorText.toLowerCase().includes("trade link")) {
       const goDashboard = await showConfirm(
-        "Your reward request was not created because your Steam trade URL is missing or was not saved correctly. Add it on the Dashboard, save it, then try redeeming again.",
-        { title: "Steam trade link required", confirmText: "Open Dashboard", cancelText: "Stay on rewards", icon: "↗" }
+        "Your reward request was not created because your Steam trade URL is missing or was not saved correctly. Add it in Settings, save it, then try redeeming again.",
+        { title: "Steam trade link required", confirmText: "Open Settings", cancelText: "Stay on rewards", icon: "↗" }
       );
       if (goDashboard) location.href = "settings.html#tradeForm";
       await updateRewardAccountNotice();

@@ -1,4 +1,4 @@
-/* SkinQuest v11.8.1 - reward filter polish hotfix */
+/* SkinQuest v11.8.2 - pre-meeting polish hotfix */
 
 :root {
   --bg: #0b0f16;
@@ -2848,5 +2848,32 @@ html.compact-reward-cards .reward-actions-smart small {
 @media (max-width: 560px) {
   .filter-chip {
     flex-basis: 100%;
+  }
+}
+
+
+/* v11.8.2 hotfix: cleaner availability pills and pre-admin nav hiding */
+.shop-toolbar.reward-toolbar.reward-toolbar-v118 {
+  grid-template-columns: minmax(205px, 1fr) minmax(225px, .74fr) minmax(300px, .88fr) minmax(210px, .72fr);
+}
+.filter-availability .filter-chip-group {
+  justify-content: flex-start;
+  align-content: center;
+}
+.filter-availability .filter-chip {
+  padding-inline: 12px;
+}
+.linked-services-grid:has(#linkedEmailService:only-child),
+.settings-page .linked-services-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (min-width: 1181px) {
+  .filter-availability .filter-chip-group {
+    min-width: 0;
+  }
+}
+@media (max-width: 1180px) {
+  .shop-toolbar.reward-toolbar.reward-toolbar-v118 {
+    grid-template-columns: 1fr 1fr;
   }
 }
