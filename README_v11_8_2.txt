@@ -22,4 +22,3 @@ SQL:
 Assets:
 - No assets folder is included. Use your existing assets package.
 
-Deploy test
