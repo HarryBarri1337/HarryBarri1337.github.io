@@ -1,4 +1,4 @@
-// SkinQuest v11.8 - reward filters, settings polish and larger logo.
+// SkinQuest v11.8.1 - reward filter polish hotfix.
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -923,6 +923,12 @@ function clearRewardFilterControls() {
   setActiveAvailabilityFilter("all");
 }
 
+function cleanCoinRangeInput(input) {
+  if (!input) return;
+  const clean = String(input.value || "").replace(/[^0-9]/g, "");
+  if (input.value !== clean) input.value = clean;
+}
+
 function renderRewards() {
   const grid = qs("#rewardsGrid");
   if (!grid) return;
@@ -1068,8 +1074,8 @@ function renderRewards() {
     };
 
     search?.addEventListener("input", scheduleSearchApply);
-    minPrice?.addEventListener("input", scheduleSearchApply);
-    maxPrice?.addEventListener("input", scheduleSearchApply);
+    minPrice?.addEventListener("input", () => { cleanCoinRangeInput(minPrice); scheduleSearchApply(); });
+    maxPrice?.addEventListener("input", () => { cleanCoinRangeInput(maxPrice); scheduleSearchApply(); });
     clearFilters?.addEventListener("click", () => {
       clearRewardFilterControls();
       scheduleApply();

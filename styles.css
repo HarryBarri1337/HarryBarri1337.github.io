@@ -1,4 +1,4 @@
-/* SkinQuest v11.8 - reward filters, settings polish and larger logo */
+/* SkinQuest v11.8.1 - reward filter polish hotfix */
 
 :root {
   --bg: #0b0f16;
@@ -2792,4 +2792,61 @@ html.compact-reward-cards .reward-actions-smart small {
   color: var(--muted);
   background: rgba(255,255,255,.045);
   border-color: rgba(255,255,255,.10);
+}
+
+
+/* v11.8.1 reward toolbar hotfix: text-only price inputs and one-line availability */
+.price-range-fields input {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+.price-range-fields input::-webkit-outer-spin-button,
+.price-range-fields input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
+}
+.shop-toolbar.reward-toolbar.reward-toolbar-v118 {
+  grid-template-columns: minmax(205px, 1fr) minmax(225px, .72fr) minmax(380px, 1.18fr) minmax(210px, .72fr);
+}
+.filter-chip-group {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.filter-chip-group::-webkit-scrollbar { display: none; }
+.filter-chip {
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: 0 9px;
+  font-size: .78rem;
+  white-space: nowrap;
+}
+@media (min-width: 1181px) {
+  .filter-availability .filter-label { margin-left: 1px; }
+}
+@media (max-width: 1180px) {
+  .filter-chip-group {
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+  .filter-chip {
+    flex: 0 1 auto;
+  }
+}
+@media (max-width: 760px) {
+  .filter-chip-group {
+    display: flex;
+    flex-wrap: wrap;
+  }
+  .filter-chip {
+    flex: 1 1 calc(50% - 7px);
+  }
+}
+@media (max-width: 560px) {
+  .filter-chip {
+    flex-basis: 100%;
+  }
 }
