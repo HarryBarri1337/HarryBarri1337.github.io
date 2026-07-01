@@ -1,0 +1,56 @@
+SkinQuest v11.8.3 - real support email notification setup
+
+The website can now require a reply email and save support requests from guests or signed-in users.
+Email notification is server-side and uses:
+
+support_requests INSERT -> Supabase Database Webhook -> Edge Function -> Resend email -> support@skinquestcs.com
+
+1) Run SQL upgrade
+Run skinquest_upgrade_v11_8_3_from_v11_8_2.sql in Supabase SQL Editor.
+This allows anonymous and signed-in users to insert support requests with an email address.
+
+2) Create/verify Resend sender
+- Create a Resend account.
+- Add/verify skinquestcs.com in Resend.
+- Add the DNS records Resend gives you inside Simply DNS.
+- Create a Resend API key.
+
+3) Deploy Edge Function
+Install/use Supabase CLI, then from the project folder:
+
+supabase login
+supabase link --project-ref ubvkupqgigfxehprsoit
+supabase secrets set RESEND_API_KEY=YOUR_RESEND_API_KEY
+supabase secrets set SUPPORT_NOTIFY_TO=support@skinquestcs.com
+supabase secrets set SUPPORT_NOTIFY_FROM="SkinQuest Support <support@skinquestcs.com>"
+supabase secrets set SUPPORT_WEBHOOK_SECRET=MAKE_A_LONG_RANDOM_SECRET
+supabase functions deploy support-notify
+
+4) Create Database Webhook in Supabase
+Go to Database -> Webhooks -> Create webhook.
+- Name: support-notify
+- Table: public.support_requests
+- Event: INSERT
+- Type: HTTP Request
+- Method: POST
+- URL: https://ubvkupqgigfxehprsoit.supabase.co/functions/v1/support-notify
+- Headers:
+  x-support-secret: SAME_LONG_RANDOM_SECRET_FROM_STEP_3
+  Content-Type: application/json
+
+5) Test
+- Open the site.
+- Submit a support request from the widget with an email.
+- Check Admin -> Support inbox.
+- Check support@skinquestcs.com for the email notification.
+
+Important:
+Never put the Resend API key, SMTP password, or webhook secret in app.js or any frontend file.
+
+6) GitHub deploy note
+If your GitHub Actions deploy uploads everything to Simply, add these excludes to deploy.yml so setup/function source files are not uploaded as public website files:
+
+**/supabase/**
+**/SUPPORT_NOTIFY_SETUP*.txt
+
+The function source is not secret, but it does not need to be publicly served from the website.

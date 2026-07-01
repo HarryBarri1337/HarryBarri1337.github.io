@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="SkinQuest version history and recent platform updates." />
   <title>Changelog - SkinQuest</title>
-  <link rel="stylesheet" href="styles.css?v=1182" />
+  <link rel="stylesheet" href="styles.css?v=1183" />
 </head>
 <body>
 <div id="pageLoader" class="page-loader">
@@ -41,6 +41,12 @@
   <section class="panel changelog-list">
     <article class="changelog-entry current">
       <span class="pill">Current</span>
+      <h2>v11.8.3 - Support notification prep</h2>
+      <p>Gave the floating support widget a cleaner look, added a required reply email field, added support@skinquestcs.com contact links, and included the Supabase Edge Function files needed for real server-side support email notifications.</p>
+    </article>
+
+    <article class="changelog-entry">
+      <span class="pill">Previous</span>
       <h2>v11.8.2 - Pre-meeting polish hotfix</h2>
       <p>Removed the extra Need more coins availability chip, tightened the availability filter layout, hid unfinished Steam/Google auth buttons, hid the Admin nav link until admin access is confirmed, and fixed trade-link wording to point to Settings.</p>
     </article>
@@ -93,8 +99,9 @@
     <a href="terms.html">Terms</a>
     <a href="privacy.html">Privacy</a>
     <a href="how-it-works.html">Help</a>
+    <a href="mailto:support@skinquestcs.com">Support</a>
   </div>
-  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="changelog.html">v11.8.2</a></p>
+  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="changelog.html">v11.8.3</a></p>
 </footer>
 <div class="modal-backdrop hidden" id="authModal">
   <div class="auth-modal" role="dialog" aria-modal="true">
@@ -141,6 +148,6 @@
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js?v=1182"></script>
+<script src="app.js?v=1183"></script>
 </body>
 </html>

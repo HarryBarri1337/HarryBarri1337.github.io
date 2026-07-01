@@ -1,6 +1,6 @@
--- SkinQuest full Supabase setup v11.8.2
+-- SkinQuest full Supabase setup v11.8.3
 -- Run this in Supabase SQL Editor before public testing.
--- It creates the tables, RLS policies, and RPC functions used by the v11.8.2 frontend.
+-- It creates the tables, RLS policies, and RPC functions used by the v11.8.3 frontend.
 
 create extension if not exists pgcrypto;
 
@@ -775,9 +775,17 @@ for select to authenticated
 using (user_id = auth.uid() or public.is_admin());
 
 drop policy if exists support_requests_insert_own on public.support_requests;
-create policy support_requests_insert_own on public.support_requests
-for insert to authenticated
-with check (user_id = auth.uid());
+drop policy if exists support_requests_insert_contact on public.support_requests;
+create policy support_requests_insert_contact on public.support_requests
+for insert to anon, authenticated
+with check (
+  (user_id is null or user_id = auth.uid())
+  and account_email is not null
+  and position('@' in account_email) > 1
+  and char_length(account_email) <= 254
+  and char_length(topic) between 2 and 80
+  and char_length(message) between 8 and 1800
+);
 
 drop policy if exists support_requests_admin_update on public.support_requests;
 create policy support_requests_admin_update on public.support_requests
@@ -796,9 +804,11 @@ grant select on public.redemption_requests to authenticated;
 grant select on public.coin_adjustments to authenticated;
 grant select on public.admin_users to authenticated;
 grant select on public.linked_services to authenticated;
+grant insert on public.support_requests to anon;
 grant select, insert on public.support_requests to authenticated;
 grant insert, update on public.reward_items to authenticated;
 grant update on public.support_requests to authenticated;
+grant usage, select on public.support_requests_id_seq to anon;
 grant usage, select on all sequences in schema public to authenticated;
 
 grant execute on function public.is_admin() to authenticated;

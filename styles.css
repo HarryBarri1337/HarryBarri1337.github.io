@@ -1,4 +1,4 @@
-/* SkinQuest v11.8.2 - pre-meeting polish hotfix */
+/* SkinQuest v11.8.3 - pre-meeting polish hotfix */
 
 :root {
   --bg: #0b0f16;
@@ -2852,7 +2852,7 @@ html.compact-reward-cards .reward-actions-smart small {
 }
 
 
-/* v11.8.2 hotfix: cleaner availability pills and pre-admin nav hiding */
+/* v11.8.3 hotfix: cleaner availability pills and pre-admin nav hiding */
 .shop-toolbar.reward-toolbar.reward-toolbar-v118 {
   grid-template-columns: minmax(205px, 1fr) minmax(225px, .74fr) minmax(300px, .88fr) minmax(210px, .72fr);
 }
@@ -2876,4 +2876,118 @@ html.compact-reward-cards .reward-actions-smart small {
   .shop-toolbar.reward-toolbar.reward-toolbar-v118 {
     grid-template-columns: 1fr 1fr;
   }
+}
+
+/* v11.8.3 support makeover + pre-test support contact polish */
+.support-widget {
+  right: 20px;
+  bottom: 20px;
+}
+.support-fab {
+  width: auto;
+  min-width: 68px;
+  height: 52px;
+  padding: 0 13px 0 9px;
+  grid-template-columns: 32px auto;
+  gap: 7px;
+  border-radius: 999px;
+  border-color: rgba(246, 207, 114, .42);
+  background:
+    radial-gradient(circle at 24% 22%, rgba(255,255,255,.32), transparent 24px),
+    linear-gradient(135deg, #f6cf72, #e8b34d 48%, #9a6224);
+  color: #160f07;
+  box-shadow: 0 18px 48px rgba(0,0,0,.36), 0 0 0 5px rgba(232,179,77,.10);
+}
+.support-fab span {
+  width: 32px;
+  height: 32px;
+  background: rgba(12,18,28,.88);
+  border: 1px solid rgba(255,255,255,.16);
+  color: var(--brand-2);
+  font-size: 1rem;
+  box-shadow: inset 0 0 18px rgba(246,207,114,.08);
+}
+.support-fab small {
+  display: block;
+  font-weight: 950;
+  letter-spacing: -.02em;
+  line-height: 1;
+}
+.support-fab:hover,
+.support-fab.open {
+  transform: translateY(-3px);
+  box-shadow: 0 22px 58px rgba(0,0,0,.42), 0 0 0 6px rgba(232,179,77,.13);
+}
+.support-panel {
+  width: min(390px, calc(100vw - 28px));
+  padding: 18px;
+  border-radius: 22px;
+  border-color: rgba(226,232,240,.20);
+  background:
+    radial-gradient(circle at 15% 0%, rgba(232,179,77,.12), transparent 11rem),
+    linear-gradient(180deg, rgba(22,31,47,.985), rgba(12,18,28,.985));
+}
+.support-panel-head {
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+.support-kicker {
+  display: inline-flex;
+  width: fit-content;
+  margin-bottom: 6px;
+  padding: 4px 8px;
+  border: 1px solid rgba(232,179,77,.22);
+  border-radius: 999px;
+  color: var(--brand-2);
+  background: rgba(232,179,77,.075);
+  font-size: .72rem;
+  font-weight: 950;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.support-panel-head strong {
+  font-size: 1.22rem;
+  letter-spacing: -.035em;
+}
+.support-panel-head p {
+  max-width: 260px;
+  line-height: 1.4;
+}
+.support-form {
+  gap: 12px;
+}
+.support-form input,
+.support-form select,
+.support-form textarea {
+  background: rgba(7, 12, 20, .68);
+  border-color: rgba(226,232,240,.17);
+}
+.support-form textarea {
+  min-height: 108px;
+}
+.support-form a {
+  color: var(--brand-2);
+  font-weight: 850;
+  text-decoration: none;
+}
+.support-form a:hover {
+  text-decoration: underline;
+}
+.support-honeypot {
+  position: absolute !important;
+  left: -9999px !important;
+  width: 1px !important;
+  height: 1px !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+.support-form .button[disabled] {
+  opacity: .7;
+  cursor: wait;
+}
+@media (max-width: 560px) {
+  .support-widget { right: 12px; bottom: 12px; }
+  .support-fab { min-width: 62px; height: 50px; padding-right: 11px; }
+  .support-fab small { display: none; }
+  .support-panel { width: min(380px, calc(100vw - 24px)); bottom: 64px; padding: 16px; }
 }

@@ -1,4 +1,4 @@
-// SkinQuest v11.8.2 - pre-meeting polish hotfix.
+// SkinQuest v11.8.3 - pre-meeting polish hotfix.
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -6,7 +6,7 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const ADMIN_EMAILS = []; // v11.6: admin access must come from Supabase admin_users via is_admin().
 const CPX_APP_ID = 33831;
-const SUPPORT_EMAIL = ""; // Optional mailto fallback. Supabase support_requests is used first for signed-in users.
+const SUPPORT_EMAIL = "support@skinquestcs.com"; // Public support contact. Form requests are saved to Supabase and can trigger server-side email notifications.
 
 let rewardItems = [];
 let adminRewardItems = [];
@@ -30,6 +30,10 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function isValidEmailAddress(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i.test(String(value || "").trim());
 }
 
 function formatDate(value) {
@@ -1438,17 +1442,22 @@ function initSupportWidget() {
   shell.dataset.supportWidget = "true";
   shell.innerHTML = `
     <button class="support-fab" type="button" aria-expanded="false" aria-label="Open support" data-support-toggle>
-      <span>?</span>
+      <span aria-hidden="true">✦</span>
+      <small>Help</small>
     </button>
     <section class="support-panel" aria-label="Support panel" aria-hidden="true" data-support-panel>
       <div class="support-panel-head">
         <div>
+          <span class="support-kicker">SkinQuest support</span>
           <strong>Need help?</strong>
-          <p>Support usually replies within 24h.</p>
+          <p>Send a support request and we’ll reply by email if needed.</p>
         </div>
         <button type="button" aria-label="Close support" data-support-close>×</button>
       </div>
       <form class="support-form" data-support-form>
+        <label>Email
+          <input data-support-email type="email" placeholder="you@example.com" autocomplete="email" required />
+        </label>
         <label>Topic
           <select data-support-topic>
             <option>Coins did not arrive</option>
@@ -1459,10 +1468,11 @@ function initSupportWidget() {
           </select>
         </label>
         <label>Message
-          <textarea data-support-message rows="4" placeholder="Tell us what happened. Include reward name, offer, or trade details if relevant."></textarea>
+          <textarea data-support-message rows="4" maxlength="1800" placeholder="Tell us what happened. Include reward name, offer, or trade details if relevant." required></textarea>
         </label>
-        <button class="button button-primary" type="submit">Send request</button>
-        <p class="fine-print">Signed-in requests are saved to support. Support usually replies within 24h.</p>
+        <input class="support-honeypot" data-support-website tabindex="-1" autocomplete="off" aria-hidden="true" placeholder="Website" />
+        <button class="button button-primary" type="submit" data-support-submit>Send request</button>
+        <p class="fine-print">Requests are saved to the admin support inbox. For urgent issues, email <a href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a>.</p>
       </form>
     </section>
   `;
@@ -1472,66 +1482,76 @@ function initSupportWidget() {
   const toggle = shell.querySelector("[data-support-toggle]");
   const panel = shell.querySelector("[data-support-panel]");
   const close = shell.querySelector("[data-support-close]");
+  const emailInput = shell.querySelector("[data-support-email]");
   const setOpen = (open) => {
     panel.classList.toggle("open", open);
     panel.setAttribute("aria-hidden", String(!open));
     toggle.classList.toggle("open", open);
     toggle.setAttribute("aria-expanded", String(open));
+    if (open) setTimeout(() => emailInput?.focus(), 80);
   };
 
-  toggle.addEventListener("click", () => setOpen(!panel.classList.contains("open")));
+  toggle.addEventListener("click", async () => {
+    const willOpen = !panel.classList.contains("open");
+    if (willOpen && emailInput && !emailInput.value) {
+      const user = await getSessionUser();
+      if (user?.email) emailInput.value = user.email;
+    }
+    setOpen(willOpen);
+  });
   close.addEventListener("click", () => setOpen(false));
 
   shell.querySelector("[data-support-form]")?.addEventListener("submit", async (event) => {
     event.preventDefault();
+    const form = event.currentTarget;
     const topic = shell.querySelector("[data-support-topic]")?.value || "Support request";
+    const email = shell.querySelector("[data-support-email]")?.value.trim().toLowerCase();
     const message = shell.querySelector("[data-support-message]")?.value.trim();
-    if (!message) return showMessage("Write a short message before sending support.", "error");
+    const honeypot = shell.querySelector("[data-support-website]")?.value.trim();
+    const submitButton = shell.querySelector("[data-support-submit]");
 
-    const user = await getSessionUser();
-    const draft = [
-      `Topic: ${topic}`,
-      `Account: ${user?.email || "Not signed in"}`,
-      `Page: ${location.href}`,
-      "",
-      message
-    ].join("\n");
+    if (honeypot) return;
+    if (!email || !isValidEmailAddress(email)) return showMessage("Enter a valid email so support can reply.", "error");
+    if (!message || message.length < 8) return showMessage("Write a short message before sending support.", "error");
 
-    if (user?.id) {
-      try {
-        const context = getSupportContext(user);
-        const { error } = await sb.from("support_requests").insert({
-          user_id: user.id,
-          topic,
-          message,
-          page_url: context.page_url,
-          user_agent: context.user_agent,
-          account_email: context.account_email,
-          browser_language: context.browser_language
-        });
-        if (!error) {
-          showMessage("Support request sent. Support usually replies within 24h.", "success");
-          shell.querySelector("[data-support-message]").value = "";
-          setOpen(false);
-          return;
-        }
-      } catch {}
-    }
+    submitButton.disabled = true;
+    const previousText = submitButton.textContent;
+    submitButton.textContent = "Sending...";
 
     try {
-      await navigator.clipboard?.writeText(draft);
-    } catch {}
+      const user = await getSessionUser();
+      const context = getSupportContext(user);
+      const { error } = await sb.from("support_requests").insert({
+        user_id: user?.id || null,
+        topic,
+        message,
+        page_url: context.page_url,
+        user_agent: context.user_agent,
+        account_email: email,
+        browser_language: context.browser_language
+      });
 
-    if (SUPPORT_EMAIL) {
+      if (error) throw error;
+
+      showMessage("Support request sent. We’ll reply by email if needed.", "success");
+      form.reset();
+      setOpen(false);
+    } catch (error) {
+      console.error("Support request failed", error);
       const subject = encodeURIComponent(`SkinQuest support - ${topic}`);
-      const body = encodeURIComponent(draft);
+      const body = encodeURIComponent([
+        `Topic: ${topic}`,
+        `Email: ${email}`,
+        `Page: ${location.href}`,
+        "",
+        message
+      ].join("\n"));
+      showMessage("Could not save the support request. Opening email instead.", "error");
       location.href = `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`;
-      showMessage("Opening your email app with the support message.", "success");
-    } else {
-      showMessage("Support message copied. Send it to the SkinQuest team through the current support channel.", "success");
+    } finally {
+      submitButton.disabled = false;
+      submitButton.textContent = previousText || "Send request";
     }
-
-    shell.querySelector("[data-support-message]").value = "";
   });
 }
 

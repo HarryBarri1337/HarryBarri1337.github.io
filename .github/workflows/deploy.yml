@@ -33,3 +33,5 @@ jobs:
             **/skinquest_upgrade*.sql
             **/skinquest_full_setup*.sql
             **/README*.txt
+            **/supabase/**
+            **/SUPPORT_NOTIFY_SETUP*.txt
