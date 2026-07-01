@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="Browse fixed CS2 reward listings, check stock, sort by price, and redeem with SkinQuest coins after saving a Steam trade URL." />
   <title>Rewards - SkinQuest</title>
-  <link rel="stylesheet" href="styles.css?v=116" />
+  <link rel="stylesheet" href="styles.css?v=117" />
 </head>
 <body>
 <div id="pageLoader" class="page-loader">
@@ -66,7 +66,11 @@
     </select>
   </section>
 
-  <section class="reward-grid" id="rewardsGrid"></section>
+  <section class="reward-grid is-loading" id="rewardsGrid" aria-busy="true">
+    <article class="reward-skeleton" aria-hidden="true"><span></span><strong></strong><p></p><em></em></article>
+    <article class="reward-skeleton" aria-hidden="true"><span></span><strong></strong><p></p><em></em></article>
+    <article class="reward-skeleton" aria-hidden="true"><span></span><strong></strong><p></p><em></em></article>
+  </section>
 </main>
 
 <footer class="site-footer">
@@ -79,7 +83,7 @@
     <a href="privacy.html">Privacy</a>
     <a href="how-it-works.html">Help</a>
   </div>
-  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="changelog.html">v11.6</a></p>
+  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="changelog.html">v11.7</a></p>
 </footer>
 <div class="modal-backdrop hidden" id="authModal">
   <div class="auth-modal" role="dialog" aria-modal="true">
@@ -126,6 +130,6 @@
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js?v=116"></script>
+<script src="app.js?v=117"></script>
 </body>
 </html>
