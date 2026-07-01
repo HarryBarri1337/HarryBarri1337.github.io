@@ -1,10 +1,10 @@
-// SkinQuest v11.3 - test-phase loading polish, mobile header cleanup and settings spacing.
+// SkinQuest v11.4 - test-phase admin roles, nav level progress and asset path cleanup.
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const ADMIN_EMAILS = []; // v11.3: admin access must come from Supabase admin_users via is_admin().
+const ADMIN_EMAILS = []; // v11.4: admin access must come from Supabase admin_users via is_admin().
 const CPX_APP_ID = 33831;
 const SUPPORT_EMAIL = ""; // Optional mailto fallback. Supabase support_requests is used first for signed-in users.
 
@@ -13,6 +13,7 @@ let adminRewardItems = [];
 let currentUser = null;
 let currentProfile = null;
 let currentIsAdmin = false;
+let currentAdminRole = null;
 
 function qs(selector) {
   return document.querySelector(selector);
@@ -152,16 +153,33 @@ function isAdmin(user) {
   return !!user?.id && !!currentIsAdmin;
 }
 
-async function fetchAdminStatus(user) {
-  if (!user?.id) return false;
+function isOwner(user = currentUser) {
+  return !!user?.id && String(currentAdminRole || "").toLowerCase() === "owner";
+}
+
+async function fetchAdminRole(user) {
+  if (!user?.id) return null;
+
   try {
-    const { data, error } = await sb.rpc("is_admin");
-    if (!error && typeof data === "boolean") return data;
+    const { data, error } = await sb.rpc("get_admin_role");
+    if (!error && data) return String(data);
   } catch (error) {
-    console.warn("Admin status check failed:", error);
+    console.warn("Admin role check failed:", error);
   }
 
-  return false;
+  try {
+    const { data, error } = await sb.rpc("is_admin");
+    if (!error && data === true) return "admin";
+  } catch (error) {
+    console.warn("Fallback admin status check failed:", error);
+  }
+
+  return null;
+}
+
+async function fetchAdminStatus(user) {
+  currentAdminRole = await fetchAdminRole(user);
+  return !!currentAdminRole;
 }
 
 async function requireUser() {
@@ -412,14 +430,24 @@ async function updateNavAuthState() {
   }
 
   let coins = 0;
+  let navLevel = null;
   try {
     const profile = await ensureProfile(user);
     currentProfile = profile;
     coins = Number(profile.points_balance || 0);
+    const totalEarned = await getTotalEarned(user.id);
+    navLevel = getLevelProgress(totalEarned);
   } catch {}
 
   const email = user.email || "Account";
-  const adminLink = isAdmin(user) ? `<a href="admin.html">Admin panel</a>` : "";
+  const adminLabel = isOwner(user) ? "Owner panel" : "Admin panel";
+  const adminLink = isAdmin(user) ? `<a href="admin.html">${adminLabel}</a>` : "";
+  const levelPill = navLevel ? `
+    <a class="level-pill" href="dashboard.html" aria-label="Level ${navLevel.level} progress">
+      <span class="level-pill-label">Lvl ${navLevel.level}</span>
+      <span class="level-pill-track"><span style="width:${navLevel.progress}%"></span></span>
+    </a>
+  ` : "";
 
   actions.innerHTML = `
     <a class="coin-pill" href="dashboard.html" aria-label="Your coin balance">
@@ -427,6 +455,7 @@ async function updateNavAuthState() {
       <strong>${coins.toLocaleString()}</strong>
       <span>coins</span>
     </a>
+    ${levelPill}
     <div class="account-menu" data-account-menu>
       <button class="account-trigger" type="button" id="accountMenuButton" aria-haspopup="true" aria-expanded="false">
         <span class="account-avatar">${escapeHtml(userInitial(user))}</span>
@@ -440,7 +469,7 @@ async function updateNavAuthState() {
           <span class="account-avatar large">${escapeHtml(userInitial(user))}</span>
           <div>
             <strong>${escapeHtml(email)}</strong>
-            <small>${coins.toLocaleString()} coins available</small>
+            <small>${coins.toLocaleString()} coins available${isAdmin(user) ? ` · ${escapeHtml(currentAdminRole)}` : ""}</small>
           </div>
         </div>
         <a href="dashboard.html">Dashboard</a>
@@ -1413,6 +1442,128 @@ async function initAuthConfirmPage() {
   }
 }
 
+function initOwnerRoleForm() {
+  const form = qs("#ownerRoleForm");
+  if (!form || form.dataset.bound === "true") return;
+  form.dataset.bound = "true";
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const identifier = qs("#roleUserIdentifier")?.value.trim();
+    const role = qs("#roleValue")?.value || "admin";
+    if (!identifier) return showMessage("Enter the user's email or user id.", "error");
+
+    const confirmed = await showConfirm(
+      role === "remove" ? `Remove admin access from ${identifier}?` : `Set ${identifier} as ${role}?`,
+      {
+        title: "Update admin role",
+        confirmText: role === "remove" ? "Remove access" : "Save role",
+        cancelText: "Cancel",
+        danger: role === "remove",
+        icon: role === "owner" ? "★" : "AD"
+      }
+    );
+    if (!confirmed) return;
+
+    const { error } = await sb.rpc("owner_set_admin_role", {
+      p_user_identifier: identifier,
+      p_role: role
+    });
+
+    if (error) return showMessage(`Could not update role: ${error.message}`, "error");
+    showMessage("Admin role updated.", "success");
+    form.reset();
+    await loadAdminUsers();
+  });
+}
+
+async function loadAdminUsers() {
+  const list = qs("#adminUsersList");
+  if (!list) return;
+
+  const { data, error } = await sb
+    .from("admin_users")
+    .select("user_id, role, created_at")
+    .order("role", { ascending: false })
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    list.className = "empty-state compact-empty";
+    list.textContent = `Could not load admin users: ${error.message}`;
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    list.className = "empty-state compact-empty";
+    list.textContent = "No admin users added yet.";
+    return;
+  }
+
+  list.className = "admin-users-list";
+  list.innerHTML = data.map((item) => `
+    <div class="admin-user-row">
+      <div>
+        <strong>${escapeHtml(item.role || "admin")}</strong>
+        <p class="muted">${escapeHtml(item.user_id)} · added ${formatDate(item.created_at)}</p>
+      </div>
+      <span class="role-badge">${escapeHtml(item.role || "admin")}</span>
+    </div>
+  `).join("");
+}
+
+async function loadAdminSupportRequests() {
+  const list = qs("#adminSupportRequests");
+  if (!list) return;
+
+  const { data, error } = await sb
+    .from("support_requests")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  if (error) {
+    list.className = "empty-state";
+    list.textContent = `Could not load support requests: ${error.message}`;
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    list.className = "empty-state";
+    list.textContent = "No support requests yet.";
+    return;
+  }
+
+  list.className = "admin-support-list";
+  list.innerHTML = data.map((item) => `
+    <article class="admin-support-row status-${escapeHtml(item.status || "new")}">
+      <div>
+        <div class="admin-row-meta">
+          <span class="status-pill">${escapeHtml(item.status || "new")}</span>
+          <span>${formatDate(item.created_at)}</span>
+        </div>
+        <strong>${escapeHtml(item.topic || "Support request")}</strong>
+        <p>${escapeHtml(item.message || "")}</p>
+        ${item.page_url ? `<a class="mini-link" href="${escapeHtml(item.page_url)}" target="_blank" rel="noopener">Open reported page</a>` : ""}
+      </div>
+      <div class="admin-actions vertical">
+        <button class="button button-ghost" type="button" data-support-status="open" data-support-id="${item.id}">Open</button>
+        <button class="button button-ghost" type="button" data-support-status="resolved" data-support-id="${item.id}">Resolved</button>
+      </div>
+    </article>
+  `).join("");
+
+  qsa("[data-support-status]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const { error: updateError } = await sb
+        .from("support_requests")
+        .update({ status: button.dataset.supportStatus })
+        .eq("id", button.dataset.supportId);
+      if (updateError) return showMessage(updateError.message, "error");
+      await loadAdminSupportRequests();
+    });
+  });
+}
+
 function initAdminCoinForm() {
   const form = qs("#adminCoinForm");
   if (!form || form.dataset.bound === "true") return;
@@ -1464,17 +1615,33 @@ async function initAdmin() {
   locked.classList.add("hidden");
   panel.classList.remove("hidden");
 
+  const owner = isOwner(user);
+  qs("#adminRoleBadge") && (qs("#adminRoleBadge").textContent = owner ? "Owner" : "Admin");
+  qsa("[data-owner-only]").forEach((section) => section.classList.toggle("hidden", !owner));
+  qs("#ownerToolsLocked")?.classList.toggle("hidden", owner);
+
   qs("#refreshAdmin")?.addEventListener("click", async () => {
     await loadAdminRequests();
-    await loadAdminRewards();
+    await loadAdminSupportRequests();
+    if (owner) {
+      await loadAdminUsers();
+      await loadAdminRewards();
+    }
   });
 
   qs("#adminStatusFilter")?.addEventListener("change", loadAdminRequests);
-  initAdminRewardForm();
-  initAdminCoinForm();
+  if (owner) {
+    initOwnerRoleForm();
+    initAdminRewardForm();
+    initAdminCoinForm();
+  }
 
   await loadAdminRequests();
-  await loadAdminRewards();
+  await loadAdminSupportRequests();
+  if (owner) {
+    await loadAdminUsers();
+    await loadAdminRewards();
+  }
 }
 
 async function loadAdminRequests() {

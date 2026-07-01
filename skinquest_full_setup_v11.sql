@@ -1,6 +1,6 @@
--- SkinQuest full Supabase setup v11.3
+-- SkinQuest full Supabase setup v11.4
 -- Run this in Supabase SQL Editor before public testing.
--- It creates the tables, RLS policies, and RPC functions used by the v11 frontend.
+-- It creates the tables, RLS policies, and RPC functions used by the v11.4 frontend.
 
 create extension if not exists pgcrypto;
 
@@ -44,6 +44,13 @@ create table if not exists public.admin_users (
   role text not null default 'admin',
   created_at timestamptz not null default now()
 );
+
+alter table public.admin_users add column if not exists role text not null default 'admin';
+do $$
+begin
+  alter table public.admin_users add constraint admin_users_role_check check (role in ('admin', 'owner'));
+exception when duplicate_object then null;
+end $$;
 
 create table if not exists public.reward_items (
   id bigserial primary key,
@@ -244,6 +251,27 @@ as $$
     from public.admin_users au
     where au.user_id = auth.uid()
   );
+$$;
+
+create or replace function public.get_admin_role()
+returns text
+language sql
+security definer
+set search_path = public
+as $$
+  select au.role
+  from public.admin_users au
+  where au.user_id = auth.uid()
+  limit 1;
+$$;
+
+create or replace function public.is_owner()
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select coalesce(public.get_admin_role() = 'owner', false);
 $$;
 
 create or replace function public.ensure_skinquest_profile()
@@ -478,6 +506,57 @@ begin
 end;
 $$;
 
+create or replace function public.owner_set_admin_role(
+  p_user_identifier text,
+  p_role text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, auth
+as $$
+declare
+  v_user_id uuid;
+  v_role text := lower(trim(coalesce(p_role, '')));
+begin
+  if not public.is_owner() then
+    raise exception 'Owner access required.';
+  end if;
+
+  begin
+    v_user_id := p_user_identifier::uuid;
+  exception when others then
+    v_user_id := null;
+  end;
+
+  if v_user_id is null then
+    select id into v_user_id
+    from auth.users
+    where lower(email) = lower(trim(p_user_identifier))
+    limit 1;
+  end if;
+
+  if v_user_id is null then
+    raise exception 'User not found.';
+  end if;
+
+  if v_role in ('remove', 'none', 'user', '') then
+    delete from public.admin_users where user_id = v_user_id;
+    return jsonb_build_object('ok', true, 'user_id', v_user_id, 'role', null);
+  end if;
+
+  if v_role not in ('admin', 'owner') then
+    raise exception 'Invalid role.';
+  end if;
+
+  insert into public.admin_users (user_id, role)
+  values (v_user_id, v_role)
+  on conflict (user_id) do update set role = excluded.role;
+
+  return jsonb_build_object('ok', true, 'user_id', v_user_id, 'role', v_role);
+end;
+$$;
+
 create or replace function public.admin_adjust_user_coins(
   p_user_identifier text,
   p_amount integer,
@@ -493,8 +572,8 @@ declare
   v_user_id uuid;
   v_reason text := coalesce(nullif(trim(p_reason), ''), 'Manual admin adjustment');
 begin
-  if not public.is_admin() then
-    raise exception 'Admin access required.';
+  if not public.is_owner() then
+    raise exception 'Owner access required.';
   end if;
 
   if p_amount is null or p_amount = 0 then
@@ -652,13 +731,13 @@ using (active = true or public.is_admin());
 drop policy if exists reward_items_admin_insert on public.reward_items;
 create policy reward_items_admin_insert on public.reward_items
 for insert to authenticated
-with check (public.is_admin());
+with check (public.is_owner());
 
 drop policy if exists reward_items_admin_update on public.reward_items;
 create policy reward_items_admin_update on public.reward_items
 for update to authenticated
-using (public.is_admin())
-with check (public.is_admin());
+using (public.is_owner())
+with check (public.is_owner());
 
 drop policy if exists redemption_requests_select_own_or_admin on public.redemption_requests;
 create policy redemption_requests_select_own_or_admin on public.redemption_requests
@@ -713,11 +792,14 @@ grant update on public.support_requests to authenticated;
 grant usage, select on all sequences in schema public to authenticated;
 
 grant execute on function public.is_admin() to authenticated;
+grant execute on function public.get_admin_role() to authenticated;
+grant execute on function public.is_owner() to authenticated;
 grant execute on function public.ensure_skinquest_profile() to authenticated;
 grant execute on function public.save_skinquest_trade_url(text) to authenticated;
 grant execute on function public.save_account_settings(boolean, boolean, boolean) to authenticated;
 grant execute on function public.claim_level_rewards() to authenticated;
 grant execute on function public.redeem_reward(bigint) to authenticated;
+grant execute on function public.owner_set_admin_role(text, text) to authenticated;
 grant execute on function public.admin_adjust_user_coins(text, integer, text) to authenticated;
 grant execute on function public.admin_update_redemption_status(bigint, text, text, text) to authenticated;
 

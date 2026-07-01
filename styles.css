@@ -1,4 +1,4 @@
-/* SkinQuest v11.3 - clean marketplace UI, account settings, support widget and loading polish */
+/* SkinQuest v11.4 - clean marketplace UI, account settings, support widget and loading polish */
 
 :root {
   --bg: #0b0f16;
@@ -1131,7 +1131,7 @@ body::before {
   z-index: -2;
   background:
     linear-gradient(180deg, rgba(7, 10, 16, 0.22), rgba(7, 10, 16, 0.72)),
-    url("site-background.png") center center / cover no-repeat;
+    url("assets/interface/site-background.png") center center / cover no-repeat;
   filter: blur(8px) saturate(1.08) contrast(0.98);
   transform: scale(1.035);
   pointer-events: none;
@@ -1354,7 +1354,7 @@ main.hero {
   }
 }
 
-/* v11.3 trust polish + mobile makeover */
+/* v11.4 trust polish + mobile makeover */
 .auth-provider-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1553,7 +1553,7 @@ main.hero {
   .stock-pill { width: 100%; justify-content: center; }
 }
 
-/* v11.3 cleaner wallet + navigation polish */
+/* v11.4 cleaner wallet + navigation polish */
 .page-loader {
   inset: 0 0 auto 0;
   height: 3px;
@@ -1655,7 +1655,7 @@ main.hero {
   .wallet-notes { display: grid; grid-template-columns: 1fr; }
 }
 
-/* v11.3 account settings, linked services and support widget */
+/* v11.4 account settings, linked services and support widget */
 .settings-stack {
   display: grid;
   gap: 18px;
@@ -1870,7 +1870,7 @@ main.hero {
   .support-panel { bottom: 66px; }
 }
 
-/* v11.3 test-phase polish: data-loading stability, support animation, mobile alignment */
+/* v11.4 test-phase polish: data-loading stability, support animation, mobile alignment */
 .page-loader { display: none !important; }
 
 .nav-actions.auth-loading {
@@ -1984,7 +1984,7 @@ main.hero {
   .support-panel { width: min(360px, calc(100vw - 24px)); }
 }
 
-/* v11.3 loading + mobile header + settings spacing fixes */
+/* v11.4 loading + mobile header + settings spacing fixes */
 .page-loader {
   display: block !important;
   position: fixed;
@@ -2096,3 +2096,104 @@ main.hero {
   .account-trigger { max-width: 128px; min-height: 40px; }
   .account-trigger-copy strong { max-width: 55px; }
 }
+
+/* v11.4 version footer, nav level progress, owner/admin polish */
+.site-version {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: .75rem;
+  font-weight: 900;
+  letter-spacing: .02em;
+}
+
+.level-pill {
+  min-width: 86px;
+  min-height: 38px;
+  padding: 7px 9px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.055);
+  display: grid;
+  gap: 5px;
+  align-content: center;
+  text-decoration: none;
+  color: var(--text);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+}
+
+.level-pill:hover { border-color: rgba(255,170,64,.35); }
+.level-pill-label { font-size: .74rem; font-weight: 950; letter-spacing: .04em; text-transform: uppercase; line-height: 1; }
+.level-pill-track { height: 5px; overflow: hidden; border-radius: 999px; background: rgba(255,255,255,.12); }
+.level-pill-track span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #ff9f2f, #ffd27a); }
+
+.role-badge {
+  display: inline-flex;
+  vertical-align: middle;
+  align-items: center;
+  margin-left: 8px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,170,64,.24);
+  background: rgba(255,151,46,.1);
+  color: #ffd09a;
+  font-size: .72rem;
+  font-weight: 950;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.owner-lock {
+  border-color: rgba(255,170,64,.24);
+  background: linear-gradient(180deg, rgba(255,151,46,.09), rgba(12,16,25,.72));
+}
+
+.admin-support-list { display: grid; gap: 12px; }
+.admin-support-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: start;
+  padding: 14px;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 18px;
+  background: rgba(255,255,255,.045);
+}
+.admin-row-meta {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-size: .8rem;
+  margin-bottom: 8px;
+}
+.admin-support-row p { margin: 6px 0 8px; color: var(--muted); line-height: 1.5; }
+
+@media (max-width: 980px) {
+  .level-pill { min-width: 72px; padding-inline: 8px; }
+  .level-pill-label { font-size: .68rem; }
+}
+
+@media (max-width: 760px) {
+  .nav-actions .level-pill { display: none; }
+  .admin-support-row { grid-template-columns: 1fr; }
+  .site-version { margin-left: 0; margin-top: 6px; }
+}
+
+.admin-users-list { display: grid; gap: 10px; margin-top: 12px; }
+.admin-user-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.1);
+  background: rgba(255,255,255,.04);
+}
+.compact-empty { margin-top: 12px; padding: 12px; }

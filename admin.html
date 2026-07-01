@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="SkinQuest admin panel for managing reward listings and manual redemption requests." />
   <title>Admin - SkinQuest</title>
-  <link rel="stylesheet" href="styles.css?v=113" />
+  <link rel="stylesheet" href="styles.css?v=114" />
 </head>
 <body>
 <div id="pageLoader" class="page-loader">
@@ -50,7 +50,7 @@
     <div class="admin-toolbar panel">
       <div>
         <span class="pill">Manual workflow</span>
-        <h2>Redeem requests</h2>
+        <h2>Redeem requests <span class="role-badge" id="adminRoleBadge">Admin</span></h2>
         <p class="muted">Use this while you send skins manually. Rejected, refunded, or cancelled requests refund coins and release reserved stock.</p>
       </div>
       <div class="admin-toolbar-actions">
@@ -71,7 +71,51 @@
 
     <div id="adminRequests" class="admin-list empty-state">Loading requests...</div>
 
-    <section class="panel admin-coin-panel">
+    <section class="panel admin-support-panel">
+      <div class="section-headline">
+        <div>
+          <span class="pill">Support inbox</span>
+          <h2>Recent support requests</h2>
+          <p class="muted">Support messages sent from the floating widget show up here while email notifications are still being connected.</p>
+        </div>
+      </div>
+      <div id="adminSupportRequests" class="empty-state">Loading support requests...</div>
+    </section>
+
+    <section id="ownerToolsLocked" class="panel owner-lock hidden">
+      <span class="pill">Owner tools locked</span>
+      <h2>Owner role required</h2>
+      <p class="muted">Regular admins can review redeem requests and support, but only owner accounts can adjust coins or manage reward stock.</p>
+    </section>
+
+
+    <section class="panel owner-role-panel" data-owner-only>
+      <div class="section-headline">
+        <div>
+          <span class="pill">Owner tools</span>
+          <h2>Admin roles</h2>
+          <p class="muted">Promote helpers to admin, upgrade an account to owner, or remove admin access. Use this carefully.</p>
+        </div>
+      </div>
+      <form id="ownerRoleForm" class="admin-grid-form compact">
+        <label>User email or user id
+          <input id="roleUserIdentifier" placeholder="friend@example.com or uuid" required />
+        </label>
+        <label>Role
+          <select id="roleValue">
+            <option value="admin">Admin</option>
+            <option value="owner">Owner</option>
+            <option value="remove">Remove access</option>
+          </select>
+        </label>
+        <div class="form-actions wide">
+          <button class="button button-primary" type="submit">Save role</button>
+        </div>
+      </form>
+      <div id="adminUsersList" class="empty-state compact-empty">Loading admin users...</div>
+    </section>
+
+    <section class="panel admin-coin-panel" data-owner-only>
       <div class="section-headline">
         <div>
           <span class="pill">Testing tools</span>
@@ -95,7 +139,7 @@
       </form>
     </section>
 
-    <section class="panel reward-admin-panel">
+    <section class="panel reward-admin-panel" data-owner-only>
       <div class="section-headline">
         <div>
           <span class="pill">Reward manager</span>
@@ -164,7 +208,7 @@
       </form>
     </section>
 
-    <section class="panel">
+    <section class="panel" data-owner-only>
       <div class="section-headline">
         <div>
           <span class="pill">Current stock</span>
@@ -186,7 +230,7 @@
     <a href="privacy.html">Privacy</a>
     <a href="how-it-works.html">Help</a>
   </div>
-  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike.</p>
+  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <span class="site-version">v11.4</span></p>
 </footer>
 
 <div class="modal-backdrop hidden" id="authModal">
@@ -228,6 +272,6 @@
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js?v=113"></script>
+<script src="app.js?v=114"></script>
 </body>
 </html>
