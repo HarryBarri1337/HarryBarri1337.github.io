@@ -1,4 +1,4 @@
-// SkinQuest v11.9 - settings cleanup, admin support polish, and Steam Connect prep.
+// SkinQuest v11.9.2.2 - settings cleanup, admin support polish, and Steam Connect prep.
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";

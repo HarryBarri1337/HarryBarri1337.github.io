@@ -1,4 +1,4 @@
-/* SkinQuest v11.9 - settings cleanup and admin support polish */
+/* SkinQuest v11.9.2.2 - settings cleanup and admin support polish */
 
 :root {
   --bg: #0b0f16;
@@ -2993,7 +2993,7 @@ html.compact-reward-cards .reward-actions-smart small {
 }
 
 
-/* v11.9 settings cleanup + sharper guide/admin support polish */
+/* v11.9.2.2 settings cleanup + sharper guide/admin support polish */
 .settings-account-panel,
 .settings-notifications-panel,
 .settings-theme-panel {
@@ -3112,7 +3112,7 @@ html.compact-reward-cards .reward-actions-smart small {
   }
 }
 
-/* v11.9 Steam Connect UI polish */
+/* v11.9.2.2 Steam Connect UI polish */
 .linked-service#linkedSteamService.is-connected {
   border-color: rgba(53,201,139,.28);
   background: rgba(53,201,139,.055);
