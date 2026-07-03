@@ -1,3 +1,22 @@
+SkinQuest v11.9.2 Steam Connect setup
+
+Status before this hotfix:
+- Steam Connect works.
+- The Steam login page may show the Supabase functions domain because steam-auth-start used Supabase as the OpenID realm.
+
+What v11.9.2 changes:
+- Adds steam-callback.html to the website.
+- steam-auth-start should now use:
+  - openid.realm = https://skinquestcs.com
+  - openid.return_to = https://skinquestcs.com/steam-callback.html?state=...
+
+SQL:
+- No new SQL is needed if v11.9.1 Steam SQL was already run.
+- The included upgrade SQL is intentionally no-op.
+
+Required Supabase action:
+Replace supabase/functions/steam-auth-start/index.ts with this version and deploy it:
+
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
@@ -77,13 +96,14 @@ serve(async (req) => {
       });
     }
 
-    const callbackUrl = `${supabaseUrl}/functions/v1/steam-auth-callback`;
+    const cleanSiteUrl = siteUrl.replace(/\/$/, "");
+    const callbackUrl = `${cleanSiteUrl}/steam-callback.html`;
 
     const params = new URLSearchParams({
       "openid.ns": "http://specs.openid.net/auth/2.0",
       "openid.mode": "checkid_setup",
       "openid.return_to": `${callbackUrl}?state=${state}`,
-      "openid.realm": supabaseUrl,
+      "openid.realm": cleanSiteUrl,
       "openid.identity": "http://specs.openid.net/auth/2.0/identifier_select",
       "openid.claimed_id": "http://specs.openid.net/auth/2.0/identifier_select",
     });
@@ -100,3 +120,13 @@ serve(async (req) => {
     });
   }
 });
+
+Deploy command:
+npx.cmd supabase functions deploy steam-auth-start --no-verify-jwt
+
+After deploying:
+1. Upload/push the v11.9.2 frontend files.
+2. Log in to SkinQuest.
+3. Settings > Connect Steam.
+4. Steam should show skinquestcs.com.
+5. After signing in, it should return to Settings and show Steam connected.
