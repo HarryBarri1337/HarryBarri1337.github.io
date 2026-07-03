@@ -1,4 +1,4 @@
-// SkinQuest v11.8.3 - pre-meeting polish hotfix.
+// SkinQuest v11.9 - settings cleanup and admin support polish.
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -1393,6 +1393,8 @@ async function refreshSettingsPage() {
   if (idEl) idEl.textContent = `User ID: ${shortId}`;
 
   const tradeReady = !!profile?.steam_trade_url && isValidSteamTradeUrl(profile.steam_trade_url);
+  const tradeStatusEl = qs("#settingsTradeStatus");
+  if (tradeStatusEl) tradeStatusEl.textContent = tradeReady ? "Saved and valid" : "Missing";
   const setReadyItem = (itemSelector, textSelector, state, text) => {
     const item = qs(itemSelector);
     const textEl = qs(textSelector);
@@ -1930,6 +1932,7 @@ async function loadAdminSupportRequests() {
   const { data, error } = await sb
     .from("support_requests")
     .select("*")
+    .or("status.is.null,status.eq.new,status.eq.open")
     .order("created_at", { ascending: false })
     .limit(20);
 
@@ -1941,7 +1944,7 @@ async function loadAdminSupportRequests() {
 
   if (!data || data.length === 0) {
     list.className = "empty-state";
-    list.textContent = "No support requests yet.";
+    list.textContent = "No open support requests. Resolved requests are hidden from this list.";
     return;
   }
 

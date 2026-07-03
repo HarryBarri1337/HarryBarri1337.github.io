@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="Manage your SkinQuest linked services, notification preferences, Steam trade URL, and account settings." />
   <title>Settings - SkinQuest</title>
-  <link rel="stylesheet" href="styles.css?v=1183" />
+  <link rel="stylesheet" href="styles.css?v=119" />
 </head>
 <body>
 <div id="pageLoader" class="page-loader">
@@ -61,145 +61,115 @@
   </section>
 
   <section id="settingsAccountSection" class="hidden settings-stack">
-    <section class="panel settings-profile-panel">
-      <div class="settings-profile-card">
+    <section class="panel settings-account-panel" id="accountSettingsPanel">
+      <div class="section-headline">
+        <div>
+          <span class="pill">Account</span>
+          <h2>Account</h2>
+          <p class="muted">Your email is your SkinQuest username. Save your Steam trade URL here so rewards can be sent safely.</p>
+        </div>
         <span class="account-avatar large" id="settingsAvatar">S</span>
-        <div>
-          <span class="pill">SkinQuest account</span>
-          <h2 id="settingsEmail">Account</h2>
-          <p class="muted" id="settingsUserId">Signed in and ready.</p>
-        </div>
       </div>
-    </section>
 
-    <section class="panel settings-readiness-panel">
-      <div class="section-headline">
-        <div>
-          <span class="pill">Account readiness</span>
-          <h2>Redeem setup</h2>
-          <p class="muted">A quick check of the things needed before SkinQuest can send rewards.</p>
-        </div>
-      </div>
-      <div class="readiness-grid settings-status-grid">
-        <article class="readiness-item is-ready" id="readinessEmailItem">
-          <strong>Email login</strong>
-          <span id="readinessEmailText">Connected</span>
+      <div class="account-settings-grid">
+        <article class="settings-info-card">
+          <span>Email</span>
+          <strong id="settingsEmail">Account</strong>
+          <small id="settingsUserId">Signed in and ready.</small>
         </article>
-        <article class="readiness-item" id="readinessTradeItem">
-          <strong>Steam trade URL</strong>
-          <span id="readinessTradeText">Checking...</span>
-        </article>
-        <article class="readiness-item" id="readinessRedeemItem">
-          <strong>Redeem status</strong>
-          <span id="readinessRedeemText">Checking...</span>
+        <article class="settings-info-card">
+          <span>Steam Trade URL</span>
+          <strong id="settingsTradeStatus">Checking...</strong>
+          <small>Required before redeeming CS2 rewards.</small>
         </article>
       </div>
-    </section>
 
-    <section class="panel">
-      <div class="section-headline">
-        <div>
-          <span class="pill">Linked services</span>
-          <h2>Connected accounts</h2>
-          <p class="muted">Email is active now. Extra sign-in methods can be connected later when they are ready.</p>
-        </div>
-      </div>
-      <div class="linked-services-grid">
-        <article class="linked-service is-connected" id="linkedEmailService">
-          <div class="linked-service-icon">@</div>
-          <div>
-            <strong>Email</strong>
-            <p>Primary login method</p>
-          </div>
-          <span>Connected</span>
-        </article>
-      </div>
-    </section>
-
-    <section class="panel">
-      <div class="section-headline">
-        <div>
-          <span class="pill">Reward delivery</span>
-          <h2>Steam trade URL</h2>
-          <p class="muted">Use your Steam trade URL only. Never share your Steam password, Steam Guard code, or API key.</p>
-        </div>
-      </div>
-      <form id="tradeForm" class="form-row trade-row">
+      <form id="tradeForm" class="form-row trade-row settings-trade-form">
         <input id="tradeUrl" type="url" placeholder="https://steamcommunity.com/tradeoffer/new/?partner=...&token=..." />
         <a class="button button-ghost" target="_blank" rel="noopener" href="https://steamcommunity.com/my/tradeoffers/privacy#trade_offer_access_url">Find trade link</a>
-        <button class="button button-primary" type="submit">Save</button>
+        <button class="button button-primary" type="submit">Save trade URL</button>
       </form>
+
+      <div class="settings-subsection">
+        <div class="settings-subsection-head">
+          <h3>Connected Logins</h3>
+          <p class="muted">Email works now. Steam and Google stay visible because they are planned before launch.</p>
+        </div>
+        <div class="linked-services-grid settings-login-grid">
+          <article class="linked-service is-connected" id="linkedEmailService">
+            <div class="linked-service-icon">@</div>
+            <div>
+              <strong>Email</strong>
+              <p>Primary login method</p>
+            </div>
+            <span>Connected</span>
+          </article>
+          <article class="linked-service is-planned">
+            <div class="linked-service-icon">ST</div>
+            <div>
+              <strong>Steam</strong>
+              <p>Planned before launch</p>
+            </div>
+            <span>Future</span>
+          </article>
+          <article class="linked-service is-planned">
+            <div class="linked-service-icon">G</div>
+            <div>
+              <strong>Google</strong>
+              <p>Planned before launch</p>
+            </div>
+            <span>Future</span>
+          </article>
+        </div>
+      </div>
     </section>
 
-    <section class="panel">
+    <section class="panel settings-notifications-panel">
       <div class="section-headline">
         <div>
           <span class="pill">Notifications</span>
-          <h2>Notification preferences</h2>
-          <p class="muted">These preferences are saved to your account when available and backed up in this browser.</p>
+          <h2>Notifications</h2>
+          <p class="muted">Choose which updates SkinQuest should send when notification features are active.</p>
         </div>
       </div>
       <form id="notificationSettingsForm" class="settings-toggle-list">
         <label class="settings-toggle">
-          <span><strong>Reward updates</strong><small>Request reviewed, trade sent, completed, rejected, or refunded.</small></span>
+          <span><strong>Reward Updates</strong><small>Request reviewed, trade sent, completed, rejected, or refunded.</small></span>
           <input id="notifyRewardUpdates" type="checkbox" checked />
         </label>
         <label class="settings-toggle">
-          <span><strong>Offer issues</strong><small>Delayed or rejected offerwall completions and reward support.</small></span>
+          <span><strong>Offer Issue</strong><small>Delayed or rejected offerwall completions and reward support.</small></span>
           <input id="notifyOfferIssues" type="checkbox" checked />
         </label>
         <label class="settings-toggle">
-          <span><strong>Product updates</strong><small>Future platform updates, new features, and important reward changes.</small></span>
+          <span><strong>Product Updates</strong><small>Future platform updates, new features, and important reward changes.</small></span>
           <input id="notifyProductUpdates" type="checkbox" />
         </label>
-        <button class="button button-primary" type="submit">Save preferences</button>
+        <button class="button button-primary" type="submit">Save notifications</button>
       </form>
     </section>
 
-    <section class="panel">
+    <section class="panel settings-theme-panel">
       <div class="section-headline">
         <div>
-          <span class="pill">Reward shop</span>
-          <h2>Reward browsing preferences</h2>
-          <p class="muted">These are saved in this browser and make the reward page open the way you like it.</p>
+          <span class="pill">Theme</span>
+          <h2>Theme</h2>
+          <p class="muted">Nuke is the current SkinQuest look. More CS-inspired themes can be added later.</p>
         </div>
       </div>
-      <form id="rewardShopSettingsForm" class="settings-toggle-list reward-settings-form">
-        <div class="settings-choice-field">
-          <span class="settings-field-label">Default reward sort</span>
-          <div class="settings-choice-grid" role="group" aria-label="Default reward sort">
-            <button class="settings-choice active" type="button" data-reward-default-sort="price-desc">High to low</button>
-            <button class="settings-choice" type="button" data-reward-default-sort="price-asc">Low to high</button>
-            <button class="settings-choice" type="button" data-reward-default-sort="featured">Featured</button>
-            <button class="settings-choice" type="button" data-reward-default-sort="stock-desc">Most stock</button>
-            <button class="settings-choice" type="button" data-reward-default-sort="name-asc">A to Z</button>
-          </div>
-        </div>
-        <label class="settings-toggle">
-          <span><strong>Show out-of-stock rewards</strong><small>Keep unavailable rewards visible at the bottom of the shop.</small></span>
-          <input id="rewardShowOutOfStock" type="checkbox" checked />
-        </label>
-        <label class="settings-toggle">
-          <span><strong>Compact reward cards</strong><small>Use shorter reward cards when browsing many skins.</small></span>
-          <input id="rewardCompactCards" type="checkbox" />
-        </label>
-        <button class="button button-primary" type="submit">Save reward preferences</button>
-      </form>
-    </section>
-
-    <section class="panel settings-quick-actions">
-      <div class="section-headline">
-        <div>
-          <span class="pill">Shortcuts</span>
-          <h2>Quick actions</h2>
-          <p class="muted">Jump to the pages you are most likely to need while testing the site.</p>
-        </div>
-      </div>
-      <div class="quick-action-grid">
-        <a class="button button-ghost" href="dashboard.html">Open Dashboard</a>
-        <a class="button button-ghost" href="rewards.html">Open Rewards</a>
-        <button class="button button-ghost" type="button" data-open-support-shortcut>Contact Support</button>
-        <a class="button button-ghost" href="how-it-works.html">How it works</a>
+      <div class="theme-option-grid" role="group" aria-label="Theme options">
+        <button class="theme-option active" type="button" aria-pressed="true">
+          <strong>Nuke Theme</strong>
+          <span>Current</span>
+        </button>
+        <button class="theme-option is-future" type="button" disabled>
+          <strong>Mirage Theme</strong>
+          <span>Future</span>
+        </button>
+        <button class="theme-option is-future" type="button" disabled>
+          <strong>Ancient Theme</strong>
+          <span>Future</span>
+        </button>
       </div>
     </section>
 
@@ -228,7 +198,7 @@
     <a href="how-it-works.html">Help</a>
     <a href="mailto:support@skinquestcs.com">Support</a>
   </div>
-  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="changelog.html">v11.8.3</a></p>
+  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="changelog.html">v11.9</a></p>
 </footer>
 <div class="modal-backdrop hidden" id="authModal">
   <div class="auth-modal" role="dialog" aria-modal="true">
@@ -275,6 +245,6 @@
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js?v=1183"></script>
+<script src="app.js?v=119"></script>
 </body>
 </html>

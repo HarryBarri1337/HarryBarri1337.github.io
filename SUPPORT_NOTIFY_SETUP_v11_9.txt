@@ -1,4 +1,4 @@
-SkinQuest v11.8.3 - real support email notification setup
+SkinQuest v11.9 - real support email notification setup
 
 The website can now require a reply email and save support requests from guests or signed-in users.
 Email notification is server-side and uses:
@@ -6,7 +6,7 @@ Email notification is server-side and uses:
 support_requests INSERT -> Supabase Database Webhook -> Edge Function -> Resend email -> support@skinquestcs.com
 
 1) Run SQL upgrade
-Run skinquest_upgrade_v11_8_3_from_v11_8_2.sql in Supabase SQL Editor.
+Run skinquest_upgrade_v11_9_from_v11_8_2.sql in Supabase SQL Editor.
 This allows anonymous and signed-in users to insert support requests with an email address.
 
 2) Create/verify Resend sender

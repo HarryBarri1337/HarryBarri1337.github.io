@@ -1,0 +1,3 @@
+-- SkinQuest upgrade v11.9 from v11.8.3
+-- No database changes are required for this release.
+-- Frontend-only changes: Settings cleanup, How it works copy cleanup, admin support inbox filter, and CSS polish.
