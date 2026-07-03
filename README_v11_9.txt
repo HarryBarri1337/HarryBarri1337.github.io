@@ -26,3 +26,10 @@ Important setup note:
 Support email notifications still depend on the already-created Supabase Edge Function, Resend secrets, and database webhook.
 
 Assets are not included. Keep using the existing assets folder.
+
+
+Steam Connect prep included in this v11.9 package:
+- Settings Steam button now calls Supabase Function steam-auth-start.
+- Steam callback result messages are handled on settings.html.
+- SQL upgrade adds steam_connected_at, unique steam_id index, and steam_auth_states.
+- Supabase functions steam-auth-start and steam-auth-callback must be deployed separately; do not upload the supabase folder to the web host.

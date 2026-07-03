@@ -17,6 +17,7 @@ create table if not exists public.profiles (
   steam_id text,
   steam_name text,
   steam_avatar_url text,
+  steam_connected_at timestamptz,
   account_status text not null default 'active',
   notification_reward_updates boolean not null default true,
   notification_offer_issues boolean not null default true,
@@ -32,6 +33,7 @@ alter table public.profiles add column if not exists steam_trade_url text;
 alter table public.profiles add column if not exists steam_id text;
 alter table public.profiles add column if not exists steam_name text;
 alter table public.profiles add column if not exists steam_avatar_url text;
+alter table public.profiles add column if not exists steam_connected_at timestamptz;
 alter table public.profiles add column if not exists account_status text not null default 'active';
 alter table public.profiles add column if not exists notification_reward_updates boolean not null default true;
 alter table public.profiles add column if not exists notification_offer_issues boolean not null default true;
@@ -155,6 +157,13 @@ create table if not exists public.linked_services (
   unique(user_id, provider)
 );
 
+create table if not exists public.steam_auth_states (
+  state text primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null
+);
+
 create table if not exists public.support_requests (
   id bigserial primary key,
   user_id uuid references auth.users(id) on delete set null,
@@ -178,6 +187,9 @@ alter table public.support_requests add column if not exists admin_note text;
 alter table public.support_requests add column if not exists updated_at timestamptz not null default now();
 
 create index if not exists profiles_account_status_idx on public.profiles(account_status);
+create unique index if not exists profiles_steam_id_unique_idx on public.profiles(steam_id) where steam_id is not null;
+create index if not exists steam_auth_states_user_id_idx on public.steam_auth_states(user_id);
+create index if not exists steam_auth_states_expires_at_idx on public.steam_auth_states(expires_at);
 create index if not exists reward_items_active_sort_idx on public.reward_items(active, sort_order, points_coins);
 create index if not exists redemption_requests_user_created_idx on public.redemption_requests(user_id, created_at desc);
 create index if not exists redemption_requests_status_created_idx on public.redemption_requests(status, created_at desc);
@@ -721,6 +733,7 @@ alter table public.redemption_requests enable row level security;
 alter table public.coin_adjustments enable row level security;
 alter table public.offerwall_events enable row level security;
 alter table public.linked_services enable row level security;
+alter table public.steam_auth_states enable row level security;
 alter table public.support_requests enable row level security;
 
 drop policy if exists profiles_select_own_or_admin on public.profiles;

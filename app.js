@@ -1,4 +1,4 @@
-// SkinQuest v11.9 - settings cleanup and admin support polish.
+// SkinQuest v11.9 - settings cleanup, admin support polish, and Steam Connect prep.
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -7,6 +7,7 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const ADMIN_EMAILS = []; // v11.6: admin access must come from Supabase admin_users via is_admin().
 const CPX_APP_ID = 33831;
 const SUPPORT_EMAIL = "support@skinquestcs.com"; // Public support contact. Form requests are saved to Supabase and can trigger server-side email notifications.
+const STEAM_AUTH_START_URL = `${SUPABASE_URL}/functions/v1/steam-auth-start`;
 
 let rewardItems = [];
 let adminRewardItems = [];
@@ -1305,6 +1306,97 @@ function getSelectedRewardDefaultSort() {
   return qs("[data-reward-default-sort].active")?.dataset.rewardDefaultSort || getRewardShopPreferences().default_sort;
 }
 
+function getSteamConnectionLabel(profile) {
+  const steamName = profile?.steam_name || profile?.steam_persona_name;
+  if (steamName) return `Connected as ${steamName}`;
+  if (profile?.steam_id) return `Connected: ${profile.steam_id}`;
+  return "Not connected";
+}
+
+function updateSteamLinkedService(profile) {
+  const card = qs("#linkedSteamService");
+  const button = qs("#connectSteamButton");
+  const status = qs("#steamLoginStatus");
+  const description = qs("#steamLoginDescription");
+  if (!card || !button || !status) return;
+
+  const connected = !!profile?.steam_id;
+  card.classList.toggle("is-connected", connected);
+  card.classList.toggle("is-planned", !connected);
+  button.classList.toggle("hidden", connected);
+  status.classList.toggle("hidden", !connected);
+  status.textContent = connected ? "Connected" : "Not connected";
+  if (description) {
+    description.textContent = connected
+      ? getSteamConnectionLabel(profile)
+      : "Connect your Steam account before launch.";
+  }
+}
+
+async function connectSteamAccount() {
+  const button = qs("#connectSteamButton");
+  const previousText = button?.textContent || "Connect";
+
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session?.access_token) {
+      openAuthModal("login");
+      return;
+    }
+
+    if (button) {
+      button.disabled = true;
+      button.textContent = "Opening Steam...";
+    }
+
+    const response = await fetch(STEAM_AUTH_START_URL, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${session.access_token}`,
+        "Content-Type": "application/json"
+      }
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.url) {
+      throw new Error(data.error || "Could not start Steam connection.");
+    }
+
+    window.location.href = data.url;
+  } catch (error) {
+    console.error("Steam connect failed", error);
+    showMessage(error.message || "Could not start Steam connection.", "error");
+    if (button) {
+      button.disabled = false;
+      button.textContent = previousText;
+    }
+  }
+}
+
+function handleSteamConnectResult() {
+  if (!document.body.classList.contains("settings-page")) return;
+  const params = new URLSearchParams(window.location.search);
+  const result = params.get("steam");
+  if (!result) return;
+
+  const messages = {
+    connected: ["Steam account connected.", "success"],
+    missing_state: ["Steam connection could not start correctly. Try again.", "error"],
+    invalid_state: ["Steam connection expired or was not recognized. Try again.", "error"],
+    expired_state: ["Steam connection expired. Try again.", "error"],
+    invalid_login: ["Steam could not verify the login. Try again.", "error"],
+    no_steam_id: ["Steam did not return a SteamID. Try again.", "error"],
+    save_failed: ["Steam verified, but SkinQuest could not save it. It may already be connected to another account.", "error"]
+  };
+  const [text, type] = messages[result] || ["Steam connection finished.", "success"];
+  showMessage(text, type);
+
+  params.delete("steam");
+  const cleanQuery = params.toString();
+  const cleanUrl = `${window.location.pathname}${cleanQuery ? `?${cleanQuery}` : ""}${window.location.hash}`;
+  window.history.replaceState({}, document.title, cleanUrl);
+}
+
 async function initSettingsPage() {
   if (!qs("#settingsAuthSection") && !qs("#notificationSettingsForm")) return;
 
@@ -1313,6 +1405,9 @@ async function initSettingsPage() {
       showMessage(`${button.dataset.futureService} linking is planned for a later version.`);
     });
   });
+
+  qs("#connectSteamButton")?.addEventListener("click", connectSteamAccount);
+  handleSteamConnectResult();
 
   qsa("[data-reward-default-sort]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -1395,6 +1490,7 @@ async function refreshSettingsPage() {
   const tradeReady = !!profile?.steam_trade_url && isValidSteamTradeUrl(profile.steam_trade_url);
   const tradeStatusEl = qs("#settingsTradeStatus");
   if (tradeStatusEl) tradeStatusEl.textContent = tradeReady ? "Saved and valid" : "Missing";
+  updateSteamLinkedService(profile);
   const setReadyItem = (itemSelector, textSelector, state, text) => {
     const item = qs(itemSelector);
     const textEl = qs(textSelector);

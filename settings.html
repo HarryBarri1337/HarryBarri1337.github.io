@@ -104,13 +104,14 @@
             </div>
             <span>Connected</span>
           </article>
-          <article class="linked-service is-planned">
+          <article class="linked-service" id="linkedSteamService">
             <div class="linked-service-icon">ST</div>
             <div>
               <strong>Steam</strong>
-              <p>Planned before launch</p>
+              <p id="steamLoginDescription">Connect your Steam account before launch.</p>
             </div>
-            <span>Future</span>
+            <button class="button button-ghost" id="connectSteamButton" type="button">Connect</button>
+            <span class="hidden" id="steamLoginStatus">Not connected</span>
           </article>
           <article class="linked-service is-planned">
             <div class="linked-service-icon">G</div>

@@ -3111,3 +3111,13 @@ html.compact-reward-cards .reward-actions-smart small {
     grid-template-columns: 1fr;
   }
 }
+
+/* v11.9 Steam Connect UI polish */
+.linked-service#linkedSteamService.is-connected {
+  border-color: rgba(53,201,139,.28);
+  background: rgba(53,201,139,.055);
+}
+.linked-service#linkedSteamService.is-connected .linked-service-icon {
+  border-color: rgba(53,201,139,.32);
+  background: rgba(53,201,139,.12);
+}
