@@ -1,6 +1,6 @@
--- SkinQuest full Supabase setup v11.9.2.2
+-- SkinQuest full Supabase setup v11.9.3
 -- Run this in Supabase SQL Editor before public testing.
--- It creates the tables, RLS policies, and RPC functions used by the v11.9.2.2 frontend.
+-- It creates the tables, RLS policies, and RPC functions used by the v11.9.3 frontend.
 
 create extension if not exists pgcrypto;
 
@@ -159,10 +159,14 @@ create table if not exists public.linked_services (
 
 create table if not exists public.steam_auth_states (
   state text primary key,
-  user_id uuid not null references auth.users(id) on delete cascade,
+  user_id uuid references auth.users(id) on delete cascade,
+  mode text not null default 'connect',
   created_at timestamptz not null default now(),
   expires_at timestamptz not null
 );
+
+alter table public.steam_auth_states alter column user_id drop not null;
+alter table public.steam_auth_states add column if not exists mode text not null default 'connect';
 
 create table if not exists public.support_requests (
   id bigserial primary key,

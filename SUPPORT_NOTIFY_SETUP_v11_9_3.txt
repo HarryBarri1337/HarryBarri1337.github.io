@@ -1,4 +1,4 @@
-SkinQuest v11.9.2.2 - real support email notification setup
+SkinQuest v11.9.3 - real support email notification setup
 
 The website can now require a reply email and save support requests from guests or signed-in users.
 Email notification is server-side and uses:

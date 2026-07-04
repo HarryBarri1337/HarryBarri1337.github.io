@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="SkinQuest account confirmation page." />
   <title>Email confirmed - SkinQuest</title>
-  <link rel="stylesheet" href="styles.css?v=1192" />
+  <link rel="stylesheet" href="styles.css?v=1193" />
 </head>
 <body>
 <div id="pageLoader" class="page-loader">
@@ -56,7 +56,7 @@
     <a href="how-it-works.html">Help</a>
     <a href="mailto:support@skinquestcs.com">Support</a>
   </div>
-  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="changelog.html">v11.9.2.2</a></p>
+  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="changelog.html">v11.9.3</a></p>
 </footer>
 
 <div class="modal-backdrop hidden" id="authModal">
@@ -71,19 +71,19 @@
       <button class="auth-tab active" data-auth-tab="signup">Sign up</button>
       <button class="auth-tab" data-auth-tab="login">Sign in</button>
     </div>
-        <div class="auth-provider-grid hidden" aria-label="Future linked sign-in options">
+        <div class="auth-provider-grid" aria-label="Account sign-in options">
       <button class="button auth-provider-button steam-button" id="steamLoginButton" type="button">
         <span>ST</span>
-        <strong>Sign in with Steam</strong>
-        <small>v12</small>
+        <strong>Continue with Steam</strong>
+        <small>Live</small>
       </button>
       <button class="button auth-provider-button google-button" id="googleLoginButton" type="button">
         <span>G</span>
         <strong>Continue with Google</strong>
-        <small>v12</small>
+        <small>Future</small>
       </button>
     </div>
-    <div class="divider hidden"><span>or use email</span></div>
+    <div class="divider"><span>or use email</span></div>
     <form id="modalSignupForm" class="stack-form auth-pane" data-auth-pane="signup">
       <input id="modalSignupEmail" type="email" placeholder="Email address" required />
       <input id="modalSignupPassword" type="password" placeholder="Password" required minlength="6" />
@@ -98,6 +98,6 @@
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js?v=1192"></script>
+<script src="app.js?v=1193"></script>
 </body>
 </html>

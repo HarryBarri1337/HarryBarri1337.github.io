@@ -3121,3 +3121,20 @@ html.compact-reward-cards .reward-actions-smart small {
   border-color: rgba(53,201,139,.32);
   background: rgba(53,201,139,.12);
 }
+
+.linked-service-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.danger-button {
+  border-color: rgba(255, 100, 110, 0.45);
+  color: #ffd5d8;
+}
+
+.danger-button:hover {
+  border-color: rgba(255, 100, 110, 0.85);
+}

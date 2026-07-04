@@ -1,4 +1,4 @@
-// SkinQuest v11.9.2.2 - settings cleanup, admin support polish, and Steam Connect prep.
+// SkinQuest v11.9.3 - Steam sign-in/signup, connect, and disconnect.
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -8,6 +8,7 @@ const ADMIN_EMAILS = []; // v11.6: admin access must come from Supabase admin_us
 const CPX_APP_ID = 33831;
 const SUPPORT_EMAIL = "support@skinquestcs.com"; // Public support contact. Form requests are saved to Supabase and can trigger server-side email notifications.
 const STEAM_AUTH_START_URL = `${SUPABASE_URL}/functions/v1/steam-auth-start`;
+const STEAM_AUTH_DISCONNECT_URL = `${SUPABASE_URL}/functions/v1/steam-disconnect`;
 
 let rewardItems = [];
 let adminRewardItems = [];
@@ -54,9 +55,21 @@ function userInitial(user) {
 
 function shortEmail(email) {
   if (!email) return "Account";
+  if (isSteamOnlyEmail(email)) return "Steam account";
   const [name, domain] = String(email).split("@");
   if (!domain) return email;
   return `${name}@${domain}`;
+}
+
+function isSteamOnlyEmail(email) {
+  return String(email || "").toLowerCase().endsWith("@steam.skinquestcs.com");
+}
+
+function displayAccountEmail(user, profile = null) {
+  if (isSteamOnlyEmail(user?.email)) {
+    return profile?.steam_name || profile?.username || "Steam account";
+  }
+  return user?.email || "Account";
 }
 
 function copyToClipboard(value, successMessage = "Copied.") {
@@ -460,9 +473,7 @@ function initAuthModal() {
     showMessage("Google sign-in is planned for version 12. Use email sign-in for now.");
   });
 
-  qs("#steamLoginButton")?.addEventListener("click", () => {
-    showMessage("Steam sign-in is planned for version 12. Use email sign-in for now.");
-  });
+  qs("#steamLoginButton")?.addEventListener("click", startSteamAuthFromModal);
 }
 
 async function updateNavAuthState() {
@@ -493,7 +504,7 @@ async function updateNavAuthState() {
     navLevel = getLevelProgress(totalEarned);
   } catch {}
 
-  const email = user.email || "Account";
+  const email = displayAccountEmail(user, currentProfile);
   const adminLabel = isOwner(user) ? "Owner panel" : "Admin panel";
   const adminLink = isAdmin(user) ? `<a href="admin.html">${adminLabel}</a>` : "";
   const levelText = navLevel ? `Lvl ${navLevel.level}` : "Lvl —";
@@ -1306,6 +1317,46 @@ function getSelectedRewardDefaultSort() {
   return qs("[data-reward-default-sort].active")?.dataset.rewardDefaultSort || getRewardShopPreferences().default_sort;
 }
 
+
+function getCurrentAuthMode() {
+  return qs("[data-auth-tab].active")?.dataset.authTab === "login" ? "login" : "signup";
+}
+
+async function startSteamAuthFromModal() {
+  const button = qs("#steamLoginButton");
+  const previousText = button?.querySelector("strong")?.textContent || "Continue with Steam";
+  const mode = getCurrentAuthMode();
+
+  try {
+    if (button) {
+      button.disabled = true;
+      const label = button.querySelector("strong");
+      if (label) label.textContent = "Opening Steam...";
+    }
+
+    const response = await fetch(STEAM_AUTH_START_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode })
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.url) {
+      throw new Error(data.error || "Could not start Steam sign-in.");
+    }
+
+    window.location.href = data.url;
+  } catch (error) {
+    console.error("Steam auth failed", error);
+    showMessage(error.message || "Could not start Steam sign-in.", "error");
+    if (button) {
+      button.disabled = false;
+      const label = button.querySelector("strong");
+      if (label) label.textContent = previousText;
+    }
+  }
+}
+
 function getSteamConnectionLabel(profile) {
   const steamName = profile?.steam_name || profile?.steam_persona_name;
   if (steamName) return `Connected as ${steamName}`;
@@ -1315,21 +1366,23 @@ function getSteamConnectionLabel(profile) {
 
 function updateSteamLinkedService(profile) {
   const card = qs("#linkedSteamService");
-  const button = qs("#connectSteamButton");
+  const connectButton = qs("#connectSteamButton");
+  const disconnectButton = qs("#disconnectSteamButton");
   const status = qs("#steamLoginStatus");
   const description = qs("#steamLoginDescription");
-  if (!card || !button || !status) return;
+  if (!card || !connectButton || !status) return;
 
   const connected = !!profile?.steam_id;
   card.classList.toggle("is-connected", connected);
   card.classList.toggle("is-planned", !connected);
-  button.classList.toggle("hidden", connected);
+  connectButton.classList.toggle("hidden", connected);
+  disconnectButton?.classList.toggle("hidden", !connected);
   status.classList.toggle("hidden", !connected);
   status.textContent = connected ? "Connected" : "Not connected";
   if (description) {
     description.textContent = connected
       ? getSteamConnectionLabel(profile)
-      : "Connect your Steam account before launch.";
+      : "Connect your Steam account or use Steam sign-in from the login window.";
   }
 }
 
@@ -1354,7 +1407,8 @@ async function connectSteamAccount() {
       headers: {
         "Authorization": `Bearer ${session.access_token}`,
         "Content-Type": "application/json"
-      }
+      },
+      body: JSON.stringify({ mode: "connect" })
     });
 
     const data = await response.json().catch(() => ({}));
@@ -1366,6 +1420,57 @@ async function connectSteamAccount() {
   } catch (error) {
     console.error("Steam connect failed", error);
     showMessage(error.message || "Could not start Steam connection.", "error");
+    if (button) {
+      button.disabled = false;
+      button.textContent = previousText;
+    }
+  }
+}
+
+
+async function disconnectSteamAccount() {
+  const button = qs("#disconnectSteamButton");
+  const previousText = button?.textContent || "Disconnect";
+  const confirmed = await confirmAction({
+    title: "Disconnect Steam?",
+    message: "Your email login will still work, but Steam sign-in will stop working until you connect Steam again.",
+    confirmText: "Disconnect Steam",
+    cancelText: "Keep connected",
+    icon: "ST",
+    danger: true
+  });
+  if (!confirmed) return;
+
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session?.access_token) {
+      openAuthModal("login");
+      return;
+    }
+
+    if (button) {
+      button.disabled = true;
+      button.textContent = "Disconnecting...";
+    }
+
+    const response = await fetch(STEAM_AUTH_DISCONNECT_URL, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${session.access_token}`,
+        "Content-Type": "application/json"
+      }
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data.error || "Could not disconnect Steam.");
+    }
+
+    showMessage("Steam account disconnected.", "success");
+    await refreshAll();
+  } catch (error) {
+    console.error("Steam disconnect failed", error);
+    showMessage(error.message || "Could not disconnect Steam.", "error");
     if (button) {
       button.disabled = false;
       button.textContent = previousText;
@@ -1386,7 +1491,8 @@ function handleSteamConnectResult() {
     expired_state: ["Steam connection expired. Try again.", "error"],
     invalid_login: ["Steam could not verify the login. Try again.", "error"],
     no_steam_id: ["Steam did not return a SteamID. Try again.", "error"],
-    save_failed: ["Steam verified, but SkinQuest could not save it. It may already be connected to another account.", "error"]
+    save_failed: ["Steam verified, but SkinQuest could not save it. It may already be connected to another account.", "error"],
+    disconnected: ["Steam account disconnected.", "success"]
   };
   const [text, type] = messages[result] || ["Steam connection finished.", "success"];
   showMessage(text, type);
@@ -1407,6 +1513,7 @@ async function initSettingsPage() {
   });
 
   qs("#connectSteamButton")?.addEventListener("click", connectSteamAccount);
+  qs("#disconnectSteamButton")?.addEventListener("click", disconnectSteamAccount);
   handleSteamConnectResult();
 
   qsa("[data-reward-default-sort]").forEach((button) => {
@@ -1477,7 +1584,7 @@ async function refreshSettingsPage() {
     product_updates: profile?.notification_product_updates ?? storedPrefs.product_updates
   };
 
-  const email = user.email || "Account";
+  const email = displayAccountEmail(user, profile);
   const shortId = user.id ? `${user.id.slice(0, 8)}...${user.id.slice(-6)}` : "Unknown id";
 
   const avatar = qs("#settingsAvatar");
@@ -1720,7 +1827,7 @@ async function refreshDashboard() {
     if (el) el.textContent = value;
   };
 
-  setText("#accountEmail", user.email || "Unknown");
+  setText("#accountEmail", displayAccountEmail(user, profile) || "Unknown");
   setText("#balanceDisplay", Number(profile.points_balance || 0).toLocaleString());
   setText("#totalEarnedDisplay", Number(totalEarned).toLocaleString());
   setText("#levelDisplay", progress.level);
@@ -1919,7 +2026,8 @@ async function initAuthConfirmPage() {
     if (copy) copy.textContent = message;
   }
 
-  setState("loading", "Confirming your email...", "Finishing your SkinQuest sign-in. This usually takes a second.");
+  const isSteamAuth = new URLSearchParams(location.search).get("steam") === "login";
+  setState("loading", isSteamAuth ? "Signing in with Steam..." : "Confirming your email...", isSteamAuth ? "Finishing your Steam sign-in. This usually takes a second." : "Finishing your SkinQuest sign-in. This usually takes a second.");
 
   try {
     const params = new URLSearchParams(location.search);
@@ -1937,17 +2045,17 @@ async function initAuthConfirmPage() {
 
     const user = data?.session?.user || await getSessionUser();
     if (!user) {
-      setState("warning", "Email link opened", "Your email link was opened, but no active session was found. Try signing in now. If Supabase still sends you here, check the redirect URL settings.");
+      setState("warning", isSteamAuth ? "Steam link opened" : "Email link opened", isSteamAuth ? "Steam sign-in opened, but no active session was found. Try signing in again." : "Your email link was opened, but no active session was found. Try signing in now. If Supabase still sends you here, check the redirect URL settings.");
       if (actions) actions.innerHTML = `<button class="button button-primary" data-open-auth="login">Sign in</button><a class="button button-ghost" href="index.html">Home</a>`;
       return;
     }
 
     await ensureProfile(user);
-    setState("success", "Email confirmed", "Your SkinQuest account is ready. You can now earn coins and redeem rewards.");
+    setState("success", isSteamAuth ? "Steam sign-in complete" : "Email confirmed", isSteamAuth ? "You are now signed in with Steam." : "Your SkinQuest account is ready. You can now earn coins and redeem rewards.");
     if (actions) actions.innerHTML = `<a class="button button-primary" href="dashboard.html">Go to dashboard</a><a class="button button-ghost" href="rewards.html">View rewards</a>`;
     await updateNavAuthState();
   } catch (error) {
-    setState("error", "Could not confirm email", error.message || "The confirmation link could not be processed.");
+    setState("error", isSteamAuth ? "Could not sign in with Steam" : "Could not confirm email", error.message || "The confirmation link could not be processed.");
     if (actions) actions.innerHTML = `<button class="button button-primary" data-open-auth="login">Try signing in</button><a class="button button-ghost" href="index.html">Home</a>`;
   }
 }
