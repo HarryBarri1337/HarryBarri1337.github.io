@@ -1,0 +1,3 @@
+-- SkinQuest v12.1.1 upgrade from v12.1.1
+-- No database schema changes in this version.
+-- v12.1.1 changes are frontend-only: Steam email prompt and settings UI polish.

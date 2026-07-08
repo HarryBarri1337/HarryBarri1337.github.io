@@ -1,4 +1,4 @@
-// SkinQuest v12.1.0 - release polish, calmer typography, theme order, and navigation stability.
+// SkinQuest v12.1.1 - Steam email prompt and settings interaction polish.
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -230,6 +230,114 @@ function showConfirm(message, options = {}) {
     requestAnimationFrame(() => backdrop.classList.add("show"));
     setTimeout(() => backdrop.querySelector("[data-confirm-ok]")?.focus(), 80);
   });
+}
+
+
+function setButtonBusy(button, busyText = "Saving...") {
+  if (!button) return () => {};
+  if (!button.dataset.defaultText) button.dataset.defaultText = button.textContent.trim();
+  const original = button.dataset.defaultText || button.textContent.trim();
+  button.disabled = true;
+  button.classList.add("is-saving");
+  button.textContent = busyText;
+  return () => {
+    button.disabled = false;
+    button.classList.remove("is-saving");
+    button.textContent = original;
+  };
+}
+
+function flashButtonSaved(button, savedText = "Saved") {
+  if (!button) return;
+  const original = button.dataset.defaultText || button.textContent.trim();
+  button.disabled = true;
+  button.classList.remove("is-saving");
+  button.classList.add("is-saved");
+  button.textContent = savedText;
+  setTimeout(() => {
+    button.disabled = false;
+    button.classList.remove("is-saved");
+    button.textContent = original;
+  }, 1200);
+}
+
+function getSteamEmailPromptSnoozeKey(userId) {
+  return `skinquest_steam_email_prompt_snooze_${userId}`;
+}
+
+function shouldShowSteamEmailPrompt(user) {
+  if (!user?.id || !isSteamOnlyEmail(user.email)) return false;
+  const snoozedUntil = Number(localStorage.getItem(getSteamEmailPromptSnoozeKey(user.id)) || 0);
+  return Date.now() > snoozedUntil;
+}
+
+async function showSteamEmailPrompt(user) {
+  if (!user?.id || !isSteamOnlyEmail(user.email)) return;
+  if (document.querySelector(".email-prompt-backdrop")) return;
+
+  const backdrop = document.createElement("div");
+  backdrop.className = "confirm-backdrop email-prompt-backdrop";
+  backdrop.innerHTML = `
+    <div class="confirm-modal email-prompt-modal" role="dialog" aria-modal="true" aria-labelledby="steamEmailPromptTitle">
+      <div class="confirm-icon">@</div>
+      <div class="confirm-copy">
+        <h2 id="steamEmailPromptTitle">Add your email</h2>
+        <p>Steam does not share your real email. Add one so SkinQuest can send reward updates and account notifications.</p>
+      </div>
+      <form class="email-prompt-form" id="steamEmailPromptForm">
+        <label class="input-label">Email address
+          <input id="steamEmailPromptInput" type="email" placeholder="you@example.com" autocomplete="email" required />
+        </label>
+        <p class="fine-print">We will send the normal Supabase confirmation email. Your address is active after you confirm it.</p>
+        <div class="confirm-actions">
+          <button class="button button-ghost" type="button" data-email-prompt-later>Later</button>
+          <button class="button button-primary" type="submit" data-email-prompt-save>Send confirmation</button>
+        </div>
+      </form>
+    </div>
+  `;
+
+  const close = (snooze = true) => {
+    if (snooze) {
+      localStorage.setItem(getSteamEmailPromptSnoozeKey(user.id), String(Date.now() + 12 * 60 * 60 * 1000));
+    }
+    backdrop.classList.remove("show");
+    backdrop.classList.add("leaving");
+    setTimeout(() => backdrop.remove(), 220);
+  };
+
+  backdrop.addEventListener("click", (event) => {
+    if (event.target === backdrop) close(true);
+  });
+  backdrop.querySelector("[data-email-prompt-later]")?.addEventListener("click", () => close(true));
+  backdrop.querySelector("#steamEmailPromptForm")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const input = backdrop.querySelector("#steamEmailPromptInput");
+    const saveButton = backdrop.querySelector("[data-email-prompt-save]");
+    const email = input?.value.trim().toLowerCase();
+    if (!email || !isValidEmailAddress(email)) {
+      showMessage("Enter a valid email address.", "error");
+      input?.focus();
+      return;
+    }
+    const reset = setButtonBusy(saveButton, "Sending...");
+    const { error } = await sb.auth.updateUser(
+      { email },
+      { emailRedirectTo: getPageUrl("auth-confirm.html") }
+    );
+    reset();
+    if (error) {
+      showMessage(error.message || "Could not send confirmation email.", "error");
+      return;
+    }
+    localStorage.removeItem(getSteamEmailPromptSnoozeKey(user.id));
+    showMessage("Confirmation email sent. Open it to finish adding your email.", "success");
+    close(false);
+  });
+
+  document.body.appendChild(backdrop);
+  requestAnimationFrame(() => backdrop.classList.add("show"));
+  setTimeout(() => backdrop.querySelector("#steamEmailPromptInput")?.focus(), 120);
 }
 
 async function confirmAndSignOut() {
@@ -1639,12 +1747,16 @@ async function initSettingsPage() {
 
   qs("#rewardShopSettingsForm")?.addEventListener("submit", (event) => {
     event.preventDefault();
+    const button = event.currentTarget.querySelector('button[type="submit"]');
+    const reset = setButtonBusy(button, "Saving...");
     saveRewardShopPreferences({
       default_sort: getSelectedRewardDefaultSort(),
       show_out_of_stock: !!qs("#rewardShowOutOfStock")?.checked,
       compact_cards: !!qs("#rewardCompactCards")?.checked
     });
     hydrateRewardShopSettingsControls();
+    reset();
+    flashButtonSaved(button, "Saved");
     showMessage("Reward browsing preferences saved.", "success");
   });
 
@@ -1656,8 +1768,13 @@ async function initSettingsPage() {
 
   qs("#notificationSettingsForm")?.addEventListener("submit", async (event) => {
     event.preventDefault();
+    const button = event.currentTarget.querySelector('button[type="submit"]');
+    const reset = setButtonBusy(button, "Saving...");
     const user = await getSessionUser();
-    if (!user) return openAuthModal("login");
+    if (!user) {
+      reset();
+      return openAuthModal("login");
+    }
 
     const prefs = {
       reward_updates: !!qs("#notifyRewardUpdates")?.checked,
@@ -1666,6 +1783,8 @@ async function initSettingsPage() {
     };
 
     await trySaveNotificationPreferences(user, prefs);
+    reset();
+    flashButtonSaved(button, "Saved");
     showMessage("Notification preferences saved.", "success");
   });
 
@@ -1883,17 +2002,22 @@ async function initDashboard() {
       const user = await getSessionUser();
       if (!user) return openAuthModal("login");
 
+      const button = event.currentTarget.querySelector('button[type="submit"]');
       const steamTradeUrl = qs("#tradeUrl")?.value.trim();
       if (steamTradeUrl && !isValidSteamTradeUrl(steamTradeUrl)) {
         return showMessage("That does not look like a valid Steam trade URL. It should include steamcommunity.com/tradeoffer/new/?partner=...&token=...");
       }
 
+      const reset = setButtonBusy(button, "Saving...");
       try {
         await saveSteamTradeUrlForUser(user, steamTradeUrl);
       } catch (error) {
+        reset();
         return showMessage(error.message, "error");
       }
 
+      reset();
+      flashButtonSaved(button, "Saved");
       showMessage("Steam trade URL saved.", "success");
       await refreshAll();
     });
@@ -1975,6 +2099,10 @@ async function refreshDashboard() {
   loadingSection?.classList.add("hidden");
   authSection.classList.add("hidden");
   accountSection.classList.remove("hidden");
+
+  if (shouldShowSteamEmailPrompt(user)) {
+    setTimeout(() => showSteamEmailPrompt(user), 260);
+  }
 }
 
 function updateGetStartedPanel(profile, totalEarned, redemptions = []) {

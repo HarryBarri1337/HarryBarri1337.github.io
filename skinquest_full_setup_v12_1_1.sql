@@ -1,4 +1,4 @@
--- SkinQuest full Supabase setup v12.1.0
+-- SkinQuest full Supabase setup v12.1.1
 -- Run this in Supabase SQL Editor only when setting up a fresh project.
 -- This full setup includes the existing database baseline used by the current frontend.
 
