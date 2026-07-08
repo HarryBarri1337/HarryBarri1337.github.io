@@ -1,4 +1,4 @@
-/* SkinQuest v12.0.1 - theme polish, navigation stability, and Settings cleanup */
+/* SkinQuest v12.0.2 - release polish, calmer typography, theme order, and navigation stability */
 
 :root {
   --bg: #0b0f16;
@@ -3250,7 +3250,7 @@ html.compact-reward-cards .reward-actions-smart small {
 .theme-option[data-theme-option="dust2"] { --theme-preview-image: url("assets/interface/dust2-background.png"); }
 .theme-option[data-theme-option="ancient"] { --theme-preview-image: url("assets/interface/ancient-background.png"); }
 
-/* v12.0.1 theme tuning + navigation/settings polish */
+/* v12.0.2 theme tuning + navigation/settings polish */
 :root,
 :root[data-theme="nuke"],
 :root[data-theme="train"],
@@ -3462,4 +3462,150 @@ main.hero {
     justify-self: start;
     margin-left: 54px;
   }
+}
+
+/* v12.0.2 release polish: calmer typography, slightly larger logo, steadier nav, and lighter theme touch */
+html {
+  background: #0b0f16;
+  color-scheme: dark;
+}
+
+.brand-logo {
+  height: 54px;
+  max-width: 270px;
+}
+.site-header {
+  min-height: 82px;
+}
+.brand-fallback .brand-mark {
+  width: 42px;
+  height: 42px;
+}
+
+/* Keep headings strong, but make regular UI copy feel less AI-heavy. */
+p,
+li,
+small,
+.muted,
+.fine-print,
+.fine-auth,
+.provider-card p,
+.reward-card p,
+.card p,
+.panel p,
+.settings-toggle small,
+.security-checklist span,
+.account-dropdown button,
+.footer-links a {
+  font-weight: 400;
+}
+
+.site-nav a,
+.nav-login,
+.coin-pill span,
+.card-topline,
+label,
+.settings-info-card span,
+.settings-subsection-head h3,
+.filter-control label,
+.level-pill-label,
+.setup-step span,
+.system-status-card span {
+  font-weight: 700;
+}
+
+.pill,
+.button,
+.status-pill,
+.stock-pill,
+.theme-option span,
+.theme-option strong,
+.settings-info-card strong,
+.linked-service strong,
+.account-trigger-copy strong,
+.coin-pill strong,
+.price,
+h1,
+h2,
+h3,
+.brand,
+.brand-mark,
+.account-avatar,
+.provider-logo {
+  font-weight: 800;
+}
+
+h1 {
+  font-weight: 850;
+}
+
+/* Make map themes more visible through mood/glow, not by changing the core blue interface. */
+body::before {
+  opacity: .98;
+  filter: blur(6px) saturate(calc(var(--theme-bg-saturation) + .06)) contrast(calc(var(--theme-bg-contrast) + .02));
+}
+body::after {
+  background:
+    radial-gradient(circle at 50% -5%, var(--theme-glow), transparent 29rem),
+    radial-gradient(circle at 88% 16%, rgba(var(--theme-map-rgb), .13), transparent 25rem),
+    radial-gradient(circle at 10% 22%, rgba(var(--theme-map-rgb), .08), transparent 24rem),
+    linear-gradient(90deg, rgba(4, 7, 12, 0.74), rgba(4, 7, 12, 0.34) 50%, rgba(4, 7, 12, 0.74));
+}
+
+.page-heading,
+.section-headline {
+  position: relative;
+}
+.page-heading::after,
+.section-headline::after {
+  content: "";
+  display: block;
+  width: 78px;
+  height: 1px;
+  margin-top: 14px;
+  background: linear-gradient(90deg, rgba(var(--theme-map-rgb), .55), transparent);
+  opacity: .55;
+}
+.theme-option {
+  min-height: 118px;
+}
+.theme-option:hover {
+  box-shadow: 0 16px 42px rgba(0,0,0,.26), 0 0 24px rgba(var(--theme-map-rgb), .08);
+}
+.theme-option.active {
+  transform: translateY(-1px);
+}
+
+/* Reduce visible layout movement while auth/profile refreshes. */
+.nav-actions {
+  min-height: 46px;
+}
+.account-trigger {
+  min-width: 162px;
+  justify-content: flex-start;
+}
+.nav-actions.auth-loading .auth-skeleton {
+  width: 240px;
+  max-width: 100%;
+}
+.nav-actions.nav-restored {
+  min-height: 46px;
+}
+
+/* Settings order polish: Themes now sits before Notifications in the markup. */
+.settings-theme-panel {
+  border-color: rgba(var(--theme-map-rgb), .18);
+}
+
+@media (max-width: 1180px) {
+  .brand-logo { height: 50px; max-width: 235px; }
+}
+@media (max-width: 760px) {
+  .brand-logo { height: 42px; max-width: 185px; }
+  .site-header { min-height: 72px; }
+  .nav-actions.auth-loading .auth-skeleton { width: 128px; }
+  .account-trigger { min-width: 0; }
+}
+@media (max-width: 560px) {
+  .brand-logo { max-width: 155px; height: 38px; }
 }

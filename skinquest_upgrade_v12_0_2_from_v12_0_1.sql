@@ -1,0 +1,2 @@
+-- SkinQuest v12.0.2 upgrade from v12.0.1
+-- No database changes in this version.

@@ -16,7 +16,7 @@
       }
     }());
   </script>
-  <link rel="stylesheet" href="styles.css?v=1201" />
+  <link rel="stylesheet" href="styles.css?v=1202" />
 </head>
 <body>
 <div id="pageLoader" class="page-loader">
@@ -52,6 +52,17 @@
   <section class="panel changelog-list">
     <article class="changelog-entry current">
       <span class="pill">Current</span>
+      <h2>v12.0.2 - Release polish</h2>
+      <ul>
+        <li>Made regular copy less over-bold so the interface feels less AI-generated and more like a normal product site.</li>
+        <li>Made the header logo slightly larger while keeping responsive sizes for smaller screens.</li>
+        <li>Moved Theme settings above Notifications so appearance settings are easier to find.</li>
+        <li>Made map themes a little more noticeable through background glow, subtle accents, and theme cards without recoloring the full UI.</li>
+        <li>Added extra navbar/profile stability polish to reduce visible movement during auth refreshes.</li>
+        <li>Kept Surveys as the clearer navigation label while leaving earn.html as the page URL.</li>
+        <li>Included no-database-changes upgrade SQL and updated README release notes.</li>
+      </ul>
+
       <h2>v12.0.1 - Theme polish + navigation stability</h2>
       <ul>
         <li>Made map themes feel more noticeable through stronger background mood, glows, borders, and theme cards.</li>
@@ -146,7 +157,7 @@
     <a href="how-it-works.html">Help</a>
     <a href="mailto:support@skinquestcs.com">Support</a>
   </div>
-  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="changelog.html">v12.0.1</a></p>
+  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="changelog.html">v12.0.2</a></p>
 </footer>
 <div class="modal-backdrop hidden" id="authModal">
   <div class="auth-modal" role="dialog" aria-modal="true">
@@ -193,6 +204,6 @@
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js?v=1201"></script>
+<script src="app.js?v=1202"></script>
 </body>
 </html>
