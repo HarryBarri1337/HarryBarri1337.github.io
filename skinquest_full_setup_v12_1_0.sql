@@ -1,4 +1,4 @@
--- SkinQuest full Supabase setup v12.0.2
+-- SkinQuest full Supabase setup v12.1.0
 -- Run this in Supabase SQL Editor only when setting up a fresh project.
 -- This full setup includes the existing database baseline used by the current frontend.
 
@@ -810,6 +810,56 @@ for update to authenticated
 using (public.is_admin())
 with check (public.is_admin());
 
+
+-- -----------------------------
+-- Admin notification subscriber views
+-- -----------------------------
+-- These views let owner/admin accounts quickly see the contact emails that opted into each notification category.
+-- They use auth.users.email as the real email source and fall back to profiles.username only if it looks like an email.
+-- Non-admin signed-in users receive zero rows because every view is gated by public.is_admin().
+
+drop view if exists public.admin_notification_reward_update_emails;
+drop view if exists public.admin_notification_offer_issue_emails;
+drop view if exists public.admin_notification_product_update_emails;
+drop view if exists public.admin_notification_subscribers;
+
+create or replace view public.admin_notification_subscribers as
+select
+  p.id as user_id,
+  coalesce(u.email, case when p.username like '%@%' then p.username else null end) as email,
+  p.username,
+  p.steam_id,
+  p.steam_name,
+  coalesce(p.notification_reward_updates, true) as reward_updates,
+  coalesce(p.notification_offer_issues, true) as offer_issues,
+  coalesce(p.notification_product_updates, false) as product_updates,
+  p.account_status,
+  p.created_at,
+  p.updated_at,
+  u.email_confirmed_at,
+  u.last_sign_in_at
+from public.profiles p
+left join auth.users u on u.id = p.id
+where public.is_admin();
+
+create or replace view public.admin_notification_reward_update_emails as
+select *
+from public.admin_notification_subscribers
+where reward_updates = true
+  and email is not null;
+
+create or replace view public.admin_notification_offer_issue_emails as
+select *
+from public.admin_notification_subscribers
+where offer_issues = true
+  and email is not null;
+
+create or replace view public.admin_notification_product_update_emails as
+select *
+from public.admin_notification_subscribers
+where product_updates = true
+  and email is not null;
+
 -- -----------------------------
 -- Grants
 -- -----------------------------
@@ -820,6 +870,10 @@ grant select on public.profiles to authenticated;
 grant select on public.redemption_requests to authenticated;
 grant select on public.coin_adjustments to authenticated;
 grant select on public.admin_users to authenticated;
+grant select on public.admin_notification_subscribers to authenticated;
+grant select on public.admin_notification_reward_update_emails to authenticated;
+grant select on public.admin_notification_offer_issue_emails to authenticated;
+grant select on public.admin_notification_product_update_emails to authenticated;
 grant select on public.linked_services to authenticated;
 grant insert on public.support_requests to anon;
 grant select, insert on public.support_requests to authenticated;
