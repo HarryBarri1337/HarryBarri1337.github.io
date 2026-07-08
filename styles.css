@@ -1,4 +1,4 @@
-/* SkinQuest v12.0.0 - map themes, Steam disconnect fix, and release cleanup */
+/* SkinQuest v12.0.1 - theme polish, navigation stability, and Settings cleanup */
 
 :root {
   --bg: #0b0f16;
@@ -3249,3 +3249,217 @@ html.compact-reward-cards .reward-actions-smart small {
 .theme-option[data-theme-option="mirage"] { --theme-preview-image: url("assets/interface/mirage-background.png"); }
 .theme-option[data-theme-option="dust2"] { --theme-preview-image: url("assets/interface/dust2-background.png"); }
 .theme-option[data-theme-option="ancient"] { --theme-preview-image: url("assets/interface/ancient-background.png"); }
+
+/* v12.0.1 theme tuning + navigation/settings polish */
+:root,
+:root[data-theme="nuke"],
+:root[data-theme="train"],
+:root[data-theme="mirage"],
+:root[data-theme="dust2"],
+:root[data-theme="ancient"] {
+  --bg: #0b0f16;
+  --page: #0f1520;
+  --surface: #141b28;
+  --surface-2: #192232;
+  --surface-3: #202b3e;
+  --brand: #e8b34d;
+  --brand-2: #f6cf72;
+  --accent: #6ea8ff;
+  --theme-map-accent: #6ea8ff;
+  --theme-map-accent-2: #f6cf72;
+  --theme-map-rgb: 110, 168, 255;
+}
+
+:root,
+:root[data-theme="nuke"] {
+  --site-background-image: url("assets/interface/nuke-background.png");
+  --theme-preview-image: url("assets/interface/nuke-background.png");
+  --theme-bg-tint-top: rgba(5, 8, 14, 0.08);
+  --theme-bg-tint-bottom: rgba(5, 8, 14, 0.68);
+  --theme-glow: rgba(91, 141, 232, 0.30);
+  --theme-map-accent: #6ea8ff;
+  --theme-map-accent-2: #f6cf72;
+  --theme-map-rgb: 110, 168, 255;
+  --theme-bg-saturation: 1.14;
+  --theme-bg-contrast: 1.03;
+}
+:root[data-theme="train"] {
+  --site-background-image: url("assets/interface/train-background.png");
+  --theme-preview-image: url("assets/interface/train-background.png");
+  --theme-bg-tint-top: rgba(16, 6, 7, 0.10);
+  --theme-bg-tint-bottom: rgba(16, 6, 7, 0.70);
+  --theme-glow: rgba(232, 89, 72, 0.29);
+  --theme-map-accent: #ff6b57;
+  --theme-map-accent-2: #f6cf72;
+  --theme-map-rgb: 255, 107, 87;
+  --theme-bg-saturation: 1.18;
+  --theme-bg-contrast: 1.05;
+}
+:root[data-theme="mirage"] {
+  --site-background-image: url("assets/interface/mirage-background.png");
+  --theme-preview-image: url("assets/interface/mirage-background.png");
+  --theme-bg-tint-top: rgba(18, 11, 4, 0.06);
+  --theme-bg-tint-bottom: rgba(18, 11, 4, 0.66);
+  --theme-glow: rgba(236, 168, 78, 0.32);
+  --theme-map-accent: #f3b45b;
+  --theme-map-accent-2: #6ea8ff;
+  --theme-map-rgb: 243, 180, 91;
+  --theme-bg-saturation: 1.12;
+  --theme-bg-contrast: 1.04;
+}
+:root[data-theme="dust2"] {
+  --site-background-image: url("assets/interface/dust2-background.png");
+  --theme-preview-image: url("assets/interface/dust2-background.png");
+  --theme-bg-tint-top: rgba(18, 12, 4, 0.06);
+  --theme-bg-tint-bottom: rgba(18, 12, 4, 0.66);
+  --theme-glow: rgba(245, 191, 105, 0.31);
+  --theme-map-accent: #e1b76a;
+  --theme-map-accent-2: #6ea8ff;
+  --theme-map-rgb: 225, 183, 106;
+  --theme-bg-saturation: 1.10;
+  --theme-bg-contrast: 1.04;
+}
+:root[data-theme="ancient"] {
+  --site-background-image: url("assets/interface/ancient-background.png");
+  --theme-preview-image: url("assets/interface/ancient-background.png");
+  --theme-bg-tint-top: rgba(3, 15, 8, 0.07);
+  --theme-bg-tint-bottom: rgba(3, 15, 8, 0.70);
+  --theme-glow: rgba(74, 210, 126, 0.30);
+  --theme-map-accent: #65d982;
+  --theme-map-accent-2: #f6cf72;
+  --theme-map-rgb: 101, 217, 130;
+  --theme-bg-saturation: 1.16;
+  --theme-bg-contrast: 1.03;
+}
+
+body::before {
+  inset: -14px;
+  filter: blur(5px) saturate(var(--theme-bg-saturation)) contrast(var(--theme-bg-contrast));
+  transform: scale(1.025);
+}
+body::after {
+  background:
+    radial-gradient(circle at 50% -4%, var(--theme-glow), transparent 32rem),
+    radial-gradient(circle at 86% 18%, rgba(var(--theme-map-rgb), .10), transparent 24rem),
+    linear-gradient(90deg, rgba(4, 7, 12, 0.72), rgba(4, 7, 12, 0.38) 50%, rgba(4, 7, 12, 0.72));
+}
+.site-header,
+.page,
+main.hero,
+.panel,
+.card,
+.provider-card,
+.reward-card,
+.settings-info-card,
+.linked-service,
+.theme-option {
+  box-shadow: 0 18px 58px rgba(0,0,0,.28), 0 0 0 1px rgba(var(--theme-map-rgb), .025);
+}
+.site-header {
+  border-color: rgba(var(--theme-map-rgb), .16);
+}
+.page,
+main.hero {
+  border-color: rgba(var(--theme-map-rgb), .12);
+}
+.panel:hover,
+.card:hover,
+.provider-card:hover,
+.reward-card:hover {
+  border-color: rgba(var(--theme-map-rgb), .23);
+}
+.theme-option {
+  min-height: 112px;
+  background:
+    linear-gradient(180deg, rgba(6,10,17,.06), rgba(6,10,17,.82)),
+    var(--theme-preview-image, var(--site-background-image)) center center / cover no-repeat;
+}
+.theme-option.active {
+  border-color: rgba(var(--theme-map-rgb), .72);
+  box-shadow: inset 0 0 0 1px rgba(var(--theme-map-rgb), .20), 0 16px 42px rgba(0,0,0,.30), 0 0 34px rgba(var(--theme-map-rgb), .14);
+}
+.theme-option.active::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 18% 0%, rgba(var(--theme-map-rgb), .24), transparent 62%);
+  pointer-events: none;
+}
+.theme-option.active span {
+  color: #0b0f16;
+  background: linear-gradient(180deg, #eef2f8, var(--theme-map-accent));
+}
+
+@media (min-width: 1081px) {
+  .nav-actions {
+    min-width: 380px;
+  }
+  .nav-actions.auth-loading .auth-skeleton {
+    width: 380px;
+  }
+}
+.nav-actions.nav-restored {
+  transition: opacity 120ms ease;
+}
+.auth-skeleton {
+  opacity: .72;
+}
+.page-loader {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+.settings-page .linked-service {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+}
+.settings-page .linked-service-actions {
+  display: contents;
+}
+.settings-page .linked-service-actions .button {
+  grid-column: 3;
+  margin-left: 0;
+  justify-self: end;
+}
+.settings-page .linked-service-actions > span {
+  grid-column: 4;
+  justify-self: end;
+  margin-left: 0;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: rgba(53,201,139,.12);
+  border: 1px solid rgba(53,201,139,.24);
+  color: #a9f3d1;
+  font-size: .74rem;
+  font-weight: 900;
+}
+.settings-page .linked-service > span {
+  grid-column: 4;
+  justify-self: end;
+}
+.linked-service#linkedSteamService.is-connected {
+  border-color: rgba(53,201,139,.30);
+  background: linear-gradient(180deg, rgba(53,201,139,.070), rgba(255,255,255,.024));
+}
+
+@media (max-width: 760px) {
+  .settings-page .linked-service {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .settings-page .linked-service-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+  .settings-page .linked-service-actions .button,
+  .settings-page .linked-service-actions > span,
+  .settings-page .linked-service > span {
+    grid-column: auto;
+    justify-self: start;
+    margin-left: 54px;
+  }
+}

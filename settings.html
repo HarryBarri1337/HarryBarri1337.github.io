@@ -5,7 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="Manage your SkinQuest linked services, notification preferences, Steam trade URL, and account settings." />
   <title>Settings - SkinQuest</title>
-  <link rel="stylesheet" href="styles.css?v=1200" />
+  <script>
+    (function () {
+      try {
+        var theme = localStorage.getItem("skinquest.siteTheme") || "nuke";
+        if (!/^(nuke|train|mirage|dust2|ancient)$/.test(theme)) theme = "nuke";
+        document.documentElement.dataset.theme = theme;
+      } catch (e) {
+        document.documentElement.dataset.theme = "nuke";
+      }
+    }());
+  </script>
+  <link rel="stylesheet" href="styles.css?v=1201" />
 </head>
 <body>
 <div id="pageLoader" class="page-loader">
@@ -22,7 +33,7 @@
   <button class="nav-toggle" aria-label="Open navigation" data-nav-toggle>☰</button>
   <nav class="site-nav" data-nav>
     <a href="dashboard.html">Dashboard</a>
-    <a href="earn.html">Earn</a>
+    <a href="earn.html">Surveys</a>
     <a href="rewards.html">Rewards</a>
     <a class="hidden-admin-link" href="admin.html">Admin</a>
     <a href="how-it-works.html">How it works</a>
@@ -158,7 +169,7 @@
         <div>
           <span class="pill">Theme</span>
           <h2>Theme</h2>
-          <p class="muted">Choose the CS-inspired background and interface colors used across SkinQuest.</p>
+          <p class="muted">Choose the CS-inspired background mood used across SkinQuest. The main interface stays in the default SkinQuest colors for readability.</p>
         </div>
       </div>
       <div class="theme-option-grid" role="group" aria-label="Theme options">
@@ -168,19 +179,19 @@
         </button>
         <button class="theme-option" type="button" data-theme-option="train" aria-pressed="false">
           <strong>Train Theme</strong>
-          <span>Red industrial</span>
+          <span>Industrial</span>
         </button>
         <button class="theme-option" type="button" data-theme-option="mirage" aria-pressed="false">
           <strong>Mirage Theme</strong>
-          <span>Warm desert</span>
+          <span>Desert</span>
         </button>
         <button class="theme-option" type="button" data-theme-option="dust2" aria-pressed="false">
           <strong>Dust2 Theme</strong>
-          <span>Sandstone</span>
+          <span>Classic</span>
         </button>
         <button class="theme-option" type="button" data-theme-option="ancient" aria-pressed="false">
           <strong>Ancient Theme</strong>
-          <span>Jungle green</span>
+          <span>Jungle</span>
         </button>
       </div>
     </section>
@@ -210,7 +221,7 @@
     <a href="how-it-works.html">Help</a>
     <a href="mailto:support@skinquestcs.com">Support</a>
   </div>
-  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="changelog.html">v12.0.0</a></p>
+  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="changelog.html">v12.0.1</a></p>
 </footer>
 <div class="modal-backdrop hidden" id="authModal">
   <div class="auth-modal" role="dialog" aria-modal="true">
@@ -257,6 +268,6 @@
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js?v=1200"></script>
+<script src="app.js?v=1201"></script>
 </body>
 </html>

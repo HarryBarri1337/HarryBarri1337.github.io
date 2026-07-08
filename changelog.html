@@ -5,7 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="SkinQuest version history and recent platform updates." />
   <title>Changelog - SkinQuest</title>
-  <link rel="stylesheet" href="styles.css?v=1200" />
+  <script>
+    (function () {
+      try {
+        var theme = localStorage.getItem("skinquest.siteTheme") || "nuke";
+        if (!/^(nuke|train|mirage|dust2|ancient)$/.test(theme)) theme = "nuke";
+        document.documentElement.dataset.theme = theme;
+      } catch (e) {
+        document.documentElement.dataset.theme = "nuke";
+      }
+    }());
+  </script>
+  <link rel="stylesheet" href="styles.css?v=1201" />
 </head>
 <body>
 <div id="pageLoader" class="page-loader">
@@ -22,7 +33,7 @@
   <button class="nav-toggle" aria-label="Open navigation" data-nav-toggle>☰</button>
   <nav class="site-nav" data-nav>
     <a href="dashboard.html">Dashboard</a>
-    <a href="earn.html">Earn</a>
+    <a href="earn.html">Surveys</a>
     <a href="rewards.html">Rewards</a>
     <a class="hidden-admin-link" href="admin.html">Admin</a>
     <a href="how-it-works.html">How it works</a>
@@ -41,10 +52,21 @@
   <section class="panel changelog-list">
     <article class="changelog-entry current">
       <span class="pill">Current</span>
+      <h2>v12.0.1 - Theme polish + navigation stability</h2>
+      <ul>
+        <li>Made map themes feel more noticeable through stronger background mood, glows, borders, and theme cards.</li>
+        <li>Kept the main SkinQuest interface colors consistent instead of recoloring the whole UI per map.</li>
+        <li>Reduced page-change flicker by applying the saved theme before the stylesheet loads.</li>
+        <li>Stabilized the top-right account area so it does not jump back to a loading state as noticeably between pages.</li>
+        <li>Moved Steam Connected into a proper status pill layout in Settings.</li>
+        <li>Renamed the Earn navigation label to Surveys while keeping earn.html as the page URL.</li>
+        <li>Added README notes that Support notifications and Steam auth setup are already completed.</li>
+      </ul>
+
       <h2>v12.0.0 - Map themes + stability cleanup</h2>
       <ul>
         <li>Added selectable Nuke, Train, Mirage, Dust2, and Ancient themes in Settings.</li>
-        <li>Theme choices now update the page background and interface colors across SkinQuest.</li>
+        <li>Theme choices update the page background and theme mood across SkinQuest.</li>
         <li>Saved the selected theme locally so the site keeps the same look on the next visit.</li>
         <li>Fixed the Steam disconnect button not opening its confirmation dialog.</li>
         <li>Removed completed support notification setup notes from the release package.</li>
@@ -124,7 +146,7 @@
     <a href="how-it-works.html">Help</a>
     <a href="mailto:support@skinquestcs.com">Support</a>
   </div>
-  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="changelog.html">v12.0.0</a></p>
+  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="changelog.html">v12.0.1</a></p>
 </footer>
 <div class="modal-backdrop hidden" id="authModal">
   <div class="auth-modal" role="dialog" aria-modal="true">
@@ -171,6 +193,6 @@
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js?v=1200"></script>
+<script src="app.js?v=1201"></script>
 </body>
 </html>

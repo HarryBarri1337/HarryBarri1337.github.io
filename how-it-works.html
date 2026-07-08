@@ -5,7 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="Learn how SkinQuest works: free partner tasks, fixed rewards, manual Steam trade review, and no gambling mechanics." />
   <title>How it works - SkinQuest</title>
-  <link rel="stylesheet" href="styles.css?v=1200" />
+  <script>
+    (function () {
+      try {
+        var theme = localStorage.getItem("skinquest.siteTheme") || "nuke";
+        if (!/^(nuke|train|mirage|dust2|ancient)$/.test(theme)) theme = "nuke";
+        document.documentElement.dataset.theme = theme;
+      } catch (e) {
+        document.documentElement.dataset.theme = "nuke";
+      }
+    }());
+  </script>
+  <link rel="stylesheet" href="styles.css?v=1201" />
 </head>
 <body>
 <div id="pageLoader" class="page-loader">
@@ -22,7 +33,7 @@
   <button class="nav-toggle" aria-label="Open navigation" data-nav-toggle>☰</button>
   <nav class="site-nav" data-nav>
     <a href="dashboard.html">Dashboard</a>
-    <a href="earn.html">Earn</a>
+    <a href="earn.html">Surveys</a>
     <a href="rewards.html">Rewards</a>
     <a class="hidden-admin-link" href="admin.html">Admin</a>
     <a href="how-it-works.html">How it works</a>
@@ -93,7 +104,7 @@
     <a href="how-it-works.html">Help</a>
     <a href="mailto:support@skinquestcs.com">Support</a>
   </div>
-  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="changelog.html">v12.0.0</a></p>
+  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="changelog.html">v12.0.1</a></p>
 </footer>
 <div class="modal-backdrop hidden" id="authModal">
   <div class="auth-modal" role="dialog" aria-modal="true">
@@ -140,6 +151,6 @@
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js?v=1200"></script>
+<script src="app.js?v=1201"></script>
 </body>
 </html>

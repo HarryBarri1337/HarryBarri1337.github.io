@@ -1,4 +1,4 @@
-// SkinQuest v12.0.0 - map themes, Steam disconnect fix, and release cleanup.
+// SkinQuest v12.0.1 - theme polish, navigation stability, and Settings cleanup.
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -11,14 +11,15 @@ const STEAM_AUTH_START_URL = `${SUPABASE_URL}/functions/v1/steam-auth-start`;
 const STEAM_AUTH_DISCONNECT_URL = `${SUPABASE_URL}/functions/v1/steam-disconnect`;
 
 const SITE_THEMES = {
-  nuke: { label: "Nuke", status: "Classic blue/yellow" },
-  train: { label: "Train", status: "Red industrial" },
-  mirage: { label: "Mirage", status: "Warm desert" },
-  dust2: { label: "Dust2", status: "Sandstone" },
-  ancient: { label: "Ancient", status: "Jungle green" }
+  nuke: { label: "Nuke", status: "Cold blue" },
+  train: { label: "Train", status: "Industrial" },
+  mirage: { label: "Mirage", status: "Desert" },
+  dust2: { label: "Dust2", status: "Classic" },
+  ancient: { label: "Ancient", status: "Jungle" }
 };
 const DEFAULT_SITE_THEME = "nuke";
 const SITE_THEME_STORAGE_KEY = "skinquest.siteTheme";
+const NAV_AUTH_CACHE_KEY = "skinquest.navAuthCache";
 
 function getSavedSiteTheme() {
   try {
@@ -241,6 +242,7 @@ async function confirmAndSignOut() {
   });
   if (!confirmed) return;
   await sb.auth.signOut();
+  setCachedNavAuthState(null);
   location.href = "index.html";
 }
 
@@ -521,39 +523,43 @@ function initAuthModal() {
   qs("#steamLoginButton")?.addEventListener("click", startSteamAuthFromModal);
 }
 
-async function updateNavAuthState() {
-  const actions = qs("#navAuthActions");
-  const user = await getSessionUser();
-  currentUser = user;
-  currentIsAdmin = await fetchAdminStatus(user);
-  updateAdminVisibility(user);
 
-  if (!actions) return;
-  actions.classList.remove("auth-loading");
-
-  if (!user) {
-    actions.innerHTML = `
-      <button class="nav-login nav-clickable" type="button" data-open-auth="login">Sign in</button>
-      <button class="button button-primary nav-cta" type="button" data-open-auth="signup">Sign up</button>
-    `;
-    return;
-  }
-
-  let coins = 0;
-  let navLevel = null;
+function getCachedNavAuthState() {
   try {
-    const profile = await ensureProfile(user);
-    currentProfile = profile;
-    coins = Number(profile.points_balance || 0);
-    const totalEarned = await getTotalEarned(user.id);
-    navLevel = getLevelProgress(totalEarned);
-  } catch {}
+    const cached = JSON.parse(localStorage.getItem(NAV_AUTH_CACHE_KEY) || "null");
+    if (!cached || cached.expiresAt < Date.now()) return null;
+    return cached;
+  } catch {
+    return null;
+  }
+}
 
-  const email = displayAccountEmail(user, currentProfile);
-  const adminLabel = isOwner(user) ? "Owner panel" : "Admin panel";
-  const adminLink = isAdmin(user) ? `<a href="admin.html">${adminLabel}</a>` : "";
+function setCachedNavAuthState(data) {
+  try {
+    if (!data) {
+      localStorage.removeItem(NAV_AUTH_CACHE_KEY);
+      return;
+    }
+    localStorage.setItem(NAV_AUTH_CACHE_KEY, JSON.stringify({
+      ...data,
+      expiresAt: Date.now() + 1000 * 60 * 30
+    }));
+  } catch {}
+}
+
+function renderSignedOutNav(actions) {
+  if (!actions) return;
+  actions.innerHTML = `
+    <button class="nav-login nav-clickable" type="button" data-open-auth="login">Sign in</button>
+    <button class="button button-primary nav-cta" type="button" data-open-auth="signup">Sign up</button>
+  `;
+}
+
+function renderSignedInNav(actions, { user, email, coins = 0, navLevel = null, adminLink = "", currentAdminRole = "" }) {
+  if (!actions || !user) return;
   const levelText = navLevel ? `Lvl ${navLevel.level}` : "Lvl —";
   const levelProgress = navLevel ? navLevel.progress : 0;
+  const safeEmail = email || displayAccountEmail(user, currentProfile);
   const levelPill = `
     <a class="level-pill" href="dashboard.html" aria-label="${escapeHtml(levelText)} progress">
       <span class="level-pill-label">${escapeHtml(levelText)}</span>
@@ -564,7 +570,7 @@ async function updateNavAuthState() {
   actions.innerHTML = `
     <a class="coin-pill" href="dashboard.html" aria-label="Your coin balance">
       ${coinIcon("coin-icon-small")}
-      <strong>${coins.toLocaleString()}</strong>
+      <strong>${Number(coins || 0).toLocaleString()}</strong>
       <span>coins</span>
     </a>
     ${levelPill}
@@ -572,7 +578,7 @@ async function updateNavAuthState() {
       <button class="account-trigger" type="button" id="accountMenuButton" aria-haspopup="true" aria-expanded="false">
         <span class="account-avatar">${escapeHtml(userInitial(user))}</span>
         <span class="account-trigger-copy">
-          <strong>${escapeHtml(email.split("@")[0] || "Account")}</strong>
+          <strong>${escapeHtml(safeEmail.split("@")[0] || "Account")}</strong>
         </span>
         <span class="account-chevron">⌄</span>
       </button>
@@ -580,20 +586,24 @@ async function updateNavAuthState() {
         <div class="account-dropdown-head">
           <span class="account-avatar large">${escapeHtml(userInitial(user))}</span>
           <div>
-            <strong>${escapeHtml(email)}</strong>
-            <small>${coins.toLocaleString()} coins${isAdmin(user) ? ` · ${escapeHtml(currentAdminRole)}` : ""}</small>
+            <strong>${escapeHtml(safeEmail)}</strong>
+            <small>${Number(coins || 0).toLocaleString()} coins${currentAdminRole ? ` · ${escapeHtml(currentAdminRole)}` : ""}</small>
           </div>
         </div>
         <a href="dashboard.html">Dashboard</a>
         <a href="settings.html">Settings</a>
         <a href="rewards.html">Rewards</a>
-        <a href="earn.html">Earn coins</a>
+        <a href="earn.html">Surveys</a>
         ${adminLink}
         <button type="button" id="navLogoutButton">Log out</button>
       </div>
     </div>
   `;
 
+  bindAccountMenu();
+}
+
+function bindAccountMenu() {
   const menuButton = qs("#accountMenuButton");
   const dropdown = qs("#accountDropdown");
   menuButton?.addEventListener("click", (event) => {
@@ -613,6 +623,63 @@ async function updateNavAuthState() {
   }
 
   qs("#navLogoutButton")?.addEventListener("click", confirmAndSignOut);
+}
+
+async function updateNavAuthState() {
+  const actions = qs("#navAuthActions");
+  const cached = actions ? getCachedNavAuthState() : null;
+  if (actions && cached?.user) {
+    renderSignedInNav(actions, {
+      user: cached.user,
+      email: cached.email,
+      coins: cached.coins,
+      navLevel: cached.navLevel,
+      adminLink: cached.isAdmin ? `<a href="admin.html">${escapeHtml(cached.adminLabel || "Admin panel")}</a>` : "",
+      currentAdminRole: cached.currentAdminRole || ""
+    });
+    actions.classList.remove("auth-loading");
+    actions.classList.add("nav-restored");
+  }
+
+  const user = await getSessionUser();
+  currentUser = user;
+  currentIsAdmin = await fetchAdminStatus(user);
+  updateAdminVisibility(user);
+
+  if (!actions) return;
+
+  if (!user) {
+    setCachedNavAuthState(null);
+    actions.classList.remove("auth-loading", "nav-restored");
+    renderSignedOutNav(actions);
+    return;
+  }
+
+  let coins = 0;
+  let navLevel = null;
+  try {
+    const profile = await ensureProfile(user);
+    currentProfile = profile;
+    coins = Number(profile.points_balance || 0);
+    const totalEarned = await getTotalEarned(user.id);
+    navLevel = getLevelProgress(totalEarned);
+  } catch {}
+
+  const email = displayAccountEmail(user, currentProfile);
+  const adminLabel = isOwner(user) ? "Owner panel" : "Admin panel";
+  const adminLink = isAdmin(user) ? `<a href="admin.html">${escapeHtml(adminLabel)}</a>` : "";
+
+  actions.classList.remove("auth-loading", "nav-restored");
+  renderSignedInNav(actions, { user, email, coins, navLevel, adminLink, currentAdminRole: isAdmin(user) ? currentAdminRole : "" });
+  setCachedNavAuthState({
+    user: { id: user.id, email: user.email, user_metadata: user.user_metadata || {} },
+    email,
+    coins,
+    navLevel,
+    isAdmin: isAdmin(user),
+    adminLabel,
+    currentAdminRole: isAdmin(user) ? currentAdminRole : ""
+  });
 }
 
 async function updateHomeAuthState() {
@@ -888,7 +955,7 @@ function getRewardActionState(item, profile) {
   }
   if (balance < cost) {
     const missing = Math.max(0, cost - balance);
-    return { disabled: false, label: "Earn more coins", note: `Need ${missing.toLocaleString()} more coins`, action: "earn" };
+    return { disabled: false, label: "Complete surveys", note: `Need ${missing.toLocaleString()} more coins`, action: "earn" };
   }
   return { disabled: false, label: "Redeem", note: "Manual review after request.", action: "redeem" };
 }
@@ -1061,7 +1128,7 @@ function renderRewards() {
           <span>Try another search, change your coin range, or clear the active filters.</span>
           <div class="empty-actions">
             <button class="button button-ghost" type="button" data-clear-reward-filters>Clear filters</button>
-            <a class="button button-primary" href="earn.html">Earn coins</a>
+            <a class="button button-primary" href="earn.html">Surveys</a>
           </div>
         </div>`;
       settleGrid();
@@ -1931,7 +1998,7 @@ function updateGetStartedPanel(profile, totalEarned, redemptions = []) {
         <h2>Set up your reward flow</h2>
         <p class="muted">Complete these basics so your first redeem request is smooth.</p>
       </div>
-      <a class="button button-primary" href="${hasTrade ? "earn.html" : "settings.html#tradeForm"}">${hasTrade ? "Earn coins" : "Add trade URL"}</a>
+      <a class="button button-primary" href="${hasTrade ? "earn.html" : "settings.html#tradeForm"}">${hasTrade ? "Open surveys" : "Add trade URL"}</a>
     </div>
     <div class="getting-started-steps">
       <a class="setup-step ${hasTrade ? "complete" : "active"}" href="settings.html#tradeForm">
@@ -1941,8 +2008,8 @@ function updateGetStartedPanel(profile, totalEarned, redemptions = []) {
       </a>
       <a class="setup-step ${hasEarned ? "complete" : hasTrade ? "active" : ""}" href="earn.html">
         <strong>${hasEarned ? "✓" : "2"}</strong>
-        <span>Earn coins</span>
-        <small>${hasEarned ? "Coins confirmed" : "Complete partner tasks"}</small>
+        <span>Complete surveys</span>
+        <small>${hasEarned ? "Coins confirmed" : "Open verified survey tasks"}</small>
       </a>
       <a class="setup-step ${hasRedeemed ? "complete" : hasEarned ? "active" : ""}" href="rewards.html">
         <strong>${hasRedeemed ? "✓" : "3"}</strong>
@@ -2015,7 +2082,7 @@ async function renderCoinHistory(userId) {
     coinHistory.innerHTML = `
       <strong>No coin history yet.</strong>
       <span>Complete your first partner task to start earning coins.</span>
-      <a class="button button-primary" href="earn.html">Earn coins</a>
+      <a class="button button-primary" href="earn.html">Surveys</a>
     `;
     return;
   }
