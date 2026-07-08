@@ -1,4 +1,4 @@
-// SkinQuest v11.9.3 - Steam sign-in/signup, connect, and disconnect.
+// SkinQuest v12.0.0 - map themes, Steam disconnect fix, and release cleanup.
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -9,6 +9,51 @@ const CPX_APP_ID = 33831;
 const SUPPORT_EMAIL = "support@skinquestcs.com"; // Public support contact. Form requests are saved to Supabase and can trigger server-side email notifications.
 const STEAM_AUTH_START_URL = `${SUPABASE_URL}/functions/v1/steam-auth-start`;
 const STEAM_AUTH_DISCONNECT_URL = `${SUPABASE_URL}/functions/v1/steam-disconnect`;
+
+const SITE_THEMES = {
+  nuke: { label: "Nuke", status: "Classic blue/yellow" },
+  train: { label: "Train", status: "Red industrial" },
+  mirage: { label: "Mirage", status: "Warm desert" },
+  dust2: { label: "Dust2", status: "Sandstone" },
+  ancient: { label: "Ancient", status: "Jungle green" }
+};
+const DEFAULT_SITE_THEME = "nuke";
+const SITE_THEME_STORAGE_KEY = "skinquest.siteTheme";
+
+function getSavedSiteTheme() {
+  try {
+    const saved = localStorage.getItem(SITE_THEME_STORAGE_KEY);
+    return SITE_THEMES[saved] ? saved : DEFAULT_SITE_THEME;
+  } catch {
+    return DEFAULT_SITE_THEME;
+  }
+}
+
+function applySiteTheme(themeKey, options = {}) {
+  const key = SITE_THEMES[themeKey] ? themeKey : DEFAULT_SITE_THEME;
+  document.documentElement.dataset.theme = key;
+  qsa("[data-theme-option]").forEach((button) => {
+    const isActive = button.dataset.themeOption === key;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+    const badge = button.querySelector("span");
+    if (badge) badge.textContent = isActive ? "Current" : SITE_THEMES[button.dataset.themeOption]?.status || "Available";
+  });
+  if (options.persist) {
+    try { localStorage.setItem(SITE_THEME_STORAGE_KEY, key); } catch {}
+    showMessage(`${SITE_THEMES[key].label} theme applied.`, "success");
+  }
+  return key;
+}
+
+function initThemeControls() {
+  applySiteTheme(getSavedSiteTheme());
+  qsa("[data-theme-option]").forEach((button) => {
+    button.addEventListener("click", () => applySiteTheme(button.dataset.themeOption, { persist: true }));
+  });
+}
+
+applySiteTheme(getSavedSiteTheme());
 
 let rewardItems = [];
 let adminRewardItems = [];
@@ -1431,14 +1476,16 @@ async function connectSteamAccount() {
 async function disconnectSteamAccount() {
   const button = qs("#disconnectSteamButton");
   const previousText = button?.textContent || "Disconnect";
-  const confirmed = await confirmAction({
-    title: "Disconnect Steam?",
-    message: "Your email login will still work, but Steam sign-in will stop working until you connect Steam again.",
-    confirmText: "Disconnect Steam",
-    cancelText: "Keep connected",
-    icon: "ST",
-    danger: true
-  });
+  const confirmed = await showConfirm(
+    "Your email login will still work, but Steam sign-in will stop working until you connect Steam again.",
+    {
+      title: "Disconnect Steam?",
+      confirmText: "Disconnect Steam",
+      cancelText: "Keep connected",
+      icon: "ST",
+      danger: true
+    }
+  );
   if (!confirmed) return;
 
   try {
@@ -2616,6 +2663,7 @@ async function refreshAll() {
 }
 
 async function boot() {
+  initThemeControls();
   applyRewardShopVisualPreferences();
   initNav();
   initAuthModal();

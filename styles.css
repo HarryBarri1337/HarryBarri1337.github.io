@@ -1,4 +1,4 @@
-/* SkinQuest v11.9.2.2 - settings cleanup and admin support polish */
+/* SkinQuest v12.0.0 - map themes, Steam disconnect fix, and release cleanup */
 
 :root {
   --bg: #0b0f16;
@@ -1120,7 +1120,7 @@ label { display: grid; gap: 7px; color: #d8e1ee; font-weight: 800; }
 
 /* Visual system: full-page background and cleaner app surfaces */
 body {
-  background: #050811;
+  background: var(--bg);
   position: relative;
   overflow-x: hidden;
 }
@@ -1130,9 +1130,9 @@ body::before {
   inset: -18px;
   z-index: -2;
   background:
-    linear-gradient(180deg, rgba(7, 10, 16, 0.22), rgba(7, 10, 16, 0.72)),
-    url("assets/interface/site-background.png") center center / cover no-repeat;
-  filter: blur(8px) saturate(1.08) contrast(0.98);
+    linear-gradient(180deg, var(--theme-bg-tint-top), var(--theme-bg-tint-bottom)),
+    var(--site-background-image) center center / cover no-repeat;
+  filter: blur(8px) saturate(var(--theme-bg-saturation)) contrast(var(--theme-bg-contrast));
   transform: scale(1.035);
   pointer-events: none;
 }
@@ -1142,8 +1142,8 @@ body::after {
   inset: 0;
   z-index: -1;
   background:
-    radial-gradient(circle at 50% 0%, rgba(91, 141, 232, 0.20), transparent 34rem),
-    linear-gradient(90deg, rgba(4, 7, 12, 0.60), rgba(4, 7, 12, 0.38) 50%, rgba(4, 7, 12, 0.60));
+    radial-gradient(circle at 50% 0%, var(--theme-glow), transparent 34rem),
+    linear-gradient(90deg, rgba(4, 7, 12, 0.66), rgba(4, 7, 12, 0.40) 50%, rgba(4, 7, 12, 0.66));
   pointer-events: none;
 }
 
@@ -3002,7 +3002,7 @@ html.compact-reward-cards .reward-actions-smart small {
 .account-settings-grid,
 .theme-option-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 12px;
   margin-top: 16px;
 }
@@ -3063,11 +3063,35 @@ html.compact-reward-cards .reward-actions-smart small {
   justify-items: start;
   text-align: left;
   padding: 16px;
+  position: relative;
+  overflow: hidden;
   border: 1px solid rgba(255,255,255,.10);
   border-radius: 18px;
-  background: rgba(255,255,255,.035);
+  background:
+    linear-gradient(180deg, rgba(6,10,17,.20), rgba(6,10,17,.76)),
+    var(--theme-preview-image, var(--site-background-image)) center center / cover no-repeat;
   color: var(--text);
   cursor: pointer;
+  transition: transform 150ms ease, border-color 150ms ease, box-shadow 150ms ease, filter 150ms ease;
+}
+.theme-option::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent, rgba(255,255,255,.08), transparent);
+  opacity: 0;
+  transition: opacity 150ms ease;
+  pointer-events: none;
+}
+.theme-option:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255,255,255,.22);
+  filter: brightness(1.04);
+}
+.theme-option:hover::after { opacity: 1; }
+.theme-option > * {
+  position: relative;
+  z-index: 1;
 }
 .theme-option strong {
   font-size: 1.02rem;
@@ -3083,19 +3107,12 @@ html.compact-reward-cards .reward-actions-smart small {
   letter-spacing: .06em;
 }
 .theme-option.active {
-  border-color: rgba(246,207,114,.42);
-  background:
-    radial-gradient(circle at 18% 0%, rgba(232,179,77,.18), transparent 8rem),
-    rgba(232,179,77,.055);
-  box-shadow: inset 0 0 0 1px rgba(232,179,77,.08);
+  border-color: rgba(246,207,114,.52);
+  box-shadow: inset 0 0 0 1px rgba(232,179,77,.12), 0 16px 36px rgba(0,0,0,.26);
 }
 .theme-option.active span {
   color: #17100a;
   background: linear-gradient(180deg, var(--brand-2), var(--brand));
-}
-.theme-option.is-future {
-  opacity: .68;
-  cursor: not-allowed;
 }
 .how-step-grid-compact .how-step-card p,
 .faq-grid-compact .panel p {
@@ -3138,3 +3155,97 @@ html.compact-reward-cards .reward-actions-smart small {
 .danger-button:hover {
   border-color: rgba(255, 100, 110, 0.85);
 }
+
+
+/* v12.0 map themes */
+:root,
+:root[data-theme="nuke"] {
+  --site-background-image: url("assets/interface/nuke-background.png");
+  --theme-preview-image: url("assets/interface/nuke-background.png");
+  --theme-bg-tint-top: rgba(7, 10, 16, 0.18);
+  --theme-bg-tint-bottom: rgba(7, 10, 16, 0.76);
+  --theme-glow: rgba(91, 141, 232, 0.22);
+  --theme-bg-saturation: 1.08;
+  --theme-bg-contrast: 0.98;
+  --bg: #050811;
+  --page: #0f1520;
+  --surface: #141b28;
+  --surface-2: #192232;
+  --surface-3: #202b3e;
+  --brand: #e8b34d;
+  --brand-2: #f6cf72;
+  --accent: #6ea8ff;
+}
+:root[data-theme="train"] {
+  --site-background-image: url("assets/interface/train-background.png");
+  --theme-preview-image: url("assets/interface/train-background.png");
+  --theme-bg-tint-top: rgba(15, 6, 8, 0.18);
+  --theme-bg-tint-bottom: rgba(15, 6, 8, 0.78);
+  --theme-glow: rgba(231, 80, 70, 0.22);
+  --theme-bg-saturation: 1.12;
+  --theme-bg-contrast: 1.02;
+  --bg: #09080b;
+  --page: #151016;
+  --surface: #1b1419;
+  --surface-2: #24191e;
+  --surface-3: #302027;
+  --brand: #d84c43;
+  --brand-2: #ff8a5f;
+  --accent: #d9a35a;
+}
+:root[data-theme="mirage"] {
+  --site-background-image: url("assets/interface/mirage-background.png");
+  --theme-preview-image: url("assets/interface/mirage-background.png");
+  --theme-bg-tint-top: rgba(21, 13, 5, 0.16);
+  --theme-bg-tint-bottom: rgba(21, 13, 5, 0.76);
+  --theme-glow: rgba(236, 168, 78, 0.24);
+  --theme-bg-saturation: 1.04;
+  --theme-bg-contrast: 1.0;
+  --bg: #0d0a07;
+  --page: #17120d;
+  --surface: #1d1710;
+  --surface-2: #281e14;
+  --surface-3: #342719;
+  --brand: #d9953d;
+  --brand-2: #ffd27a;
+  --accent: #6ea8ff;
+}
+:root[data-theme="dust2"] {
+  --site-background-image: url("assets/interface/dust2-background.png");
+  --theme-preview-image: url("assets/interface/dust2-background.png");
+  --theme-bg-tint-top: rgba(20, 14, 7, 0.14);
+  --theme-bg-tint-bottom: rgba(20, 14, 7, 0.74);
+  --theme-glow: rgba(245, 191, 105, 0.24);
+  --theme-bg-saturation: 1.02;
+  --theme-bg-contrast: 1.0;
+  --bg: #0e0b07;
+  --page: #18130c;
+  --surface: #21190f;
+  --surface-2: #2c2113;
+  --surface-3: #3a2a16;
+  --brand: #d6a150;
+  --brand-2: #f4d08a;
+  --accent: #78aee8;
+}
+:root[data-theme="ancient"] {
+  --site-background-image: url("assets/interface/ancient-background.png");
+  --theme-preview-image: url("assets/interface/ancient-background.png");
+  --theme-bg-tint-top: rgba(5, 16, 10, 0.15);
+  --theme-bg-tint-bottom: rgba(5, 16, 10, 0.78);
+  --theme-glow: rgba(74, 210, 126, 0.20);
+  --theme-bg-saturation: 1.05;
+  --theme-bg-contrast: 0.98;
+  --bg: #07100b;
+  --page: #0e1912;
+  --surface: #132219;
+  --surface-2: #182d20;
+  --surface-3: #1f3a29;
+  --brand: #4fb06e;
+  --brand-2: #96e6a8;
+  --accent: #d7b46a;
+}
+.theme-option[data-theme-option="nuke"] { --theme-preview-image: url("assets/interface/nuke-background.png"); }
+.theme-option[data-theme-option="train"] { --theme-preview-image: url("assets/interface/train-background.png"); }
+.theme-option[data-theme-option="mirage"] { --theme-preview-image: url("assets/interface/mirage-background.png"); }
+.theme-option[data-theme-option="dust2"] { --theme-preview-image: url("assets/interface/dust2-background.png"); }
+.theme-option[data-theme-option="ancient"] { --theme-preview-image: url("assets/interface/ancient-background.png"); }
