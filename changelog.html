@@ -16,7 +16,15 @@
       }
     }());
   </script>
-  <link rel="stylesheet" href="styles.css?v=1211" />
+  <link rel="stylesheet" href="styles.css?v=1212" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#0b0f16" />
+  <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png" />
+  <link rel="icon" href="assets/icons/favicon-16.png" sizes="16x16" type="image/png" />
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="SkinQuest" />
 </head>
 <body>
 <div id="pageLoader" class="page-loader">
@@ -52,6 +60,17 @@
   <section class="panel changelog-list">
     <article class="changelog-entry current">
       <span class="pill">Current</span>
+      <h2>v12.1.2 - PWA install support + goal rewards</h2>
+      <ul>
+        <li>SkinQuest can now be added to your phone or desktop home screen as an installable app, with its own icon and offline-friendly app shell.</li>
+        <li>Added a star button on every reward card so you can mark up to 5 rewards as goals.</li>
+        <li>The dashboard now shows a Goal rewards section (when at least one reward is starred) with the reward's picture, name, and a progress bar toward its coin cost.</li>
+        <li>Once you have enough coins for a starred reward, the progress bar is replaced with a Claim reward button that jumps to Rewards with that item already searched.</li>
+        <li>Included upgrade SQL for the new favorite_rewards table and updated the full setup SQL to match.</li>
+      </ul>
+    </article>
+
+    <article class="changelog-entry">
       <h2>v12.1.1 - Background + notification admin views</h2>
       <ul>
         <li>Fixed the map background layer so it renders above the body color and no longer disappears on deployed pages.</li>
@@ -159,7 +178,7 @@
     <a href="how-it-works.html">Help</a>
     <a href="mailto:support@skinquestcs.com">Support</a>
   </div>
-  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="changelog.html">v12.1.1</a></p>
+  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="changelog.html">v12.1.2</a></p>
 </footer>
 <div class="modal-backdrop hidden" id="authModal">
   <div class="auth-modal" role="dialog" aria-modal="true">
@@ -206,6 +225,6 @@
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js?v=1211"></script>
+<script src="app.js?v=1212"></script>
 </body>
 </html>

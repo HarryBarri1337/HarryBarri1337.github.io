@@ -1,4 +1,4 @@
-/* SkinQuest v12.1.1 - Steam email prompt and settings interaction polish */
+/* SkinQuest v12.1.2 - PWA install support and goal rewards */
 
 :root {
   --bg: #0b0f16;
@@ -591,6 +591,76 @@ label { display: grid; gap: 7px; color: #d8e1ee; font-weight: 800; }
 .reward-card.rarity-classified::before { background: #d32ce6; }
 .reward-card.rarity-covert::before { background: #eb4b4b; }
 .reward-card.rarity-contraband::before { background: #e4ae39; }
+
+/* Favorite / goal star */
+.favorite-star {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 3;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(5, 8, 12, 0.55);
+  backdrop-filter: blur(4px);
+  cursor: pointer;
+  transition: transform 140ms ease, background 140ms ease, border-color 140ms ease;
+}
+.favorite-star:hover { transform: scale(1.08); border-color: var(--border-strong); }
+.favorite-star:active { transform: scale(0.92); }
+.favorite-star.is-busy { opacity: .55; pointer-events: none; }
+.star-icon {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.7;
+  stroke-linejoin: round;
+  transition: fill 160ms ease, stroke 160ms ease, transform 160ms ease;
+}
+.favorite-star:not(.is-favorited):hover .star-icon { stroke: var(--brand-2); }
+.favorite-star.is-favorited { border-color: rgba(232, 179, 77, 0.5); background: rgba(232, 179, 77, 0.14); }
+.favorite-star.is-favorited .star-icon { fill: var(--brand); stroke: var(--brand); transform: scale(1.06); }
+.favorite-count-pill {
+  padding: 6px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: .82rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+/* Goal rewards (dashboard) */
+.goal-rewards-list { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); margin-top: 14px; }
+.goal-reward-card {
+  position: relative;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: rgba(255,255,255,0.035);
+}
+.goal-reward-card .reward-art { width: 84px; height: 84px; min-height: 84px; flex: none; border-radius: 12px; padding: 8px; }
+.goal-reward-info { flex: 1; min-width: 0; display: grid; gap: 8px; }
+.goal-reward-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.goal-reward-head h3 { margin: 0; font-size: 1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.goal-reward-head .favorite-star { position: static; width: 28px; height: 28px; flex: none; }
+.goal-reward-head .favorite-star .star-icon { width: 15px; height: 15px; }
+.goal-reward-coins { margin: 0; display: flex; align-items: center; gap: 6px; font-size: .88rem; }
+.goal-progress-bar { height: 8px; border-radius: 999px; background: #0f1520; border: 1px solid var(--border); overflow: hidden; }
+.goal-progress-bar span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--brand), var(--accent)); }
+.goal-claim-button { padding: 9px 14px; font-size: .88rem; width: max-content; }
+
+@media (max-width: 560px) {
+  .goal-rewards-list { grid-template-columns: 1fr; }
+}
 
 /* Dashboard / history */
 .account-bar {

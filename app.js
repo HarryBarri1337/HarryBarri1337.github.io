@@ -1,4 +1,4 @@
-// SkinQuest v12.1.1 - Steam email prompt and settings interaction polish.
+// SkinQuest v12.1.2 - PWA install support and goal rewards (star + track + claim).
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -56,12 +56,20 @@ function initThemeControls() {
 
 applySiteTheme(getSavedSiteTheme());
 
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  });
+}
+
 let rewardItems = [];
 let adminRewardItems = [];
 let currentUser = null;
 let currentProfile = null;
 let currentIsAdmin = false;
 let currentAdminRole = null;
+let favoriteRewardIds = new Set();
+const MAX_FAVORITE_REWARDS = 5;
 
 function qs(selector) {
   return document.querySelector(selector);
@@ -882,6 +890,64 @@ async function loadRewards() {
   throw lastError || new Error("Could not load rewards.");
 }
 
+async function loadFavoriteRewards(userId) {
+  if (!userId) {
+    favoriteRewardIds = new Set();
+    return favoriteRewardIds;
+  }
+
+  const { data, error } = await sb.from("favorite_rewards").select("reward_id").eq("user_id", userId);
+  favoriteRewardIds = new Set(error ? [] : (data || []).map((row) => Number(row.reward_id)));
+  return favoriteRewardIds;
+}
+
+function updateFavoriteCountUi() {
+  qsa("[data-favorite-count]").forEach((el) => {
+    el.textContent = `${favoriteRewardIds.size}/${MAX_FAVORITE_REWARDS} goals starred`;
+  });
+}
+
+async function toggleFavoriteReward(rewardId, starButton = null) {
+  const user = await getSessionUser();
+  if (!user) {
+    openAuthModal("login");
+    return;
+  }
+
+  const id = Number(rewardId);
+  const isFavorited = favoriteRewardIds.has(id);
+
+  if (!isFavorited && favoriteRewardIds.size >= MAX_FAVORITE_REWARDS) {
+    showMessage(`You can only star up to ${MAX_FAVORITE_REWARDS} rewards as goals. Unstar one first.`, "error");
+    return;
+  }
+
+  starButton?.classList.add("is-busy");
+
+  if (isFavorited) {
+    const { error } = await sb.from("favorite_rewards").delete().eq("user_id", user.id).eq("reward_id", id);
+    starButton?.classList.remove("is-busy");
+    if (error) return showMessage("Could not remove that goal. Please try again.", "error");
+    favoriteRewardIds.delete(id);
+  } else {
+    const { error } = await sb.from("favorite_rewards").insert({ user_id: user.id, reward_id: id });
+    starButton?.classList.remove("is-busy");
+    if (error) {
+      const friendly = /favou?rite/i.test(error.message || "") ? error.message : "Could not star that reward. Please try again.";
+      showMessage(friendly, "error");
+      return;
+    }
+    favoriteRewardIds.add(id);
+  }
+
+  qsa(`[data-favorite-star="${id}"]`).forEach((button) => {
+    button.classList.toggle("is-favorited", favoriteRewardIds.has(id));
+    button.setAttribute("aria-pressed", String(favoriteRewardIds.has(id)));
+    button.setAttribute("aria-label", favoriteRewardIds.has(id) ? "Remove goal star" : "Set as goal");
+  });
+  updateFavoriteCountUi();
+}
+
 function getRewardRarity(item) {
   const raw = (item.rarity || item.rarity_key || "").toString().trim();
   const key = raw.toLowerCase().replace(/[^a-z]/g, "");
@@ -1258,9 +1324,14 @@ function renderRewards() {
       const description = item.description || item.market_name || "Manual Steam trade after review";
       const action = getRewardActionState(item, currentProfile);
 
+      const isFavorited = favoriteRewardIds.has(Number(item.id));
+
       return `
         <article class="reward-card steam-item ${rarityClass(item)} ${outOfStock ? "is-out" : ""}">
           ${renderRewardArt(item)}
+          <button class="favorite-star ${isFavorited ? "is-favorited" : ""}" type="button" data-favorite-star="${item.id}" aria-pressed="${isFavorited}" aria-label="${isFavorited ? "Remove goal star" : "Set as goal"}">
+            <svg class="star-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.95 6.53 7.15.66-5.4 4.73 1.63 7-6.33-3.8-6.33 3.8 1.63-7-5.4-4.73 7.15-.66L12 2.6z"/></svg>
+          </button>
           <div class="reward-info">
             <div class="reward-title-row">
               ${rarity ? `<span class="rarity-badge">${escapeHtml(rarity.label)}</span>` : ""}
@@ -1296,6 +1367,14 @@ function renderRewards() {
         requestRedeem(Number(button.dataset.redeem), button);
       });
     });
+    qsa("[data-favorite-star]").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        toggleFavoriteReward(button.dataset.favoriteStar, button);
+      });
+    });
+    updateFavoriteCountUi();
     settleGrid();
   }
 
@@ -2077,6 +2156,7 @@ async function refreshDashboard() {
   if (xpBar) xpBar.style.width = `${progress.progress}%`;
 
   updateRedeemBlocker(profile);
+  await renderGoalRewards(user, profile);
 
   const { data: redemptions, error } = await sb
     .from("redemption_requests")
@@ -2103,6 +2183,70 @@ async function refreshDashboard() {
   if (shouldShowSteamEmailPrompt(user)) {
     setTimeout(() => showSteamEmailPrompt(user), 260);
   }
+}
+
+async function renderGoalRewards(user, profile) {
+  const panel = qs("#goalRewardsPanel");
+  const list = qs("#goalRewardsList");
+  if (!panel || !list || !user?.id) return;
+
+  await loadFavoriteRewards(user.id);
+
+  if (favoriteRewardIds.size === 0) {
+    panel.classList.add("hidden");
+    list.innerHTML = "";
+    return;
+  }
+
+  const ids = Array.from(favoriteRewardIds);
+  const { data, error } = await sb.from("reward_items").select("*").in("id", ids);
+
+  if (error || !data || data.length === 0) {
+    panel.classList.add("hidden");
+    list.innerHTML = "";
+    return;
+  }
+
+  panel.classList.remove("hidden");
+  const balance = Number(profile?.points_balance || 0);
+
+  list.innerHTML = data.map((item) => {
+    const cost = getRewardCost(item);
+    const pct = cost > 0 ? Math.max(0, Math.min(100, (balance / cost) * 100)) : 100;
+    const canClaim = balance >= cost && !rewardIsOutOfStock(item);
+
+    return `
+      <div class="goal-reward-card">
+        ${renderRewardArt(item)}
+        <div class="goal-reward-info">
+          <div class="goal-reward-head">
+            <h3>${escapeHtml(item.name)}</h3>
+            <button class="favorite-star is-favorited" type="button" data-favorite-star="${item.id}" aria-pressed="true" aria-label="Remove goal star">
+              <svg class="star-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.95 6.53 7.15.66-5.4 4.73 1.63 7-6.33-3.8-6.33 3.8 1.63-7-5.4-4.73 7.15-.66L12 2.6z"/></svg>
+            </button>
+          </div>
+          <p class="muted goal-reward-coins">${coinIcon("coin-icon-small")} ${balance.toLocaleString()} / ${cost.toLocaleString()} coins</p>
+          ${canClaim
+            ? `<button class="button button-primary goal-claim-button" type="button" data-claim-reward="${escapeHtml(item.name)}">Claim reward</button>`
+            : `<div class="goal-progress-bar" role="progressbar" aria-valuenow="${Math.round(pct)}" aria-valuemin="0" aria-valuemax="100"><span style="width:${pct}%"></span></div>`}
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  qsa("#goalRewardsList [data-favorite-star]").forEach((button) => {
+    button.addEventListener("click", async (event) => {
+      event.preventDefault();
+      await toggleFavoriteReward(button.dataset.favoriteStar, button);
+      await renderGoalRewards(user, profile);
+    });
+  });
+
+  qsa("#goalRewardsList [data-claim-reward]").forEach((button) => {
+    button.addEventListener("click", () => {
+      location.href = `rewards.html?search=${encodeURIComponent(button.dataset.claimReward || "")}`;
+    });
+  });
 }
 
 function updateGetStartedPanel(profile, totalEarned, redemptions = []) {
@@ -2851,10 +2995,21 @@ async function refreshAll() {
   await refreshSettingsPage();
   await initOfferwall();
   if (qs("#rewardsGrid")) {
+    await loadFavoriteRewards(currentUser?.id);
     renderRewards();
     await updateRewardAccountNotice();
   }
   await initAdmin();
+}
+
+function applyRewardSearchFromQuery() {
+  const params = new URLSearchParams(location.search);
+  const search = params.get("search");
+  if (!search) return;
+  const input = qs("#skinSearch");
+  if (!input) return;
+  input.value = search;
+  window.__skinquestRewardApply?.(true);
 }
 
 async function boot() {
@@ -2871,7 +3026,9 @@ async function boot() {
   if (qs("#rewardsGrid")) {
     try {
       await loadRewards();
+      await loadFavoriteRewards(currentUser?.id);
       renderRewards();
+      applyRewardSearchFromQuery();
       await updateRewardAccountNotice();
     } catch (error) {
       qs("#rewardsGrid").innerHTML = `<div class="empty-state">Could not load rewards right now. Please refresh and try again.</div>`;
