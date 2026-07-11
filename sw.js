@@ -1,17 +1,18 @@
 // SkinQuest service worker - default PWA install support.
-// Keeps things simple: same-origin GET requests use a stale-while-revalidate
-// cache so the app can install and reopen quickly. Supabase/API calls and
-// any cross-origin requests are always left alone and go straight to network.
+// Same-origin GET requests use network-first: always try the network so
+// deployed updates show up immediately, and only fall back to the cache
+// when offline. Supabase/API calls and any cross-origin requests are
+// always left alone and go straight to network.
 
-const CACHE_NAME = "skinquest-cache-v1221";
+const CACHE_NAME = "skinquest-cache-v1223";
 const APP_SHELL = [
   "index.html",
   "dashboard.html",
   "rewards.html",
   "earn.html",
   "how-it-works.html",
-  "styles.css?v=1221",
-  "app.js?v=1221",
+  "styles.css?v=1223",
+  "app.js?v=1223",
   "manifest.json",
   "assets/interface/skinquestlogo.png",
   "assets/interface/coin_logo.png",
@@ -46,17 +47,14 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) return;
 
   event.respondWith(
-    caches.match(request).then((cached) => {
-      const network = fetch(request)
-        .then((response) => {
-          if (response && response.ok) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone)).catch(() => {});
-          }
-          return response;
-        })
-        .catch(() => cached);
-      return cached || network;
-    })
+    fetch(request)
+      .then((response) => {
+        if (response && response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone)).catch(() => {});
+        }
+        return response;
+      })
+      .catch(() => caches.match(request))
   );
 });
