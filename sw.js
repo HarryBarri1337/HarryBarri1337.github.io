@@ -3,15 +3,15 @@
 // cache so the app can install and reopen quickly. Supabase/API calls and
 // any cross-origin requests are always left alone and go straight to network.
 
-const CACHE_NAME = "skinquest-cache-v1220";
+const CACHE_NAME = "skinquest-cache-v1221";
 const APP_SHELL = [
   "index.html",
   "dashboard.html",
   "rewards.html",
   "earn.html",
   "how-it-works.html",
-  "styles.css?v=1220",
-  "app.js?v=1220",
+  "styles.css?v=1221",
+  "app.js?v=1221",
   "manifest.json",
   "assets/interface/skinquestlogo.png",
   "assets/interface/coin_logo.png",

@@ -1,4 +1,4 @@
-/* SkinQuest v12.2.0 - Mobile layout fixes, icon-only PWA app icon, 6 goal rewards */
+/* SkinQuest v12.2.1 - Transparent favicon + goal-card star overflow fix */
 
 :root {
   --bg: #0b0f16;
@@ -650,7 +650,7 @@ label { display: grid; gap: 7px; color: #d8e1ee; font-weight: 800; }
 .goal-reward-card .reward-art { width: 84px; height: 84px; min-height: 84px; flex: none; border-radius: 12px; padding: 8px; }
 .goal-reward-info { flex: 1; min-width: 0; display: grid; gap: 8px; }
 .goal-reward-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.goal-reward-head h3 { margin: 0; font-size: 1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.goal-reward-head h3 { flex: 1 1 auto; min-width: 0; margin: 0; font-size: 1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .goal-reward-head .favorite-star { position: static; width: 28px; height: 28px; flex: none; }
 .goal-reward-head .favorite-star .star-icon { width: 15px; height: 15px; }
 .goal-reward-coins { margin: 0; display: flex; align-items: center; gap: 6px; font-size: .88rem; }
