@@ -1,4 +1,4 @@
--- SkinQuest full Supabase setup v12.1.2
+-- SkinQuest full Supabase setup v12.2.0
 -- Run this in Supabase SQL Editor only when setting up a fresh project.
 -- This full setup includes the existing database baseline used by the current frontend.
 
@@ -279,8 +279,8 @@ returns trigger
 language plpgsql
 as $$
 begin
-  if (select count(*) from public.favorite_rewards where user_id = new.user_id) >= 5 then
-    raise exception 'You can only star up to 5 rewards as goals.';
+  if (select count(*) from public.favorite_rewards where user_id = new.user_id) >= 6 then
+    raise exception 'You can only star up to 6 rewards as goals.';
   end if;
   return new;
 end;

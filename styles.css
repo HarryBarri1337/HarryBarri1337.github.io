@@ -1,4 +1,4 @@
-/* SkinQuest v12.1.2 - PWA install support and goal rewards */
+/* SkinQuest v12.2.0 - Mobile layout fixes, icon-only PWA app icon, 6 goal rewards */
 
 :root {
   --bg: #0b0f16;
@@ -660,6 +660,10 @@ label { display: grid; gap: 7px; color: #d8e1ee; font-weight: 800; }
 
 @media (max-width: 560px) {
   .goal-rewards-list { grid-template-columns: 1fr; }
+}
+@media (max-width: 420px) {
+  .goal-reward-card { flex-direction: column; align-items: stretch; text-align: left; }
+  .goal-reward-card .reward-art { width: 100%; height: 120px; min-height: 120px; }
 }
 
 /* Dashboard / history */
@@ -2696,9 +2700,10 @@ main.hero {
 }
 .reward-shop-status {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px 12px;
   margin: -4px 0 18px;
   color: var(--muted);
   font-weight: 800;

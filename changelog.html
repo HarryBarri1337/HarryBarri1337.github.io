@@ -16,7 +16,7 @@
       }
     }());
   </script>
-  <link rel="stylesheet" href="styles.css?v=1212" />
+  <link rel="stylesheet" href="styles.css?v=1220" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#0b0f16" />
   <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png" />
@@ -60,6 +60,17 @@
   <section class="panel changelog-list">
     <article class="changelog-entry current">
       <span class="pill">Current</span>
+      <h2>v12.2.0 - Mobile fit fixes + icon-only app icon</h2>
+      <ul>
+        <li>Fixed the Rewards page status bar so the new goal-star counter no longer crowds "Clear filters" on narrow phones.</li>
+        <li>Goal reward cards on the dashboard now stack the picture above the details on narrow phones instead of squeezing them side by side.</li>
+        <li>The installable app icon is now the SQ shield mark only (no wordmark), scaled to fill the icon like a normal app icon.</li>
+        <li>Raised the goal rewards star limit from 5 to 6.</li>
+        <li>Included upgrade SQL that raises the favorite_rewards limit to 6 and updated the full setup SQL to match.</li>
+      </ul>
+    </article>
+
+    <article class="changelog-entry">
       <h2>v12.1.2 - PWA install support + goal rewards</h2>
       <ul>
         <li>SkinQuest can now be added to your phone or desktop home screen as an installable app, with its own icon and offline-friendly app shell.</li>
@@ -178,7 +189,7 @@
     <a href="how-it-works.html">Help</a>
     <a href="mailto:support@skinquestcs.com">Support</a>
   </div>
-  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="changelog.html">v12.1.2</a></p>
+  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="changelog.html">v12.2.0</a></p>
 </footer>
 <div class="modal-backdrop hidden" id="authModal">
   <div class="auth-modal" role="dialog" aria-modal="true">
@@ -225,6 +236,6 @@
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js?v=1212"></script>
+<script src="app.js?v=1220"></script>
 </body>
 </html>
