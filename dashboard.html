@@ -24,7 +24,7 @@
       }
     }());
   </script>
-  <link rel="stylesheet" href="styles.css?v=1223" />
+  <link rel="stylesheet" href="styles.css?v=1224" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#0b0f16" />
   <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png" />
@@ -110,16 +110,22 @@
         <strong id="totalEarnedDisplay">—</strong>
         <p>All confirmed positive coin credits.</p>
       </div>
-      <div class="stat-card">
+      <div class="stat-card level-stat-card">
         <span>Level</span>
         <strong id="levelDisplay">—</strong>
+        <span class="level-title-display" id="levelTitleDisplay">Loading rank</span>
         <p><span id="xpDisplay">Loading progress</span> toward the next level.</p>
       </div>
     </section>
 
     <section class="panel xp-panel">
-      <h2>Level progress</h2>
-      <p class="muted compact-copy">Every 1,000 earned coins adds one level. Each new level pays a 50 coin bonus.</p>
+      <div class="xp-panel-heading">
+        <div>
+          <h2>Level progress</h2>
+          <p class="muted compact-copy">Every 1,000 earned coins adds one level. Each new level pays a 50 coin bonus.</p>
+        </div>
+        <span class="level-rank-badge" id="levelTitleText">Loading rank</span>
+      </div>
       <div class="xp-row">
         <span id="levelText">Level —</span>
         <span id="nextLevelText">Next level</span>
@@ -171,7 +177,7 @@
     <a href="how-it-works.html">Help</a>
     <a href="mailto:support@skinquestcs.com">Support</a>
   </div>
-  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="changelog.html">v12.2.3</a></p>
+  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="changelog.html">v12.2.4</a></p>
 </footer>
 <div class="modal-backdrop hidden" id="authModal">
   <div class="auth-modal" role="dialog" aria-modal="true">
@@ -218,6 +224,6 @@
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js?v=1223"></script>
+<script src="app.js?v=1224"></script>
 </body>
 </html>

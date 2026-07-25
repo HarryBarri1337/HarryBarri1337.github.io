@@ -1,4 +1,4 @@
-// SkinQuest v12.2.3 - Google Analytics (gtag.js) added site-wide.
+// SkinQuest v12.2.4 - CS2 profile rank titles and animated coin/XP gain popups.
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -465,9 +465,182 @@ async function claimLevelRewards() {
 
 const COINS_PER_LEVEL = 1000;
 const LEVEL_BONUS_COINS = 50;
+const PROGRESS_SNAPSHOT_KEY_PREFIX = "skinquest.progressSnapshot.";
+
+const CS2_LEVEL_TITLES = [
+  "Recruit",
+  "Private Rank 1",
+  "Private Rank 2",
+  "Private Rank 3",
+  "Private Rank 4",
+  "Corporal Rank 5",
+  "Corporal Rank 6",
+  "Corporal Rank 7",
+  "Corporal Rank 8",
+  "Sergeant Rank 9",
+  "Sergeant Rank 10",
+  "Sergeant Rank 11",
+  "Sergeant Rank 12",
+  "Master Sergeant Rank 13",
+  "Master Sergeant Rank 14",
+  "Master Sergeant Rank 15",
+  "Master Sergeant Rank 16",
+  "Sergeant Major Rank 17",
+  "Sergeant Major Rank 18",
+  "Sergeant Major Rank 19",
+  "Sergeant Major Rank 20",
+  "Lieutenant Rank 21",
+  "Lieutenant Rank 22",
+  "Lieutenant Rank 23",
+  "Lieutenant Rank 24",
+  "Captain Rank 25",
+  "Captain Rank 26",
+  "Captain Rank 27",
+  "Captain Rank 28",
+  "Major Rank 29",
+  "Major Rank 30",
+  "Major Rank 31",
+  "Major Rank 32",
+  "Colonel Rank 33",
+  "Colonel Rank 34",
+  "Colonel Rank 35",
+  "Brigadier General",
+  "Major General",
+  "Lieutenant General",
+  "General",
+  "Global General"
+];
 
 function calculateLevel(totalEarned) {
   return Math.max(1, Math.floor(Number(totalEarned || 0) / COINS_PER_LEVEL) + 1);
+}
+
+function getLevelTitle(level) {
+  const safeLevel = Math.max(0, Math.floor(Number(level || 0)));
+  return CS2_LEVEL_TITLES[Math.min(safeLevel, CS2_LEVEL_TITLES.length - 1)] || "Recruit";
+}
+
+function getProgressSnapshot(userId) {
+  if (!userId) return null;
+  try {
+    const snapshot = JSON.parse(localStorage.getItem(`${PROGRESS_SNAPSHOT_KEY_PREFIX}${userId}`) || "null");
+    if (!snapshot || !Number.isFinite(Number(snapshot.coins)) || !Number.isFinite(Number(snapshot.totalEarned))) return null;
+    return snapshot;
+  } catch {
+    return null;
+  }
+}
+
+function saveProgressSnapshot(userId, { coins = 0, totalEarned = 0, level = 1 }) {
+  if (!userId) return;
+  try {
+    localStorage.setItem(`${PROGRESS_SNAPSHOT_KEY_PREFIX}${userId}`, JSON.stringify({
+      coins: Number(coins || 0),
+      totalEarned: Number(totalEarned || 0),
+      level: Number(level || 1),
+      savedAt: Date.now()
+    }));
+  } catch {}
+}
+
+function getProgressGainStack() {
+  let stack = qs("#progressGainStack");
+  if (stack) return stack;
+  stack = document.createElement("div");
+  stack.id = "progressGainStack";
+  stack.className = "progress-gain-stack";
+  stack.setAttribute("aria-live", "polite");
+  document.body.appendChild(stack);
+  return stack;
+}
+
+function showProgressGain({ coinGain = 0, xpGain = 0, previousLevel = 1, currentLevel = 1 }) {
+  const gainedCoins = Math.max(0, Number(coinGain || 0));
+  const gainedXp = Math.max(0, Number(xpGain || 0));
+  const leveledUp = Number(currentLevel || 1) > Number(previousLevel || 1);
+  if (!gainedCoins && !gainedXp && !leveledUp) return;
+
+  const stack = getProgressGainStack();
+  const popup = document.createElement("section");
+  popup.className = `progress-gain-popup${leveledUp ? " level-up" : ""}`;
+  popup.innerHTML = `
+    ${leveledUp ? `
+      <div class="progress-level-up">
+        <span>Level up</span>
+        <strong>Level ${Number(currentLevel).toLocaleString()} · ${escapeHtml(getLevelTitle(currentLevel))}</strong>
+      </div>
+    ` : ""}
+    <div class="progress-gain-rows">
+      ${gainedCoins ? `
+        <div class="progress-gain-row coin-gain-row">
+          ${coinIcon("progress-gain-coin")}
+          <div><strong>+${gainedCoins.toLocaleString()}</strong><span>Coins</span></div>
+        </div>
+      ` : ""}
+      ${gainedXp ? `
+        <div class="progress-gain-row xp-gain-row">
+          <span class="progress-xp-icon">XP</span>
+          <div><strong>+${gainedXp.toLocaleString()}</strong><span>XP</span></div>
+        </div>
+      ` : ""}
+    </div>
+  `;
+  stack.appendChild(popup);
+
+  requestAnimationFrame(() => popup.classList.add("show"));
+  const visibleFor = leveledUp ? 5200 : 4000;
+  window.setTimeout(() => {
+    popup.classList.add("leaving");
+    window.setTimeout(() => popup.remove(), 420);
+  }, visibleFor);
+}
+
+function trackProgressAndShowGains(userId, { coins = 0, totalEarned = 0 } = {}) {
+  if (!userId) return;
+  const nextCoins = Number(coins || 0);
+  const nextEarned = Number(totalEarned || 0);
+  const nextLevel = calculateLevel(nextEarned);
+  const previous = getProgressSnapshot(userId);
+
+  saveProgressSnapshot(userId, { coins: nextCoins, totalEarned: nextEarned, level: nextLevel });
+  if (!previous) return;
+
+  const previousLevel = Number(previous.level || calculateLevel(previous.totalEarned));
+  const coinGain = nextCoins - Number(previous.coins || 0);
+  const xpGain = nextEarned - Number(previous.totalEarned || 0);
+  if (coinGain <= 0 && xpGain <= 0 && nextLevel <= previousLevel) return;
+
+  window.setTimeout(() => showProgressGain({
+    coinGain,
+    xpGain,
+    previousLevel,
+    currentLevel: nextLevel
+  }), qs("#pageLoader")?.classList.contains("done") ? 80 : 420);
+}
+
+function initProgressRefreshWatcher() {
+  if (window.__skinquestProgressRefreshBound) return;
+  window.__skinquestProgressRefreshBound = true;
+  let lastCheckAt = Date.now();
+  let checking = false;
+
+  const checkForProgress = async () => {
+    if (checking || document.visibilityState === "hidden" || !currentUser?.id) return;
+    if (Date.now() - lastCheckAt < 10000) return;
+    checking = true;
+    lastCheckAt = Date.now();
+    try {
+      await updateNavAuthState();
+      if (qs("#accountSection")) await refreshDashboard();
+    } finally {
+      checking = false;
+    }
+  };
+
+  window.addEventListener("focus", checkForProgress);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") checkForProgress();
+  });
 }
 
 function coinsForLevel(level) {
@@ -480,7 +653,13 @@ function getLevelProgress(totalEarned) {
   const currentFloor = coinsForLevel(level);
   const nextFloor = coinsForLevel(level + 1);
   const progress = ((earned - currentFloor) / COINS_PER_LEVEL) * 100;
-  return { level, currentFloor, nextFloor, progress: Math.max(0, Math.min(100, progress)) };
+  return {
+    level,
+    title: getLevelTitle(level),
+    currentFloor,
+    nextFloor,
+    progress: Math.max(0, Math.min(100, progress))
+  };
 }
 
 function updateAdminVisibility(user) {
@@ -674,10 +853,11 @@ function renderSignedOutNav(actions) {
 function renderSignedInNav(actions, { user, email, coins = 0, navLevel = null, adminLink = "", currentAdminRole = "" }) {
   if (!actions || !user) return;
   const levelText = navLevel ? `Lvl ${navLevel.level}` : "Lvl —";
+  const levelTitle = navLevel?.title || (navLevel ? getLevelTitle(navLevel.level) : "Profile rank");
   const levelProgress = navLevel ? navLevel.progress : 0;
   const safeEmail = email || displayAccountEmail(user, currentProfile);
   const levelPill = `
-    <a class="level-pill" href="dashboard.html" aria-label="${escapeHtml(levelText)} progress">
+    <a class="level-pill" href="dashboard.html" aria-label="${escapeHtml(`${levelText}, ${levelTitle}`)} progress" title="${escapeHtml(levelTitle)}">
       <span class="level-pill-label">${escapeHtml(levelText)}</span>
       <span class="level-pill-track"><span style="width:${levelProgress}%"></span></span>
     </a>
@@ -704,6 +884,7 @@ function renderSignedInNav(actions, { user, email, coins = 0, navLevel = null, a
           <div>
             <strong>${escapeHtml(safeEmail)}</strong>
             <small>${Number(coins || 0).toLocaleString()} coins${currentAdminRole ? ` · ${escapeHtml(currentAdminRole)}` : ""}</small>
+            <small class="account-rank-line">${navLevel ? `Level ${Number(navLevel.level).toLocaleString()} · ${escapeHtml(levelTitle)}` : "Profile rank loading"}</small>
           </div>
         </div>
         <a href="dashboard.html">Dashboard</a>
@@ -779,6 +960,7 @@ async function updateNavAuthState() {
     coins = Number(profile.points_balance || 0);
     const totalEarned = await getTotalEarned(user.id);
     navLevel = getLevelProgress(totalEarned);
+    trackProgressAndShowGains(user.id, { coins, totalEarned });
   } catch {}
 
   const email = displayAccountEmail(user, currentProfile);
@@ -803,12 +985,14 @@ async function updateHomeAuthState() {
   const authed = qs("[data-user-home]");
   if (!guest || !authed) return;
 
-  const setHomeStats = (coins = "—", level = "—", pending = "—") => {
+  const setHomeStats = (coins = "—", level = "—", pending = "—", levelTitle = "level") => {
     const homeCoins = qs("[data-home-coins]");
     const homeLevel = qs("[data-home-level]");
+    const homeLevelTitle = qs("[data-home-level-title]");
     const homePending = qs("[data-home-pending]");
     if (homeCoins) homeCoins.textContent = coins;
     if (homeLevel) homeLevel.textContent = level;
+    if (homeLevelTitle) homeLevelTitle.textContent = levelTitle;
     if (homePending) homePending.textContent = pending;
   };
 
@@ -832,10 +1016,12 @@ async function updateHomeAuthState() {
       .select("status")
       .eq("user_id", user.id);
 
+    const homeProgress = getLevelProgress(totalEarned);
     setHomeStats(
       Number(profile.points_balance || 0).toLocaleString(),
-      String(calculateLevel(totalEarned)),
-      String((redemptions || []).filter((item) => ["pending", "reviewing", "trade_sent"].includes(item.status)).length)
+      String(homeProgress.level),
+      String((redemptions || []).filter((item) => ["pending", "reviewing", "trade_sent"].includes(item.status)).length),
+      homeProgress.title
     );
   } catch {
     setHomeStats();
@@ -2130,7 +2316,6 @@ async function refreshDashboard() {
   try {
     const bonus = await claimLevelRewards();
     if (Number(bonus?.bonus_awarded || 0) > 0) {
-      showMessage(`Level reward unlocked: +${Number(bonus.bonus_awarded).toLocaleString()} coins.`, "success");
       profile = await ensureProfile(user);
     }
   } catch (error) {
@@ -2148,9 +2333,12 @@ async function refreshDashboard() {
   setText("#balanceDisplay", Number(profile.points_balance || 0).toLocaleString());
   setText("#totalEarnedDisplay", Number(totalEarned).toLocaleString());
   setText("#levelDisplay", progress.level);
+  setText("#levelTitleDisplay", progress.title);
+  setText("#levelTitleText", progress.title);
   setText("#xpDisplay", `${Number(totalEarned - progress.currentFloor).toLocaleString()} / ${COINS_PER_LEVEL.toLocaleString()} earned coins`);
   setText("#levelText", `Level ${progress.level}`);
   setText("#nextLevelText", `${Number(Math.max(0, progress.nextFloor - totalEarned)).toLocaleString()} coins to Level ${progress.level + 1}`);
+  trackProgressAndShowGains(user.id, { coins: Number(profile.points_balance || 0), totalEarned });
 
   const xpBar = qs("#xpBarFill");
   if (xpBar) xpBar.style.width = `${progress.progress}%`;
@@ -3016,6 +3204,7 @@ async function boot() {
   initThemeControls();
   applyRewardShopVisualPreferences();
   initNav();
+  initProgressRefreshWatcher();
   initAuthModal();
   initSupportWidget();
   await updateNavAuthState();
