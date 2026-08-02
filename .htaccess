@@ -29,6 +29,14 @@ RewriteRule ^auth-confirm\.html$ /auth-confirm [R=301,L,NE]
 RewriteCond %{THE_REQUEST} \s/+steam-callback\.html(?:[?\s]) [NC]
 RewriteRule ^steam-callback\.html$ /steam-callback [R=301,L,NE]
 
+# Neutral campaign links. Each one serves the homepage internally, so the
+# visitor keeps /01, /02, etc. in the address bar and GA4 records that path.
+RewriteRule ^01/?$ index.html [L]
+RewriteRule ^02/?$ index.html [L]
+RewriteRule ^03/?$ index.html [L]
+RewriteRule ^04/?$ index.html [L]
+RewriteRule ^05/?$ index.html [L]
+
 # Leave real files and directories untouched.
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
