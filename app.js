@@ -1,4 +1,4 @@
-// SkinQuest v12.2.8 - reliable settings actions and complete SQL package cleanup.
+// SkinQuest v12.2.9 - repaired Trade URL and complete reward redemption flow.
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -1629,6 +1629,57 @@ function renderRewards() {
   apply(false);
 }
 
+function getFriendlyRedeemError(error) {
+  const code = String(error?.code || "").trim();
+  const message = String(error?.message || "").trim();
+  const details = String(error?.details || "").trim();
+  const hint = String(error?.hint || "").trim();
+  const combined = [message, details, hint].filter(Boolean).join(" ");
+  const lower = combined.toLowerCase();
+
+  if (lower.includes("trade url") || lower.includes("trade link")) {
+    return { message: "Your Steam trade URL is missing or invalid. Save the complete Steam trade offer link in Settings, then try again.", action: "trade" };
+  }
+  if (lower.includes("not enough coins")) {
+    return { message: "You do not have enough coins for this reward.", action: "refresh" };
+  }
+  if (lower.includes("out of stock")) {
+    return { message: "That reward is out of stock.", action: "refresh" };
+  }
+  if (lower.includes("reward not found") || lower.includes("reward price is invalid")) {
+    return { message: "This reward is unavailable or has an invalid price. Refresh the rewards page and try again.", action: "refresh" };
+  }
+  if (lower.includes("account is not active")) {
+    return { message: "This account cannot redeem rewards right now. Contact support if this looks wrong.", action: "none" };
+  }
+  if (
+    code === "PGRST202" || code === "PGRST203" ||
+    lower.includes("could not find the function") ||
+    lower.includes("function public.redeem_reward") ||
+    lower.includes("schema cache")
+  ) {
+    return { message: "The redemption database update is missing or the API schema is stale. Run the current upgrade SQL in Supabase, then refresh this page.", action: "none" };
+  }
+  if (
+    code === "42703" || code === "42P01" ||
+    lower.includes("column") && lower.includes("does not exist") ||
+    lower.includes("relation") && lower.includes("does not exist")
+  ) {
+    return { message: "The redemption database schema is outdated. Run the current SkinQuest upgrade SQL in Supabase before redeeming.", action: "none" };
+  }
+  if (code === "42501" || lower.includes("permission denied") || lower.includes("not allowed")) {
+    return { message: "The database blocked the redeem request because a permission or function grant is missing. Run the current upgrade SQL in Supabase.", action: "none" };
+  }
+
+  const safeDetail = combined.replace(/\s+/g, " ").slice(0, 260);
+  return {
+    message: safeDetail
+      ? `Redeem failed: ${safeDetail}${code ? ` (${code})` : ""}`
+      : "Could not create the redeem request. Refresh and try again.",
+    action: "none"
+  };
+}
+
 async function requestRedeem(rewardId, sourceButton = null) {
   const user = await getSessionUser();
   if (!user) {
@@ -1640,28 +1691,32 @@ async function requestRedeem(rewardId, sourceButton = null) {
   try {
     profile = await ensureProfile(user);
   } catch (error) {
-    showMessage("Could not prepare your account profile. Please refresh and try again, or contact support if it keeps happening.", "error");
+    console.error("Redeem profile preparation failed", error);
+    showMessage("Could not prepare your account profile. Refresh and try again.", "error");
     return;
   }
 
   const reward = rewardItems.find((item) => Number(item.id) === Number(rewardId));
-  if (!reward) return;
+  if (!reward) {
+    showMessage("Reward not found. Refresh the page and try again.", "error");
+    return;
+  }
 
   if (!profile.steam_trade_url) {
-    const goDashboard = await showConfirm(
+    const goSettings = await showConfirm(
       "Before you can redeem, add your Steam trade URL in Settings. Without it, SkinQuest does not know where to send the skin.",
       { title: "Add your Steam trade link first", confirmText: "Add trade link", cancelText: "Stay on rewards", icon: "↗" }
     );
-    if (goDashboard) location.href = "/settings#tradeForm";
+    if (goSettings) location.href = "/settings#tradeForm";
     return;
   }
 
   if (!isValidSteamTradeUrl(profile.steam_trade_url)) {
-    const goDashboard = await showConfirm(
+    const goSettings = await showConfirm(
       "Your saved Steam trade URL looks incomplete. It must be the full Steam trade offer link with both partner and token.",
       { title: "Fix your Steam trade link", confirmText: "Fix trade link", cancelText: "Stay on rewards", icon: "!" }
     );
-    if (goDashboard) location.href = "/settings#tradeForm";
+    if (goSettings) location.href = "/settings#tradeForm";
     return;
   }
 
@@ -1671,7 +1726,7 @@ async function requestRedeem(rewardId, sourceButton = null) {
   }
 
   if (rewardIsOutOfStock(reward)) {
-    showMessage("That reward is out of stock.");
+    showMessage("That reward is out of stock.", "error");
     await loadRewards();
     renderRewards();
     return;
@@ -1690,38 +1745,56 @@ async function requestRedeem(rewardId, sourceButton = null) {
   );
   if (!confirmed) return;
 
+  let resetButton = () => {};
   if (sourceButton) {
-    sourceButton.disabled = true;
-    sourceButton.dataset.originalText = sourceButton.textContent;
-    sourceButton.textContent = "Redeeming...";
+    resetButton = setButtonBusy(sourceButton, "Redeeming...");
   }
 
-  const { error } = await sb.rpc("redeem_reward", { p_reward_id: rewardId });
+  try {
+    const { data, error } = await withTimeout(
+      sb.rpc("redeem_reward", { p_reward_id: Number(rewardId) }),
+      20000,
+      "The redeem request timed out. Check your connection and try again."
+    );
 
-  if (sourceButton) {
-    sourceButton.disabled = false;
-    sourceButton.textContent = sourceButton.dataset.originalText || "Redeem";
-  }
+    if (error) throw error;
+    if (!data || data.ok !== true) {
+      throw new Error("The database did not confirm that the redeem request was created.");
+    }
 
-  if (error) {
-    const errorText = String(error.message || "");
-    if (errorText.toLowerCase().includes("trade url") || errorText.toLowerCase().includes("trade link")) {
-      const goDashboard = await showConfirm(
-        "Your reward request was not created because your Steam trade URL is missing or was not saved correctly. Add it in Settings, save it, then try redeeming again.",
+    resetButton();
+    showMessage("Redeem request created. Coins were deducted and stock was reserved for manual review.", "success");
+    await loadRewards();
+    renderRewards();
+    await updateRewardAccountNotice();
+    await refreshAll();
+  } catch (error) {
+    resetButton();
+    console.error("Redeem RPC failed", {
+      code: error?.code,
+      message: error?.message,
+      details: error?.details,
+      hint: error?.hint,
+      error
+    });
+
+    const friendly = getFriendlyRedeemError(error);
+    if (friendly.action === "trade") {
+      const goSettings = await showConfirm(
+        friendly.message,
         { title: "Steam trade link required", confirmText: "Open Settings", cancelText: "Stay on rewards", icon: "↗" }
       );
-      if (goDashboard) location.href = "/settings#tradeForm";
+      if (goSettings) location.href = "/settings#tradeForm";
       await updateRewardAccountNotice();
       return;
     }
-    return showMessage("Could not create the redeem request. Please refresh, check your trade link, and try again.", "error");
-  }
 
-  showMessage("Redeem request created. Coins were deducted and stock was reserved for manual review.", "success");
-  await loadRewards();
-  renderRewards();
-  await updateRewardAccountNotice();
-  await refreshAll();
+    showMessage(friendly.message, "error");
+    if (friendly.action === "refresh") {
+      await loadRewards().catch(() => {});
+      renderRewards();
+    }
+  }
 }
 
 function isValidSteamTradeUrl(url) {
@@ -1755,7 +1828,7 @@ async function saveSteamTradeUrlForUser(user, steamTradeUrl) {
     if (saved && Object.prototype.hasOwnProperty.call(saved, "steam_trade_url")) return saved;
   }
 
-  // Safe fallback through the user's own profile row. v12.2.8 SQL grants only
+  // Safe fallback through the user's own profile row. v12.2.9 SQL grants only
   // the steam_trade_url column and applies an own-row RLS policy.
   const { data, error } = await sb
     .from("profiles")

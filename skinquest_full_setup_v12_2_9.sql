@@ -1,6 +1,6 @@
--- SkinQuest full Supabase setup v12.2.8
+-- SkinQuest full Supabase setup v12.2.9
 -- Run this in Supabase SQL Editor only when setting up a fresh project.
--- This is the complete fresh-project setup matching the v12.2.8 frontend.
+-- This is the complete fresh-project setup matching the v12.2.9 frontend.
 
 create extension if not exists pgcrypto;
 
@@ -489,6 +489,11 @@ begin
 end;
 $$;
 
+-- Remove old overloads that can make PostgREST report an ambiguous RPC call.
+drop function if exists public.redeem_reward(integer);
+drop function if exists public.redeem_reward(numeric);
+drop function if exists public.redeem_reward(text);
+
 create or replace function public.redeem_reward(p_reward_id bigint)
 returns jsonb
 language plpgsql
@@ -507,12 +512,20 @@ begin
     raise exception 'You must be logged in.';
   end if;
 
+  if p_reward_id is null or p_reward_id <= 0 then
+    raise exception 'Reward not found.';
+  end if;
+
   perform public.ensure_skinquest_profile();
 
   select * into v_profile
   from public.profiles
   where id = v_user_id
   for update;
+
+  if v_profile.id is null then
+    raise exception 'Profile not found.';
+  end if;
 
   if coalesce(v_profile.account_status, 'active') <> 'active' then
     raise exception 'Account is not active.';
@@ -522,16 +535,25 @@ begin
     raise exception 'Steam trade URL is required.';
   end if;
 
+  if (
+    v_profile.steam_trade_url !~* '^https://(www\.)?steamcommunity\.com/tradeoffer/new/?\?' or
+    v_profile.steam_trade_url !~ '(^|[?&])partner=[0-9]+(&|$)' or
+    v_profile.steam_trade_url !~ '(^|[?&])token=[A-Za-z0-9_-]+(&|$)'
+  ) then
+    raise exception 'Steam trade URL is invalid.';
+  end if;
+
   select * into v_reward
   from public.reward_items
-  where id = p_reward_id and active = true
+  where id = p_reward_id
+    and active = true
   for update;
 
-  if not found then
+  if v_reward.id is null then
     raise exception 'Reward not found.';
   end if;
 
-  v_cost := coalesce(nullif(v_reward.points_coins, 0), v_reward.points_cost, 0);
+  v_cost := coalesce(nullif(v_reward.points_coins, 0), nullif(v_reward.points_cost, 0), 0);
   if v_cost <= 0 then
     raise exception 'Reward price is invalid.';
   end if;
@@ -546,30 +568,60 @@ begin
   end if;
 
   update public.profiles
-  set points_balance = points_balance - v_cost
+  set points_balance = coalesce(points_balance, 0) - v_cost,
+      updated_at = now()
   where id = v_user_id;
 
   update public.reward_items
-  set quantity_reserved = coalesce(quantity_reserved, 0) + 1
+  set quantity_reserved = coalesce(quantity_reserved, 0) + 1,
+      updated_at = now()
   where id = v_reward.id;
 
   insert into public.redemption_requests (
-    user_id, reward_id, reward_name, points_coins, points_cost, steam_trade_url, status
+    user_id,
+    reward_id,
+    reward_name,
+    points_coins,
+    points_cost,
+    steam_trade_url,
+    status
   ) values (
-    v_user_id, v_reward.id, v_reward.name, v_cost, v_cost, v_profile.steam_trade_url, 'pending'
-  ) returning id into v_request_id;
+    v_user_id,
+    v_reward.id,
+    v_reward.name,
+    v_cost,
+    v_cost,
+    v_profile.steam_trade_url,
+    'pending'
+  )
+  returning id into v_request_id;
 
-  insert into public.coin_adjustments (user_id, amount, reason, source_type, source_id, metadata)
-  values (
+  insert into public.coin_adjustments (
+    user_id,
+    amount,
+    reason,
+    source_type,
+    source_id,
+    metadata
+  ) values (
     v_user_id,
     -v_cost,
     'Redeem hold / ' || v_reward.name,
     'redemption_hold',
     v_request_id::text,
-    jsonb_build_object('reward_id', v_reward.id, 'reward_name', v_reward.name)
+    jsonb_build_object(
+      'reward_id', v_reward.id,
+      'reward_name', v_reward.name,
+      'redemption_request_id', v_request_id
+    )
   );
 
-  return jsonb_build_object('ok', true, 'request_id', v_request_id);
+  return jsonb_build_object(
+    'ok', true,
+    'request_id', v_request_id,
+    'reward_id', v_reward.id,
+    'coins_spent', v_cost
+  );
 end;
 $$;
 
@@ -944,7 +996,12 @@ grant select, insert on public.support_requests to authenticated;
 grant insert, update on public.reward_items to authenticated;
 grant update on public.support_requests to authenticated;
 grant select, insert, delete on public.favorite_rewards to authenticated;
-grant usage, select on public.support_requests_id_seq to anon;
+do $$
+begin
+  if to_regclass('public.support_requests_id_seq') is not null then
+    execute 'grant usage, select on sequence public.support_requests_id_seq to anon';
+  end if;
+end $$;
 grant usage, select on all sequences in schema public to authenticated;
 
 grant execute on function public.is_admin() to authenticated;
@@ -955,6 +1012,7 @@ revoke all on function public.save_skinquest_trade_url(text) from public;
 grant execute on function public.save_skinquest_trade_url(text) to authenticated;
 grant execute on function public.save_account_settings(boolean, boolean, boolean) to authenticated;
 grant execute on function public.claim_level_rewards() to authenticated;
+revoke all on function public.redeem_reward(bigint) from public;
 grant execute on function public.redeem_reward(bigint) to authenticated;
 grant execute on function public.owner_set_admin_role(text, text) to authenticated;
 grant execute on function public.admin_adjust_user_coins(text, integer, text) to authenticated;
@@ -967,3 +1025,7 @@ grant execute on function public.admin_update_redemption_status(bigint, text, te
 -- insert into public.admin_users (user_id, role)
 -- values ('YOUR-USER-ID-HERE', 'owner')
 -- on conflict (user_id) do update set role = excluded.role;
+
+
+-- Refresh Supabase/PostgREST after function and schema updates.
+notify pgrst, 'reload schema';

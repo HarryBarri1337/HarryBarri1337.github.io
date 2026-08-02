@@ -1,4 +1,4 @@
-/* SkinQuest v12.2.8 */
+/* SkinQuest v12.2.9 */
 
 :root {
   --bg: #0b0f16;
@@ -4072,7 +4072,7 @@ body > footer {
 }
 
 
-/* v12.2.8 settings action feedback */
+/* v12.2.9 settings action feedback */
 .form-feedback {
   min-height: 1.35em;
   margin: 8px 0 0;
