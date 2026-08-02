@@ -1,0 +1,48 @@
+DirectoryIndex index.html
+RewriteEngine On
+
+# Redirect direct requests for legacy .html URLs to their clean public URLs.
+# THE_REQUEST ensures internal rewrites do not create redirect loops.
+RewriteCond %{THE_REQUEST} \s/+index\.html(?:[?\s]) [NC]
+RewriteRule ^index\.html$ / [R=301,L,NE]
+
+RewriteCond %{THE_REQUEST} \s/+dashboard\.html(?:[?\s]) [NC]
+RewriteRule ^dashboard\.html$ /dashboard [R=301,L,NE]
+RewriteCond %{THE_REQUEST} \s/+earn\.html(?:[?\s]) [NC]
+RewriteRule ^earn\.html$ /surveys [R=301,L,NE]
+RewriteCond %{THE_REQUEST} \s/+rewards\.html(?:[?\s]) [NC]
+RewriteRule ^rewards\.html$ /rewards [R=301,L,NE]
+RewriteCond %{THE_REQUEST} \s/+admin\.html(?:[?\s]) [NC]
+RewriteRule ^admin\.html$ /admin [R=301,L,NE]
+RewriteCond %{THE_REQUEST} \s/+how-it-works\.html(?:[?\s]) [NC]
+RewriteRule ^how-it-works\.html$ /how-it-works [R=301,L,NE]
+RewriteCond %{THE_REQUEST} \s/+settings\.html(?:[?\s]) [NC]
+RewriteRule ^settings\.html$ /settings [R=301,L,NE]
+RewriteCond %{THE_REQUEST} \s/+privacy\.html(?:[?\s]) [NC]
+RewriteRule ^privacy\.html$ /privacy [R=301,L,NE]
+RewriteCond %{THE_REQUEST} \s/+terms\.html(?:[?\s]) [NC]
+RewriteRule ^terms\.html$ /terms [R=301,L,NE]
+RewriteCond %{THE_REQUEST} \s/+changelog\.html(?:[?\s]) [NC]
+RewriteRule ^changelog\.html$ /changelog [R=301,L,NE]
+RewriteCond %{THE_REQUEST} \s/+auth-confirm\.html(?:[?\s]) [NC]
+RewriteRule ^auth-confirm\.html$ /auth-confirm [R=301,L,NE]
+RewriteCond %{THE_REQUEST} \s/+steam-callback\.html(?:[?\s]) [NC]
+RewriteRule ^steam-callback\.html$ /steam-callback [R=301,L,NE]
+
+# Leave real files and directories untouched.
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Clean public routes -> existing HTML files internally.
+RewriteRule ^dashboard/?$ dashboard.html [L]
+RewriteRule ^surveys/?$ earn.html [L]
+RewriteRule ^rewards/?$ rewards.html [L]
+RewriteRule ^admin/?$ admin.html [L]
+RewriteRule ^how-it-works/?$ how-it-works.html [L]
+RewriteRule ^settings/?$ settings.html [L]
+RewriteRule ^privacy/?$ privacy.html [L]
+RewriteRule ^terms/?$ terms.html [L]
+RewriteRule ^changelog/?$ changelog.html [L]
+RewriteRule ^auth-confirm/?$ auth-confirm.html [L]
+RewriteRule ^steam-callback/?$ steam-callback.html [L]

@@ -157,7 +157,7 @@ function legacyCopyToClipboard(text, successMessage) {
   return copied;
 }
 
-function getPageUrl(fileName = "index.html") {
+function getPageUrl(fileName = "/") {
   const basePath = location.pathname.replace(/[^/]*$/, "");
   return `${location.origin}${basePath}${fileName}`;
 }
@@ -331,7 +331,7 @@ async function showSteamEmailPrompt(user) {
     const reset = setButtonBusy(saveButton, "Sending...");
     const { error } = await sb.auth.updateUser(
       { email },
-      { emailRedirectTo: getPageUrl("auth-confirm.html") }
+      { emailRedirectTo: getPageUrl("/auth-confirm") }
     );
     reset();
     if (error) {
@@ -359,7 +359,7 @@ async function confirmAndSignOut() {
   if (!confirmed) return;
   await sb.auth.signOut();
   setCachedNavAuthState(null);
-  location.href = "index.html";
+  location.href = "/";
 }
 
 function finishPageLoad() {
@@ -663,7 +663,7 @@ function getLevelProgress(totalEarned) {
 }
 
 function updateAdminVisibility(user) {
-  qsa('a[href="admin.html"]').forEach((link) => {
+  qsa('a[href="/admin"]').forEach((link) => {
     link.classList.toggle("hidden-admin-link", !isAdmin(user));
   });
 }
@@ -700,9 +700,13 @@ function initNav() {
     });
   }
 
-  const current = location.pathname.split("/").pop() || "index.html";
+  const normalizePath = (value) => {
+    const path = new URL(value, location.origin).pathname.replace(/\/+$/, "");
+    return path || "/";
+  };
+  const current = normalizePath(location.pathname);
   nav?.querySelectorAll("a").forEach((link) => {
-    if (link.getAttribute("href") === current) link.classList.add("active");
+    if (normalizePath(link.getAttribute("href") || "/") === current) link.classList.add("active");
   });
 }
 
@@ -777,7 +781,7 @@ function initAuthModal() {
       email,
       password,
       options: {
-        emailRedirectTo: getPageUrl("auth-confirm.html")
+        emailRedirectTo: getPageUrl("/auth-confirm")
       }
     });
     if (error) return showMessage(error.message, "error");
@@ -857,14 +861,14 @@ function renderSignedInNav(actions, { user, email, coins = 0, navLevel = null, a
   const levelProgress = navLevel ? navLevel.progress : 0;
   const safeEmail = email || displayAccountEmail(user, currentProfile);
   const levelPill = `
-    <a class="level-pill" href="dashboard.html" aria-label="${escapeHtml(`${levelText}, ${levelTitle}`)} progress" title="${escapeHtml(levelTitle)}">
+    <a class="level-pill" href="/dashboard" aria-label="${escapeHtml(`${levelText}, ${levelTitle}`)} progress" title="${escapeHtml(levelTitle)}">
       <span class="level-pill-label">${escapeHtml(levelText)}</span>
       <span class="level-pill-track"><span style="width:${levelProgress}%"></span></span>
     </a>
   `;
 
   actions.innerHTML = `
-    <a class="coin-pill" href="dashboard.html" aria-label="Your coin balance">
+    <a class="coin-pill" href="/dashboard" aria-label="Your coin balance">
       ${coinIcon("coin-icon-small")}
       <strong>${Number(coins || 0).toLocaleString()}</strong>
       <span>coins</span>
@@ -887,10 +891,10 @@ function renderSignedInNav(actions, { user, email, coins = 0, navLevel = null, a
             <small class="account-rank-line">${navLevel ? `Level ${Number(navLevel.level).toLocaleString()} · ${escapeHtml(levelTitle)}` : "Profile rank loading"}</small>
           </div>
         </div>
-        <a href="dashboard.html">Dashboard</a>
-        <a href="settings.html">Settings</a>
-        <a href="rewards.html">Rewards</a>
-        <a href="earn.html">Surveys</a>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/settings">Settings</a>
+        <a href="/rewards">Rewards</a>
+        <a href="/surveys">Surveys</a>
         ${adminLink}
         <button type="button" id="navLogoutButton">Log out</button>
       </div>
@@ -931,7 +935,7 @@ async function updateNavAuthState() {
       email: cached.email,
       coins: cached.coins,
       navLevel: cached.navLevel,
-      adminLink: cached.isAdmin ? `<a href="admin.html">${escapeHtml(cached.adminLabel || "Admin panel")}</a>` : "",
+      adminLink: cached.isAdmin ? `<a href="/admin">${escapeHtml(cached.adminLabel || "Admin panel")}</a>` : "",
       currentAdminRole: cached.currentAdminRole || ""
     });
     actions.classList.remove("auth-loading");
@@ -965,7 +969,7 @@ async function updateNavAuthState() {
 
   const email = displayAccountEmail(user, currentProfile);
   const adminLabel = isOwner(user) ? "Owner panel" : "Admin panel";
-  const adminLink = isAdmin(user) ? `<a href="admin.html">${escapeHtml(adminLabel)}</a>` : "";
+  const adminLink = isAdmin(user) ? `<a href="/admin">${escapeHtml(adminLabel)}</a>` : "";
 
   actions.classList.remove("auth-loading", "nav-restored");
   renderSignedInNav(actions, { user, email, coins, navLevel, adminLink, currentAdminRole: isAdmin(user) ? currentAdminRole : "" });
@@ -1255,7 +1259,7 @@ async function updateRewardAccountNotice() {
           <strong>Add your Steam trade URL before redeeming.</strong>
           <span>SkinQuest needs your Steam trade link so the admin can send your reward after review.</span>
         </div>
-        <a class="button button-primary" href="settings.html#tradeForm">Add trade link</a>
+        <a class="button button-primary" href="/settings#tradeForm">Add trade link</a>
       `;
       return;
     }
@@ -1488,7 +1492,7 @@ function renderRewards() {
           <span>Try another search, change your coin range, or clear the active filters.</span>
           <div class="empty-actions">
             <button class="button button-ghost" type="button" data-clear-reward-filters>Clear filters</button>
-            <a class="button button-primary" href="earn.html">Surveys</a>
+            <a class="button button-primary" href="/surveys">Surveys</a>
           </div>
         </div>`;
       settleGrid();
@@ -1547,8 +1551,8 @@ function renderRewards() {
         event.stopPropagation();
         const action = button.dataset.rewardAction || "redeem";
         if (action === "login") return openAuthModal("signup");
-        if (action === "trade") return location.href = "settings.html#tradeForm";
-        if (action === "earn") return location.href = "earn.html";
+        if (action === "trade") return location.href = "/settings#tradeForm";
+        if (action === "earn") return location.href = "/surveys";
         if (action === "out") return;
         requestRedeem(Number(button.dataset.redeem), button);
       });
@@ -1639,7 +1643,7 @@ async function requestRedeem(rewardId, sourceButton = null) {
       "Before you can redeem, add your Steam trade URL in Settings. Without it, SkinQuest does not know where to send the skin.",
       { title: "Add your Steam trade link first", confirmText: "Add trade link", cancelText: "Stay on rewards", icon: "↗" }
     );
-    if (goDashboard) location.href = "settings.html#tradeForm";
+    if (goDashboard) location.href = "/settings#tradeForm";
     return;
   }
 
@@ -1648,7 +1652,7 @@ async function requestRedeem(rewardId, sourceButton = null) {
       "Your saved Steam trade URL looks incomplete. It must be the full Steam trade offer link with both partner and token.",
       { title: "Fix your Steam trade link", confirmText: "Fix trade link", cancelText: "Stay on rewards", icon: "!" }
     );
-    if (goDashboard) location.href = "settings.html#tradeForm";
+    if (goDashboard) location.href = "/settings#tradeForm";
     return;
   }
 
@@ -1697,7 +1701,7 @@ async function requestRedeem(rewardId, sourceButton = null) {
         "Your reward request was not created because your Steam trade URL is missing or was not saved correctly. Add it in Settings, save it, then try redeeming again.",
         { title: "Steam trade link required", confirmText: "Open Settings", cancelText: "Stay on rewards", icon: "↗" }
       );
-      if (goDashboard) location.href = "settings.html#tradeForm";
+      if (goDashboard) location.href = "/settings#tradeForm";
       await updateRewardAccountNotice();
       return;
     }
@@ -2432,7 +2436,7 @@ async function renderGoalRewards(user, profile) {
 
   qsa("#goalRewardsList [data-claim-reward]").forEach((button) => {
     button.addEventListener("click", () => {
-      location.href = `rewards.html?search=${encodeURIComponent(button.dataset.claimReward || "")}`;
+      location.href = `/rewards?search=${encodeURIComponent(button.dataset.claimReward || "")}`;
     });
   });
 }
@@ -2458,20 +2462,20 @@ function updateGetStartedPanel(profile, totalEarned, redemptions = []) {
         <h2>Set up your reward flow</h2>
         <p class="muted">Complete these basics so your first redeem request is smooth.</p>
       </div>
-      <a class="button button-primary" href="${hasTrade ? "earn.html" : "settings.html#tradeForm"}">${hasTrade ? "Open surveys" : "Add trade URL"}</a>
+      <a class="button button-primary" href="${hasTrade ? "/surveys" : "/settings#tradeForm"}">${hasTrade ? "Open surveys" : "Add trade URL"}</a>
     </div>
     <div class="getting-started-steps">
-      <a class="setup-step ${hasTrade ? "complete" : "active"}" href="settings.html#tradeForm">
+      <a class="setup-step ${hasTrade ? "complete" : "active"}" href="/settings#tradeForm">
         <strong>${hasTrade ? "✓" : "1"}</strong>
         <span>Save Steam trade URL</span>
         <small>${hasTrade ? "Ready for rewards" : "Required before redeeming"}</small>
       </a>
-      <a class="setup-step ${hasEarned ? "complete" : hasTrade ? "active" : ""}" href="earn.html">
+      <a class="setup-step ${hasEarned ? "complete" : hasTrade ? "active" : ""}" href="/surveys">
         <strong>${hasEarned ? "✓" : "2"}</strong>
         <span>Complete surveys</span>
         <small>${hasEarned ? "Coins confirmed" : "Open verified survey tasks"}</small>
       </a>
-      <a class="setup-step ${hasRedeemed ? "complete" : hasEarned ? "active" : ""}" href="rewards.html">
+      <a class="setup-step ${hasRedeemed ? "complete" : hasEarned ? "active" : ""}" href="/rewards">
         <strong>${hasRedeemed ? "✓" : "3"}</strong>
         <span>Redeem a reward</span>
         <small>${hasRedeemed ? "Request created" : "Pick a fixed reward"}</small>
@@ -2489,7 +2493,7 @@ function renderRedeemHistory(redemptions) {
     redeemHistory.innerHTML = `
       <strong>No redeem requests yet.</strong>
       <span>Once you redeem a reward, your request status appears here.</span>
-      <a class="button button-primary" href="rewards.html">Browse rewards</a>
+      <a class="button button-primary" href="/rewards">Browse rewards</a>
     `;
     return;
   }
@@ -2542,7 +2546,7 @@ async function renderCoinHistory(userId) {
     coinHistory.innerHTML = `
       <strong>No coin history yet.</strong>
       <span>Complete your first partner task to start earning coins.</span>
-      <a class="button button-primary" href="earn.html">Surveys</a>
+      <a class="button button-primary" href="/surveys">Surveys</a>
     `;
     return;
   }
@@ -2620,17 +2624,17 @@ async function initAuthConfirmPage() {
     const user = data?.session?.user || await getSessionUser();
     if (!user) {
       setState("warning", isSteamAuth ? "Steam link opened" : "Email link opened", isSteamAuth ? "Steam sign-in opened, but no active session was found. Try signing in again." : "Your email link was opened, but no active session was found. Try signing in now. If Supabase still sends you here, check the redirect URL settings.");
-      if (actions) actions.innerHTML = `<button class="button button-primary" data-open-auth="login">Sign in</button><a class="button button-ghost" href="index.html">Home</a>`;
+      if (actions) actions.innerHTML = `<button class="button button-primary" data-open-auth="login">Sign in</button><a class="button button-ghost" href="/">Home</a>`;
       return;
     }
 
     await ensureProfile(user);
     setState("success", isSteamAuth ? "Steam sign-in complete" : "Email confirmed", isSteamAuth ? "You are now signed in with Steam." : "Your SkinQuest account is ready. You can now earn coins and redeem rewards.");
-    if (actions) actions.innerHTML = `<a class="button button-primary" href="dashboard.html">Go to dashboard</a><a class="button button-ghost" href="rewards.html">View rewards</a>`;
+    if (actions) actions.innerHTML = `<a class="button button-primary" href="/dashboard">Go to dashboard</a><a class="button button-ghost" href="/rewards">View rewards</a>`;
     await updateNavAuthState();
   } catch (error) {
     setState("error", isSteamAuth ? "Could not sign in with Steam" : "Could not confirm email", error.message || "The confirmation link could not be processed.");
-    if (actions) actions.innerHTML = `<button class="button button-primary" data-open-auth="login">Try signing in</button><a class="button button-ghost" href="index.html">Home</a>`;
+    if (actions) actions.innerHTML = `<button class="button button-primary" data-open-auth="login">Try signing in</button><a class="button button-ghost" href="/">Home</a>`;
   }
 }
 
