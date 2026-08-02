@@ -24,7 +24,7 @@
       }
     }());
   </script>
-  <link rel="stylesheet" href="styles.css?v=1229" />
+  <link rel="stylesheet" href="styles.css?v=12210" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#0b0f16" />
   <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png" />
@@ -68,15 +68,53 @@
   <section class="panel changelog-list">
     <article class="changelog-entry current">
       <span class="pill">Current</span>
-      <h2>v12.2.9 - Redemption database repair</h2>
+      <h2>v12.2.10 - Redemption stability + Trade URL fix</h2>
       <ul>
-        <li>Rebuilt the existing-project SQL as a complete schema synchronization instead of a partial Trade URL patch.</li>
-        <li>Replaced the redeem_reward RPC, removed conflicting old overloads, refreshed PostgREST, and repaired required redemption tables, columns, policies, grants, and ledger fields.</li>
-        <li>Redeem failures now show the real database reason or a specific repair message instead of one generic error.</li>
-        <li>Trade URL saving, reward redemption, the full setup SQL, and the upgrade SQL now use the same database definitions.</li>
+        <li>Restored the stable v12.2.4 redemption frontend and redeem_reward database function after a regression in later repair releases.</li>
+        <li>Moved Trade URL form binding outside the main startup sequence so unrelated page-loading errors cannot leave the Save button inactive.</li>
+        <li>The Save button now enters its Saving state immediately and shows inline success, validation, timeout, or database feedback.</li>
+        <li>Added a focused existing-project repair SQL and a matching full setup SQL without replacing the wider working redemption schema.</li>
+        <li>Restored the complete version history instead of replacing the newest changelog entry each release.</li>
       </ul>
     </article>
 
+    <article class="changelog-entry">
+      <h2>v12.2.9 - Redemption diagnostics + schema synchronization</h2>
+      <ul>
+        <li>Added redemption database synchronization and more specific redeem error reporting.</li>
+        <li>Superseded by the narrower v12.2.10 stability repair, which restores the previously working redemption path.</li>
+      </ul>
+    </article>
+
+    <article class="changelog-entry">
+      <h2>v12.2.8 - Trade URL save feedback</h2>
+      <ul>
+        <li>Added immediate button feedback, inline Trade URL status messages, and timeout handling.</li>
+        <li>The frontend feedback improvements were retained in v12.2.10 with a narrower database repair.</li>
+      </ul>
+    </article>
+
+    <article class="changelog-entry">
+      <h2>v12.2.7 - Initial Trade URL database patch</h2>
+      <ul>
+        <li>Added a dedicated save_skinquest_trade_url RPC, flexible Steam link validation, and an own-profile fallback.</li>
+        <li>The release package still contained outdated SQL files, which was corrected in later versions.</li>
+      </ul>
+    </article>
+
+    <article class="changelog-entry">
+      <h2>v12.2.6 - Campaign tracking paths</h2>
+      <ul>
+        <li>Added neutral campaign paths /01 through /05 that keep the numbered landing path visible for GA4 comparison.</li>
+      </ul>
+    </article>
+
+    <article class="changelog-entry">
+      <h2>v12.2.5 - Clean public URLs</h2>
+      <ul>
+        <li>Added clean routes such as /dashboard, /surveys, /rewards, and /settings through Apache rewrites.</li>
+      </ul>
+    </article>
     <article class="changelog-entry">
       <h2>v12.2.4 - CS2 profile ranks + gain animations</h2>
       <ul>
@@ -239,7 +277,7 @@
     <a href="/how-it-works">Help</a>
     <a href="mailto:support@skinquestcs.com">Support</a>
   </div>
-  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v12.2.9</a></p>
+  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v12.2.10</a></p>
 </footer>
 <div class="modal-backdrop hidden" id="authModal">
   <div class="auth-modal" role="dialog" aria-modal="true">
@@ -286,6 +324,6 @@
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js?v=1229"></script>
+<script src="app.js?v=12210"></script>
 </body>
 </html>
