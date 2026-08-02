@@ -1,8 +1,16 @@
--- SkinQuest v12.2.7 upgrade
--- Repairs Steam trade URL saving for existing Supabase projects.
+-- SkinQuest existing-project upgrade to v12.2.8
+-- Safe to run once on the current SkinQuest Supabase project.
+-- Idempotent: existing columns, functions and policies are replaced safely.
+
+begin;
 
 alter table public.profiles
   add column if not exists steam_trade_url text;
+
+alter table public.profiles
+  add column if not exists updated_at timestamptz not null default now();
+
+alter table public.profiles enable row level security;
 
 create or replace function public.save_skinquest_trade_url(p_trade_url text)
 returns public.profiles
@@ -12,6 +20,7 @@ set search_path = public
 as $$
 declare
   v_user_id uuid := auth.uid();
+  v_email text := coalesce(auth.jwt() ->> 'email', '');
   v_profile public.profiles%rowtype;
   v_trade_url text := nullif(trim(coalesce(p_trade_url, '')), '');
 begin
@@ -19,7 +28,9 @@ begin
     raise exception 'You must be logged in.';
   end if;
 
-  perform public.ensure_skinquest_profile();
+  insert into public.profiles (id, username)
+  values (v_user_id, coalesce(nullif(split_part(v_email, '@', 1), ''), 'user'))
+  on conflict (id) do nothing;
 
   if v_trade_url is not null and (
     v_trade_url !~* '^https://(www\.)?steamcommunity\.com/tradeoffer/new/?\?' or
@@ -46,7 +57,7 @@ $$;
 revoke all on function public.save_skinquest_trade_url(text) from public;
 grant execute on function public.save_skinquest_trade_url(text) to authenticated;
 
--- Restricted fallback used only if the RPC call is unavailable.
+grant select on public.profiles to authenticated;
 grant update (steam_trade_url) on public.profiles to authenticated;
 
 drop policy if exists profiles_update_own_trade_url on public.profiles;
@@ -54,3 +65,5 @@ create policy profiles_update_own_trade_url on public.profiles
 for update to authenticated
 using (id = auth.uid())
 with check (id = auth.uid());
+
+commit;

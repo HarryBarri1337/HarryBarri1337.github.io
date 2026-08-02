@@ -24,7 +24,7 @@
       }
     }());
   </script>
-  <link rel="stylesheet" href="styles.css?v=1227" />
+  <link rel="stylesheet" href="styles.css?v=1228" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#0b0f16" />
   <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png" />
@@ -111,11 +111,12 @@
         </article>
       </div>
 
-      <form id="tradeForm" class="form-row trade-row settings-trade-form">
-        <input id="tradeUrl" type="url" placeholder="https://steamcommunity.com/tradeoffer/new/?partner=...&token=..." />
+      <form id="tradeForm" class="form-row trade-row settings-trade-form" novalidate>
+        <input id="tradeUrl" type="url" autocomplete="off" spellcheck="false" placeholder="https://steamcommunity.com/tradeoffer/new/?partner=...&token=..." />
         <a class="button button-ghost" target="_blank" rel="noopener" href="https://steamcommunity.com/my/tradeoffers/privacy#trade_offer_access_url">Find trade link</a>
-        <button class="button button-primary" type="submit">Save trade URL</button>
+        <button class="button button-primary" id="saveTradeUrlButton" type="submit">Save trade URL</button>
       </form>
+      <p class="form-feedback" id="tradeSaveFeedback" aria-live="polite"></p>
 
       <div class="settings-subsection">
         <div class="settings-subsection-head">
@@ -240,7 +241,7 @@
     <a href="/how-it-works">Help</a>
     <a href="mailto:support@skinquestcs.com">Support</a>
   </div>
-  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v12.2.4</a></p>
+  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v12.2.8</a></p>
 </footer>
 <div class="modal-backdrop hidden" id="authModal">
   <div class="auth-modal" role="dialog" aria-modal="true">
@@ -287,6 +288,6 @@
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js?v=1227"></script>
+<script src="app.js?v=1228"></script>
 </body>
 </html>

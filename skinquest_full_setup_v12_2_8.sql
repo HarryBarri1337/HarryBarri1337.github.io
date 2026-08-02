@@ -1,6 +1,6 @@
--- SkinQuest full Supabase setup v12.2.4
+-- SkinQuest full Supabase setup v12.2.8
 -- Run this in Supabase SQL Editor only when setting up a fresh project.
--- This full setup includes the existing database baseline used by the current frontend.
+-- This is the complete fresh-project setup matching the v12.2.8 frontend.
 
 create extension if not exists pgcrypto;
 
@@ -361,6 +361,7 @@ set search_path = public
 as $$
 declare
   v_user_id uuid := auth.uid();
+  v_email text := coalesce(auth.jwt() ->> 'email', '');
   v_profile public.profiles%rowtype;
   v_trade_url text := nullif(trim(coalesce(p_trade_url, '')), '');
 begin
@@ -368,16 +369,27 @@ begin
     raise exception 'You must be logged in.';
   end if;
 
-  perform public.ensure_skinquest_profile();
+  insert into public.profiles (id, username)
+  values (v_user_id, coalesce(nullif(split_part(v_email, '@', 1), ''), 'user'))
+  on conflict (id) do nothing;
 
-  if v_trade_url is not null and v_trade_url !~ '^https://steamcommunity\.com/tradeoffer/new/\?(.+&)?partner=[0-9]+(&.+)?token=[A-Za-z0-9_-]+' then
+  if v_trade_url is not null and (
+    v_trade_url !~* '^https://(www\.)?steamcommunity\.com/tradeoffer/new/?\?' or
+    v_trade_url !~ '(^|[?&])partner=[0-9]+(&|$)' or
+    v_trade_url !~ '(^|[?&])token=[A-Za-z0-9_-]+(&|$)'
+  ) then
     raise exception 'Invalid Steam trade URL.';
   end if;
 
   update public.profiles
-  set steam_trade_url = v_trade_url
+  set steam_trade_url = v_trade_url,
+      updated_at = now()
   where id = v_user_id
   returning * into v_profile;
+
+  if v_profile.id is null then
+    raise exception 'Could not find or create your profile.';
+  end if;
 
   return v_profile;
 end;
@@ -775,6 +787,12 @@ create policy profiles_select_own_or_admin on public.profiles
 for select to authenticated
 using (id = auth.uid() or public.is_admin());
 
+drop policy if exists profiles_update_own_trade_url on public.profiles;
+create policy profiles_update_own_trade_url on public.profiles
+for update to authenticated
+using (id = auth.uid())
+with check (id = auth.uid());
+
 drop policy if exists admin_users_select_own_or_admin on public.admin_users;
 create policy admin_users_select_own_or_admin on public.admin_users
 for select to authenticated
@@ -912,6 +930,7 @@ where product_updates = true
 grant usage on schema public to anon, authenticated;
 grant select on public.reward_items to anon, authenticated;
 grant select on public.profiles to authenticated;
+grant update (steam_trade_url) on public.profiles to authenticated;
 grant select on public.redemption_requests to authenticated;
 grant select on public.coin_adjustments to authenticated;
 grant select on public.admin_users to authenticated;
@@ -932,6 +951,7 @@ grant execute on function public.is_admin() to authenticated;
 grant execute on function public.get_admin_role() to authenticated;
 grant execute on function public.is_owner() to authenticated;
 grant execute on function public.ensure_skinquest_profile() to authenticated;
+revoke all on function public.save_skinquest_trade_url(text) from public;
 grant execute on function public.save_skinquest_trade_url(text) to authenticated;
 grant execute on function public.save_account_settings(boolean, boolean, boolean) to authenticated;
 grant execute on function public.claim_level_rewards() to authenticated;

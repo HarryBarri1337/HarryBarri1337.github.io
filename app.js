@@ -1,4 +1,4 @@
-// SkinQuest v12.2.7 - trade URL save repair and reliability checks.
+// SkinQuest v12.2.8 - reliable settings actions and complete SQL package cleanup.
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -267,6 +267,15 @@ function flashButtonSaved(button, savedText = "Saved") {
     button.classList.remove("is-saved");
     button.textContent = original;
   }, 1200);
+}
+
+function withTimeout(promise, timeoutMs, timeoutMessage) {
+  let timeoutId;
+  const timeout = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
+  });
+  return Promise.race([Promise.resolve(promise), timeout])
+    .finally(() => clearTimeout(timeoutId));
 }
 
 function getSteamEmailPromptSnoozeKey(userId) {
@@ -1746,7 +1755,7 @@ async function saveSteamTradeUrlForUser(user, steamTradeUrl) {
     if (saved && Object.prototype.hasOwnProperty.call(saved, "steam_trade_url")) return saved;
   }
 
-  // Safe fallback through the user's own profile row. v12.2.7 SQL grants only
+  // Safe fallback through the user's own profile row. v12.2.8 SQL grants only
   // the steam_trade_url column and applies an own-row RLS policy.
   const { data, error } = await sb
     .from("profiles")
@@ -1764,6 +1773,76 @@ async function saveSteamTradeUrlForUser(user, steamTradeUrl) {
   return data;
 }
 
+
+function setTradeSaveFeedback(message = "", type = "") {
+  const feedback = qs("#tradeSaveFeedback");
+  if (!feedback) return;
+  feedback.textContent = message;
+  feedback.className = `form-feedback${type ? ` form-feedback-${type}` : ""}`;
+}
+
+async function handleTradeUrlSubmit(event) {
+  event?.preventDefault();
+  const form = event?.currentTarget?.id === "tradeForm" ? event.currentTarget : qs("#tradeForm");
+  if (!form || form.dataset.submitting === "true") return;
+
+  const button = form.querySelector('button[type="submit"]');
+  const input = form.querySelector("#tradeUrl");
+  const reset = setButtonBusy(button, "Saving...");
+  form.dataset.submitting = "true";
+  setTradeSaveFeedback("Saving your Steam trade URL...", "info");
+
+  try {
+    const steamTradeUrl = String(input?.value || "").trim();
+    if (steamTradeUrl && !isValidSteamTradeUrl(steamTradeUrl)) {
+      throw new Error("That does not look like a valid Steam trade URL. It must be the complete steamcommunity.com trade offer link with partner and token.");
+    }
+
+    const user = await withTimeout(
+      getSessionUser(),
+      10000,
+      "Sign-in check timed out. Refresh the page and try again."
+    );
+    if (!user) {
+      openAuthModal("login");
+      throw new Error("You need to sign in before saving a Steam trade URL.");
+    }
+
+    const savedProfile = await withTimeout(
+      saveSteamTradeUrlForUser(user, steamTradeUrl),
+      15000,
+      "Saving timed out. Check your connection, refresh the page, and try again."
+    );
+
+    currentProfile = { ...(currentProfile || {}), ...(savedProfile || {}) };
+    if (input) input.value = savedProfile?.steam_trade_url || "";
+
+    const tradeStatus = qs("#settingsTradeStatus");
+    if (tradeStatus) tradeStatus.textContent = savedProfile?.steam_trade_url ? "Saved and valid" : "Missing";
+
+    reset();
+    flashButtonSaved(button, "Saved");
+    setTradeSaveFeedback(savedProfile?.steam_trade_url ? "Trade URL saved successfully." : "Trade URL removed.", "success");
+    showMessage(savedProfile?.steam_trade_url ? "Steam trade URL saved." : "Steam trade URL removed.", "success");
+
+    refreshSettingsPage().catch((error) => console.warn("Settings refresh after trade save failed:", error));
+  } catch (error) {
+    console.error("Trade URL submit failed", error);
+    reset();
+    const message = error?.message || "Could not save your Steam trade URL. Please try again.";
+    setTradeSaveFeedback(message, "error");
+    showMessage(message, "error");
+  } finally {
+    form.dataset.submitting = "false";
+  }
+}
+
+function initTradeUrlForm() {
+  const form = qs("#tradeForm");
+  if (!form || form.dataset.tradeUrlBound === "true") return;
+  form.dataset.tradeUrlBound = "true";
+  form.addEventListener("submit", handleTradeUrlSubmit);
+}
 
 function getStoredNotificationPreferences(userId) {
   const defaults = {
@@ -2278,35 +2357,6 @@ function initSupportWidget() {
 }
 
 async function initDashboard() {
-  const tradeForm = qs("#tradeForm");
-  if (tradeForm) {
-    tradeForm.addEventListener("submit", async (event) => {
-      event.preventDefault();
-
-      const user = await getSessionUser();
-      if (!user) return openAuthModal("login");
-
-      const button = event.currentTarget.querySelector('button[type="submit"]');
-      const steamTradeUrl = qs("#tradeUrl")?.value.trim();
-      if (steamTradeUrl && !isValidSteamTradeUrl(steamTradeUrl)) {
-        return showMessage("That does not look like a valid Steam trade URL. It should include steamcommunity.com/tradeoffer/new/?partner=...&token=...");
-      }
-
-      const reset = setButtonBusy(button, "Saving...");
-      try {
-        await saveSteamTradeUrlForUser(user, steamTradeUrl);
-      } catch (error) {
-        reset();
-        return showMessage(error.message, "error");
-      }
-
-      reset();
-      flashButtonSaved(button, "Saved");
-      showMessage("Steam trade URL saved.", "success");
-      await refreshAll();
-    });
-  }
-
   qs("#logoutButton")?.addEventListener("click", confirmAndSignOut);
 
   await refreshDashboard();
@@ -3226,6 +3276,7 @@ async function boot() {
   initProgressRefreshWatcher();
   initAuthModal();
   initSupportWidget();
+  initTradeUrlForm();
   await updateNavAuthState();
   await updateHomeAuthState();
   await initAuthConfirmPage();

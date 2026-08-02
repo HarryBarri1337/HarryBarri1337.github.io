@@ -1,4 +1,4 @@
-/* SkinQuest v12.2.7 */
+/* SkinQuest v12.2.8 */
 
 :root {
   --bg: #0b0f16;
@@ -4070,3 +4070,16 @@ body > footer {
   line-height: 1.2;
   overflow-wrap: anywhere;
 }
+
+
+/* v12.2.8 settings action feedback */
+.form-feedback {
+  min-height: 1.35em;
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: .9rem;
+  line-height: 1.45;
+}
+.form-feedback-info { color: var(--accent); }
+.form-feedback-success { color: var(--green); }
+.form-feedback-error { color: var(--red); }
