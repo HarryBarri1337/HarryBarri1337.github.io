@@ -1,4 +1,4 @@
-// SkinQuest v12.2.4 - CS2 profile rank titles and animated coin/XP gain popups.
+// SkinQuest v12.2.7 - trade URL save repair and reliability checks.
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -1720,10 +1720,12 @@ function isValidSteamTradeUrl(url) {
   try {
     const parsed = new URL(url);
     const host = parsed.hostname.toLowerCase();
-    return host === "steamcommunity.com" &&
-      parsed.pathname.startsWith("/tradeoffer/new/") &&
-      parsed.searchParams.has("partner") &&
-      parsed.searchParams.has("token");
+    const partner = parsed.searchParams.get("partner") || "";
+    const token = parsed.searchParams.get("token") || "";
+    return (host === "steamcommunity.com" || host === "www.steamcommunity.com") &&
+      parsed.pathname.replace(/\/+$/, "") === "/tradeoffer/new" &&
+      /^\d+$/.test(partner) &&
+      /^[A-Za-z0-9_-]+$/.test(token);
   } catch {
     return false;
   }
@@ -1732,21 +1734,34 @@ function isValidSteamTradeUrl(url) {
 async function saveSteamTradeUrlForUser(user, steamTradeUrl) {
   if (!user?.id) throw new Error("You need to sign in first.");
 
-  // Preferred route. This avoids the silent '0 rows updated' problem when a profile row is missing.
-  const { error: rpcError } = await sb.rpc("save_skinquest_trade_url", { p_trade_url: steamTradeUrl });
-  if (!rpcError) return;
-
-  // Fallback route if the RPC is unavailable.
+  // Ensure the user's profile exists before saving.
   await ensureProfile(user);
+
+  // Preferred secure route through Supabase RPC.
+  const { data: rpcData, error: rpcError } = await sb.rpc("save_skinquest_trade_url", {
+    p_trade_url: steamTradeUrl || null
+  });
+  if (!rpcError) {
+    const saved = Array.isArray(rpcData) ? rpcData[0] : rpcData;
+    if (saved && Object.prototype.hasOwnProperty.call(saved, "steam_trade_url")) return saved;
+  }
+
+  // Safe fallback through the user's own profile row. v12.2.7 SQL grants only
+  // the steam_trade_url column and applies an own-row RLS policy.
   const { data, error } = await sb
     .from("profiles")
-    .update({ steam_trade_url: steamTradeUrl })
+    .update({ steam_trade_url: steamTradeUrl || null })
     .eq("id", user.id)
     .select("id, steam_trade_url")
     .maybeSingle();
 
-  if (error) throw new Error("Could not save your Steam trade URL. Please try again.");
-  if (!data) throw new Error("Could not save your Steam trade URL. Refresh the page and try again.");
+  if (error || !data) {
+    console.error("Trade URL save failed", { rpcError, fallbackError: error });
+    const details = rpcError?.message || error?.message || "No profile row was updated.";
+    throw new Error(`Could not save your Steam trade URL. ${details}`);
+  }
+
+  return data;
 }
 
 
