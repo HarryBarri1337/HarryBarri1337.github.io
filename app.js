@@ -1,4 +1,4 @@
-// SkinQuest v12.2.10 - stable redemption backtrack + isolated Trade URL save
+// SkinQuest v12.3.0 - reward redemption schema repair + cleaner rank titles
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -477,41 +477,41 @@ const PROGRESS_SNAPSHOT_KEY_PREFIX = "skinquest.progressSnapshot.";
 
 const CS2_LEVEL_TITLES = [
   "Recruit",
-  "Private Rank 1",
-  "Private Rank 2",
-  "Private Rank 3",
-  "Private Rank 4",
-  "Corporal Rank 5",
-  "Corporal Rank 6",
-  "Corporal Rank 7",
-  "Corporal Rank 8",
-  "Sergeant Rank 9",
-  "Sergeant Rank 10",
-  "Sergeant Rank 11",
-  "Sergeant Rank 12",
-  "Master Sergeant Rank 13",
-  "Master Sergeant Rank 14",
-  "Master Sergeant Rank 15",
-  "Master Sergeant Rank 16",
-  "Sergeant Major Rank 17",
-  "Sergeant Major Rank 18",
-  "Sergeant Major Rank 19",
-  "Sergeant Major Rank 20",
-  "Lieutenant Rank 21",
-  "Lieutenant Rank 22",
-  "Lieutenant Rank 23",
-  "Lieutenant Rank 24",
-  "Captain Rank 25",
-  "Captain Rank 26",
-  "Captain Rank 27",
-  "Captain Rank 28",
-  "Major Rank 29",
-  "Major Rank 30",
-  "Major Rank 31",
-  "Major Rank 32",
-  "Colonel Rank 33",
-  "Colonel Rank 34",
-  "Colonel Rank 35",
+  "Private",
+  "Private",
+  "Private",
+  "Private",
+  "Corporal",
+  "Corporal",
+  "Corporal",
+  "Corporal",
+  "Sergeant",
+  "Sergeant",
+  "Sergeant",
+  "Sergeant",
+  "Master Sergeant",
+  "Master Sergeant",
+  "Master Sergeant",
+  "Master Sergeant",
+  "Sergeant Major",
+  "Sergeant Major",
+  "Sergeant Major",
+  "Sergeant Major",
+  "Lieutenant",
+  "Lieutenant",
+  "Lieutenant",
+  "Lieutenant",
+  "Captain",
+  "Captain",
+  "Captain",
+  "Captain",
+  "Major",
+  "Major",
+  "Major",
+  "Major",
+  "Colonel",
+  "Colonel",
+  "Colonel",
   "Brigadier General",
   "Major General",
   "Lieutenant General",
@@ -1695,14 +1695,25 @@ async function requestRedeem(rewardId, sourceButton = null) {
     sourceButton.textContent = "Redeeming...";
   }
 
-  const { error } = await sb.rpc("redeem_reward", { p_reward_id: rewardId });
+  try {
+    const { data, error } = await withTimeout(
+      sb.rpc("redeem_reward", { p_reward_id: rewardId }),
+      15000,
+      "The redeem request timed out. Please check your connection and try again."
+    );
 
-  if (sourceButton) {
-    sourceButton.disabled = false;
-    sourceButton.textContent = sourceButton.dataset.originalText || "Redeem";
-  }
+    if (error) throw error;
+    if (!data || data.ok !== true || !data.request_id) {
+      throw new Error("The reward server returned an invalid response. No redeem request was confirmed.");
+    }
 
-  if (error) {
+    showMessage("Redeem request created. Coins were deducted and stock was reserved for manual review.", "success");
+    await loadRewards();
+    renderRewards();
+    await updateRewardAccountNotice();
+    await refreshAll();
+  } catch (error) {
+    console.error("Reward redemption failed", error);
     const errorText = String(error.message || "");
     if (errorText.toLowerCase().includes("trade url") || errorText.toLowerCase().includes("trade link")) {
       const goDashboard = await showConfirm(
@@ -1713,14 +1724,13 @@ async function requestRedeem(rewardId, sourceButton = null) {
       await updateRewardAccountNotice();
       return;
     }
-    return showMessage("Could not create the redeem request. Please refresh, check your trade link, and try again.", "error");
+    showMessage(errorText || "Could not create the redeem request. Please refresh and try again.", "error");
+  } finally {
+    if (sourceButton) {
+      sourceButton.disabled = false;
+      sourceButton.textContent = sourceButton.dataset.originalText || "Redeem";
+    }
   }
-
-  showMessage("Redeem request created. Coins were deducted and stock was reserved for manual review.", "success");
-  await loadRewards();
-  renderRewards();
-  await updateRewardAccountNotice();
-  await refreshAll();
 }
 
 function isValidSteamTradeUrl(url) {

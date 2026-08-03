@@ -1,6 +1,6 @@
--- SkinQuest full Supabase setup v12.2.10
+-- SkinQuest full Supabase setup v12.3.0
 -- Run this in Supabase SQL Editor only when setting up a fresh project.
--- Stable full setup: v12.2.4 redemption flow plus the v12.2.10 Trade URL repair.
+-- Stable full setup including the v12.3.0 reward redemption schema repair.
 
 create extension if not exists pgcrypto;
 
@@ -104,6 +104,7 @@ create table if not exists public.redemption_requests (
 );
 
 alter table public.redemption_requests add column if not exists points_coins integer not null default 0;
+alter table public.redemption_requests add column if not exists reward_id bigint references public.reward_items(id) on delete set null;
 alter table public.redemption_requests add column if not exists points_cost integer not null default 0;
 alter table public.redemption_requests add column if not exists steam_trade_url text;
 alter table public.redemption_requests add column if not exists admin_note text;

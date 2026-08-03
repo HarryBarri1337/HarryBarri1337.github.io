@@ -1,12 +1,18 @@
--- SkinQuest existing-project repair v12.2.10
+-- SkinQuest existing-project repair v12.3.0
 -- Run this once on the CURRENT Supabase project.
--- This migration intentionally backtracks redemption to the last known-working
--- v12.2.4 implementation and changes only the Trade URL save path around it.
+-- Repairs the missing redemption_requests.reward_id column that prevents all
+-- reward claims, then restores the stable redemption and Trade URL functions.
 
 begin;
 
 alter table public.profiles add column if not exists steam_trade_url text;
 alter table public.profiles add column if not exists updated_at timestamptz not null default now();
+
+-- Existing projects created before reward inventory linking can be missing this
+-- column. redeem_reward always writes it, so its absence rolls back every claim.
+alter table public.redemption_requests
+  add column if not exists reward_id bigint
+  references public.reward_items(id) on delete set null;
 
 -- Restore the stable Trade URL RPC with flexible parameter ordering.
 create or replace function public.save_skinquest_trade_url(p_trade_url text)
@@ -161,4 +167,4 @@ commit;
 
 notify pgrst, 'reload schema';
 
-select 'SkinQuest v12.2.10 repair applied: stable redemption restored and Trade URL save repaired.' as status;
+select 'SkinQuest v12.3.0 repair applied: reward claims, Trade URL save, and redemption schema repaired.' as status;

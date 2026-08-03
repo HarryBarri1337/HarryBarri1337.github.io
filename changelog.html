@@ -24,7 +24,7 @@
       }
     }());
   </script>
-  <link rel="stylesheet" href="styles.css?v=12210" />
+  <link rel="stylesheet" href="styles.css?v=1230" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#0b0f16" />
   <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png" />
@@ -68,6 +68,16 @@
   <section class="panel changelog-list">
     <article class="changelog-entry current">
       <span class="pill">Current</span>
+      <h2>v12.3.0 - Reward claim repair + cleaner rank titles</h2>
+      <ul>
+        <li>Fixed reward claims on existing databases by adding the missing redemption_requests.reward_id column before restoring the redeem_reward function.</li>
+        <li>Added the same compatibility repair to the full setup SQL so partially initialized databases are repaired too.</li>
+        <li>Reward claims now time out safely, always restore the Redeem button, verify the RPC success response, and show the real failure reason instead of hiding every error behind one generic message.</li>
+        <li>Removed duplicated rank numbers from profile titles, so Level 7 now displays as Level 7 · Corporal instead of Level 7 · Corporal Rank 7.</li>
+      </ul>
+    </article>
+
+    <article class="changelog-entry">
       <h2>v12.2.10 - Redemption stability + Trade URL fix</h2>
       <ul>
         <li>Restored the stable v12.2.4 redemption frontend and redeem_reward database function after a regression in later repair releases.</li>
@@ -277,7 +287,7 @@
     <a href="/how-it-works">Help</a>
     <a href="mailto:support@skinquestcs.com">Support</a>
   </div>
-  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v12.2.10</a></p>
+  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v12.3.0</a></p>
 </footer>
 <div class="modal-backdrop hidden" id="authModal">
   <div class="auth-modal" role="dialog" aria-modal="true">
@@ -324,6 +334,6 @@
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js?v=12210"></script>
+<script src="app.js?v=1230"></script>
 </body>
 </html>
