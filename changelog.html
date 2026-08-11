@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="description" content="SkinQuest version history and recent platform updates." />
   <title>Changelog - SkinQuest</title>
   <link rel="canonical" href="https://skinquestcs.com/changelog" />
@@ -18,7 +18,7 @@
       }
     }());
   </script>
-  <link rel="stylesheet" href="styles.css?v=1300" />
+  <link rel="stylesheet" href="styles.css?v=1310" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#0b0f16" />
   <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png" />
@@ -62,13 +62,22 @@
   <section class="panel changelog-list">
     <article class="changelog-entry current">
       <span class="pill">Current</span>
+      <h2>v13.1.0 - BitLabs, refund XP repair, and mobile polish</h2>
+      <ul>
+        <li>Activated BitLabs with a signed-in offerwall, verified HMAC callback, idempotent credits, and negative reconciliation support.</li>
+        <li>Fixed rejected reward refunds so restored coins no longer add XP or display an earning animation.</li>
+        <li>Added an Install SkinQuest shortcut to the home page and real Apple, Android, and desktop icons to the install guide.</li>
+        <li>Reworked the mobile header, menu, cards, forms, provider layouts, modals, and install flow for narrow screens.</li>
+        <li>Forwarded account deletion to BitLabs when the Server-to-Server key is configured.</li>
+      </ul>
+    </article>
+
+    <article class="changelog-entry">
       <h2>v13.0.0 - Secure surveys, account controls, and installable app</h2>
       <ul>
-        <li>Rebuilt Surveys with secure provider links, live CPX availability, and postback-ready BitLabs and Lootably integrations.</li>
-        <li>Added idempotent coin credits and reversals, reward limits, safer refunds, and automatic admin and customer order emails.</li>
-        <li>Added password recovery, permanent account deletion, privacy data requests, stronger signup requirements, and accessible authentication dialogs.</li>
-        <li>Added a complete install page, mobile home-screen support, improved offline behavior, app shortcuts, icons, and automatic cache updates.</li>
-        <li>Improved SEO, private-page indexing protection, legal information, support spam protection, Steam URL validation, and dependency pinning.</li>
+        <li>Rebuilt Surveys with secure CPX links and provider-ready survey accounting.</li>
+        <li>Added safer reward redemption, automatic order emails, password recovery, account deletion, and support rate limiting.</li>
+        <li>Added the install page, PWA shell, SEO metadata, and updated legal information.</li>
       </ul>
     </article>
 
@@ -283,7 +292,7 @@
     <a href="/install">Install app</a>
     <a href="mailto:support@skinquestcs.com">Support</a>
   </div>
-  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v13.0.0</a></p>
+  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v13.1.0</a></p>
 </footer>
 <div class="modal-backdrop hidden" id="authModal">
   <div class="auth-modal" role="dialog" aria-modal="true">
@@ -325,6 +334,6 @@
   </div>
 </div>
 <script src="assets/vendor/supabase-js-2.45.4.js"></script>
-<script src="app.js?v=1300"></script>
+<script src="app.js?v=1310"></script>
 </body>
 </html>

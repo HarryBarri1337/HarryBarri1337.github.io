@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="description" content="Install SkinQuest on iPhone, iPad, Android, or desktop for fast home-screen access." />
   <title>Install SkinQuest</title>
   <link rel="canonical" href="https://skinquestcs.com/install" />
@@ -13,7 +13,7 @@
   <meta property="og:image" content="https://skinquestcs.com/assets/icons/icon-512.png" />
   <meta name="twitter:card" content="summary" />
   <script>(function(){try{var t=localStorage.getItem("skinquest.siteTheme")||"nuke";if(!/^(nuke|train|mirage|dust2|ancient)$/.test(t))t="nuke";document.documentElement.dataset.theme=t}catch(e){document.documentElement.dataset.theme="nuke"}}());</script>
-  <link rel="stylesheet" href="styles.css?v=1300" />
+  <link rel="stylesheet" href="styles.css?v=1310" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#0b0f16" />
   <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png" />
@@ -39,18 +39,27 @@
     <button id="installAppButton" class="button button-primary button-large hidden" type="button">Install SkinQuest</button>
   </section>
   <section class="install-layout">
-    <article class="panel install-card"><span class="provider-logo">iOS</span><h2>iPhone or iPad</h2><ol><li>Open <strong>skinquestcs.com</strong> in Safari.</li><li>Tap the Share button.</li><li>Choose <strong>Add to Home Screen</strong>.</li><li>Tap <strong>Add</strong>.</li></ol></article>
-    <article class="panel install-card"><span class="provider-logo">A</span><h2>Android</h2><ol><li>Open SkinQuest in Chrome.</li><li>Tap the browser menu.</li><li>Choose <strong>Install app</strong> or <strong>Add to Home screen</strong>.</li><li>Confirm the installation.</li></ol></article>
-    <article class="panel install-card"><span class="provider-logo">PC</span><h2>Desktop</h2><ol><li>Open SkinQuest in Chrome or Edge.</li><li>Click the install icon in the address bar.</li><li>Confirm <strong>Install</strong>.</li></ol></article>
+    <article class="panel install-card">
+      <span class="platform-icon platform-icon-apple" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.79 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.53 4.1zM12.03 7.25C11.88 5.02 13.69 3.18 15.77 3c.29 2.58-2.34 4.5-3.74 4.25z"/></svg></span>
+      <h2>iPhone or iPad</h2><ol><li>Open <strong>skinquestcs.com</strong> in Safari.</li><li>Tap the Share button.</li><li>Choose <strong>Add to Home Screen</strong>.</li><li>Tap <strong>Add</strong>.</li></ol>
+    </article>
+    <article class="panel install-card">
+      <span class="platform-icon platform-icon-android" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M17.6 9.48 19.44 6.3a.63.63 0 0 0-1.09-.63l-1.86 3.22A11.1 11.1 0 0 0 12 8c-1.62 0-3.15.32-4.49.9L5.65 5.67a.63.63 0 1 0-1.09.63L6.4 9.48C3.3 11.17 1.19 14.31 1 18h22c-.19-3.69-2.3-6.83-5.4-8.52zM7 15.25a1 1 0 1 1 0-2 1 1 0 0 1 0 2zm10 0a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/></svg></span>
+      <h2>Android</h2><ol><li>Open SkinQuest in Chrome.</li><li>Tap the browser menu.</li><li>Choose <strong>Install app</strong> or <strong>Add to Home screen</strong>.</li><li>Confirm the installation.</li></ol>
+    </article>
+    <article class="panel install-card">
+      <span class="platform-icon platform-icon-desktop" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8m-4-4v4"/></svg></span>
+      <h2>Desktop</h2><ol><li>Open SkinQuest in Chrome or Edge.</li><li>Click the install icon in the address bar.</li><li>Confirm <strong>Install</strong>.</li></ol>
+    </article>
     <article class="panel install-qr-card"><img src="assets/interface/install-qr.svg" alt="QR code opening skinquestcs.com/install" /><div><h2>Open on your phone</h2><p class="muted">Scan the QR code with your camera, then follow the steps for your device.</p></div></article>
   </section>
   <section class="panel install-note"><h2>Updates happen automatically</h2><p class="muted">SkinQuest checks the network first and updates cached app files in the background. When you are offline, the previously cached public app shell remains available.</p></section>
 </main>
 
 <footer class="site-footer"><div><strong>SkinQuest</strong><p>Earn coins from verified partner tasks and redeem CS2 skins.</p></div><div class="footer-links"><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/how-it-works">Help</a>
-    <a href="/install">Install app</a><a href="mailto:support@skinquestcs.com">Support</a></div><p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v13.0.0</a></p></footer>
+    <a href="/install">Install app</a><a href="mailto:support@skinquestcs.com">Support</a></div><p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v13.1.0</a></p></footer>
 
 <div class="modal-backdrop hidden" id="authModal"><div class="auth-modal" role="dialog" aria-modal="true"><button class="modal-close" data-close-auth aria-label="Close">×</button><div class="auth-modal-head"><span class="pill">SkinQuest account</span><h2 id="authTitle">Create your account</h2><p id="authSubtitle">Start earning coins toward CS2 skins.</p></div><div class="auth-tabs"><button class="auth-tab active" data-auth-tab="signup">Sign up</button><button class="auth-tab" data-auth-tab="login">Sign in</button></div><form id="modalSignupForm" class="stack-form auth-pane" data-auth-pane="signup"><input id="modalSignupEmail" type="email" placeholder="Email address" required /><input id="modalSignupPassword" type="password" placeholder="Password" required minlength="10" /><button class="button button-primary" type="submit">Create account</button></form><form id="modalLoginForm" class="stack-form auth-pane hidden" data-auth-pane="login"><input id="modalLoginEmail" type="email" placeholder="Email address" required /><input id="modalLoginPassword" type="password" placeholder="Password" required /><button class="button button-primary" type="submit">Sign in</button></form><p class="fine-auth">Rewards require verified completions. Do not use VPNs, bots, or fake survey answers.</p></div></div>
-<script src="assets/vendor/supabase-js-2.45.4.js"></script><script src="app.js?v=1300"></script>
+<script src="assets/vendor/supabase-js-2.45.4.js"></script><script src="app.js?v=1310"></script>
 </body>
 </html>

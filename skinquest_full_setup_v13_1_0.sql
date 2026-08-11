@@ -1,6 +1,6 @@
--- SkinQuest full Supabase setup v13.0.0
+-- SkinQuest full Supabase setup v13.1.0
 -- Run this in Supabase SQL Editor only when setting up a fresh project.
--- Stable full setup including the v13.0.0 reward redemption schema repair.
+-- Stable full setup including BitLabs accounting and the refund XP repair.
 
 create extension if not exists pgcrypto;
 
@@ -463,6 +463,7 @@ begin
   from public.coin_adjustments
   where user_id = v_user_id
     and amount > 0
+    and lower(coalesce(source_type, '')) <> 'redemption_refund'
     and lower(coalesce(reason, '')) not like 'level reward%';
 
   v_current_level := greatest(1, floor(v_base_earned / 1000.0)::integer + 1);
@@ -1043,6 +1044,65 @@ $$;
 
 revoke all on function public.process_offerwall_postback(text, text, uuid, integer, text, jsonb) from public, anon, authenticated;
 grant execute on function public.process_offerwall_postback(text, text, uuid, integer, text, jsonb) to service_role;
+
+create or replace function public.process_bitlabs_callback(
+  p_event_id text,
+  p_user_id uuid,
+  p_amount integer,
+  p_reference_id text default null,
+  p_payload jsonb default '{}'::jsonb
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_event_id bigint;
+  v_balance integer;
+begin
+  if auth.role() <> 'service_role' then raise exception 'Service role required.'; end if;
+  p_event_id := trim(coalesce(p_event_id, ''));
+  if p_event_id = '' or char_length(p_event_id) > 180 then raise exception 'Invalid event id.'; end if;
+  if p_amount = 0 or p_amount < -100000 or p_amount > 100000 then raise exception 'Invalid coin amount.'; end if;
+  perform 1 from auth.users where id = p_user_id;
+  if not found then raise exception 'Unknown user.'; end if;
+
+  insert into public.offerwall_events(provider, provider_event_id, user_id, amount, status, raw_payload, processed_at)
+  values (
+    'bitlabs', p_event_id, p_user_id, p_amount,
+    case when p_amount > 0 then 'completed' else 'reversed' end,
+    coalesce(p_payload, '{}'::jsonb), now()
+  ) on conflict (provider, provider_event_id) do nothing
+  returning id into v_event_id;
+  if v_event_id is null then
+    return jsonb_build_object('ok', true, 'duplicate', true, 'event_id', p_event_id);
+  end if;
+
+  insert into public.profiles(id, username) values (p_user_id, 'user') on conflict (id) do nothing;
+  select coalesce(points_balance, 0) into v_balance from public.profiles where id = p_user_id for update;
+  update public.profiles
+    set points_balance = greatest(0, coalesce(points_balance, 0) + p_amount),
+        account_status = case
+          when p_amount < 0 and coalesce(v_balance, 0) < (p_amount * -1) then 'under_review'
+          else account_status
+        end
+    where id = p_user_id;
+
+  insert into public.coin_adjustments(user_id, amount, reason, source_type, source_id, metadata)
+  values (
+    p_user_id, p_amount,
+    case when p_amount > 0 then 'BitLabs survey completion' else 'BitLabs survey reconciliation' end,
+    case when p_amount > 0 then 'offerwall_credit' else 'offerwall_reversal' end,
+    'bitlabs:' || p_event_id,
+    jsonb_build_object('provider', 'bitlabs', 'reference_id', p_reference_id)
+  );
+  return jsonb_build_object('ok', true, 'duplicate', false, 'event_id', p_event_id, 'amount', p_amount);
+end;
+$$;
+
+revoke all on function public.process_bitlabs_callback(text, uuid, integer, text, jsonb) from public, anon, authenticated;
+grant execute on function public.process_bitlabs_callback(text, uuid, integer, text, jsonb) to service_role;
 
 -- Support must go through the rate-limited Edge Function.
 drop policy if exists support_requests_insert_own on public.support_requests;

@@ -39,6 +39,21 @@ Deno.serve(async (req) => {
         },
         409,
       );
+
+    const bitlabsS2s = Deno.env.get("BITLABS_S2S_TOKEN") || "";
+    if (bitlabsS2s) {
+      const providerDelete = await fetch(
+        `https://api.bitlabs.ai/v1/publishers/users/${encodeURIComponent(user.id)}`,
+        { method: "DELETE", headers: { "X-S2S-Token": bitlabsS2s } },
+      );
+      if (!providerDelete.ok && providerDelete.status !== 404) {
+        console.error("BitLabs user deletion failed", providerDelete.status, await providerDelete.text());
+        return reply(
+          { error: "The connected survey data could not be deleted. Please try again." },
+          502,
+        );
+      }
+    }
     const { error: deleteError } = await admin.auth.admin.deleteUser(user.id);
     if (deleteError) throw deleteError;
     return reply({ ok: true });

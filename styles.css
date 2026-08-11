@@ -1,4 +1,4 @@
-/* SkinQuest v13.0.0 */
+/* SkinQuest v13.1.0 */
 
 :root {
   --bg: #0b0f16;
@@ -4114,3 +4114,168 @@ body > footer {
 .form-feedback-info { color: var(--accent); }
 .form-feedback-success { color: var(--green); }
 .form-feedback-error { color: var(--red); }
+
+/* v13.1.0: install discovery, platform icons, and final responsive pass */
+.home-install-cta {
+  width: min(100%, 520px);
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 180, 78, .28);
+  border-radius: 15px;
+  background: linear-gradient(135deg, rgba(255, 172, 63, .13), rgba(255, 139, 35, .05));
+  color: var(--text);
+  text-decoration: none;
+  transition: border-color .2s ease, transform .2s ease, background .2s ease;
+}
+
+.home-install-cta:hover {
+  border-color: rgba(255, 191, 93, .54);
+  background: linear-gradient(135deg, rgba(255, 172, 63, .2), rgba(255, 139, 35, .08));
+  transform: translateY(-2px);
+}
+
+.home-install-cta > span:nth-child(2) { min-width: 0; display: grid; gap: 2px; }
+.home-install-cta strong { color: #fff4e2; font-size: .94rem; }
+.home-install-cta small { color: var(--muted); font-size: .76rem; line-height: 1.35; }
+.home-install-icon {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 184, 80, .24);
+  border-radius: 13px;
+  background: rgba(255, 167, 54, .1);
+}
+.home-install-icon svg { width: 23px; height: 23px; fill: none; stroke: #ffc469; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.home-install-arrow { color: #ffc469; font-size: 1.8rem; line-height: 1; }
+
+.platform-icon {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 10px;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 14px;
+  background: linear-gradient(145deg, rgba(255,255,255,.1), rgba(255,255,255,.035));
+  color: #f4f6fb;
+}
+.platform-icon svg { width: 27px; height: 27px; fill: currentColor; }
+.platform-icon-desktop svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.platform-icon-android { color: #a4df64; }
+.platform-icon-apple { color: #f4f5f8; }
+.platform-icon-desktop { color: #9fcaff; }
+.provider-bitlabs-card { border-color: rgba(99, 155, 255, .25); }
+
+@media (max-width: 760px) {
+  html { overflow-x: hidden; scroll-padding-top: 86px; }
+  body { min-width: 0; overflow-x: hidden; }
+
+  .site-header {
+    width: calc(100% - 16px);
+    min-height: 62px;
+    margin: 8px auto 0;
+    padding: 9px 10px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 8px;
+    border-radius: 16px;
+  }
+
+  .brand { min-width: 0; }
+  .brand-logo { width: auto; max-width: 116px; height: 31px; object-fit: contain; }
+  .nav-toggle { width: 42px; height: 42px; min-width: 42px; padding: 0; border-radius: 12px; }
+  .nav-actions { min-width: 0; gap: 6px; }
+  .nav-actions .button { min-height: 42px; padding: 9px 11px; font-size: .77rem; }
+  .coin-pill, .level-pill { display: none !important; }
+  .account-trigger { width: 44px; min-width: 44px; max-width: 44px; height: 44px; padding: 5px; justify-content: center; }
+  .account-trigger-copy, .account-chevron { display: none; }
+
+  .site-nav {
+    grid-column: 1 / -1;
+    width: 100%;
+    max-height: 0;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px;
+    padding: 0;
+    opacity: 0;
+    pointer-events: none;
+    transition: max-height .24s ease, padding .24s ease, opacity .18s ease;
+  }
+  .site-nav.open { max-height: 260px; padding-top: 7px; opacity: 1; pointer-events: auto; }
+  .site-nav a { min-height: 44px; display: grid; place-items: center; padding: 9px 8px; border-radius: 10px; text-align: center; }
+
+  main, main.page { width: 100%; max-width: none; padding-left: 12px; padding-right: 12px; }
+  .hero, .page-heading, .panel, .provider-card, .reward-card, .settings-card { border-radius: 17px; }
+  .hero { min-height: 0; padding: 24px 18px; }
+  .hero-split, .feature-grid, .provider-grid, .recommended-surveys-grid, .reward-grid, .settings-grid, .install-layout { grid-template-columns: minmax(0, 1fr) !important; }
+  .hero-copy h1, .page-heading h1 { max-width: 100%; font-size: clamp(2.15rem, 10.5vw, 3.35rem); line-height: .98; overflow-wrap: anywhere; }
+  .hero-copy > p, .page-heading > p { max-width: 100%; font-size: .94rem; line-height: 1.65; }
+  .hero-actions { width: 100%; display: grid; grid-template-columns: 1fr; gap: 9px; }
+  .hero-actions.hidden { display: none; }
+  .hero-actions .button, .provider-action { width: 100%; min-height: 49px; }
+  .home-install-cta { width: 100%; margin-top: 11px; padding: 11px; }
+  .trust-row { gap: 7px; }
+  .trust-row span { font-size: .72rem; }
+  .hero-card { min-width: 0; padding: 16px; }
+  .mini-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .mini-stats > div { min-width: 0; padding: 10px 5px; }
+  .mini-stats strong { font-size: clamp(1rem, 5vw, 1.35rem); overflow-wrap: anywhere; }
+
+  .page-heading { padding: 24px 16px; text-align: left; }
+  .compact-heading { align-items: flex-start; }
+  .section-headline, .xp-panel-heading, .reward-toolbar { display: grid; gap: 11px; }
+  .panel, .provider-card { padding: 16px; }
+  .recommended-surveys-panel { min-height: 0; }
+  .recommended-surveys-grid { gap: 10px; }
+  .survey-result-card { min-width: 0; min-height: 0; padding: 15px; }
+  .survey-result-meta { gap: 8px; flex-wrap: wrap; }
+  .provider-grid { gap: 10px; }
+  .provider-card { min-height: 0; }
+  .provider-head { align-items: flex-start; }
+  .provider-head > div { min-width: 0; }
+  .provider-head h2, .provider-head p { overflow-wrap: anywhere; }
+
+  .install-hero { padding-top: 26px; padding-bottom: 26px; }
+  .install-hero .button { width: 100%; }
+  .install-layout { gap: 10px; }
+  .install-card { min-height: 0; }
+  .install-card ol { padding-left: 21px; }
+  .install-card li { margin-bottom: 8px; line-height: 1.55; }
+  .install-qr-card { grid-column: auto; display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 14px; align-items: center; }
+  .install-qr-card img { width: 92px; height: 92px; }
+
+  .reward-toolbar input, .reward-toolbar select, .stack-form input, .stack-form textarea, .stack-form select { width: 100%; min-width: 0; }
+  .reward-card-actions, .settings-actions { display: grid; grid-template-columns: 1fr; gap: 8px; }
+  .reward-card-actions .button, .settings-actions .button { width: 100%; }
+  .dashboard-grid, .account-grid, .admin-grid { grid-template-columns: minmax(0, 1fr) !important; }
+  .table-wrap { margin-left: -4px; margin-right: -4px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  .site-footer { width: calc(100% - 24px); margin-left: auto; margin-right: auto; padding: 22px 4px 28px; display: grid; gap: 18px; }
+  .footer-links { justify-content: flex-start; gap: 10px 16px; }
+  .auth-modal { width: calc(100vw - 20px); max-height: calc(100dvh - 24px); overflow-y: auto; padding: 20px 15px; border-radius: 18px; }
+  .support-widget { right: 10px; bottom: max(10px, env(safe-area-inset-bottom)); }
+  .support-panel { width: calc(100vw - 20px); max-height: calc(100dvh - 90px); overflow-y: auto; }
+  .progress-gain-stack { top: 78px; width: calc(100vw - 20px); }
+}
+
+@media (max-width: 420px) {
+  .site-header { width: calc(100% - 10px); margin-top: 5px; padding: 8px; gap: 5px; }
+  .brand-logo { max-width: 102px; height: 28px; }
+  main, main.page { padding-left: 8px; padding-right: 8px; }
+  .hero, .page-heading { padding-left: 14px; padding-right: 14px; }
+  .hero-copy h1, .page-heading h1 { font-size: clamp(2rem, 11vw, 2.75rem); }
+  .panel, .provider-card { padding: 14px; }
+  .home-install-cta { grid-template-columns: 40px minmax(0, 1fr) auto; gap: 9px; }
+  .home-install-icon { width: 40px; height: 40px; }
+  .home-install-cta small { font-size: .7rem; }
+  .install-qr-card { grid-template-columns: 76px minmax(0, 1fr); }
+  .install-qr-card img { width: 76px; height: 76px; }
+  .mini-stats { grid-template-columns: 1fr; }
+}

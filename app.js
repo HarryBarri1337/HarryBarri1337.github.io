@@ -1,4 +1,4 @@
-// SkinQuest v13.0.0 - secure surveys, account controls, PWA and delivery hardening
+// SkinQuest v13.1.0 - secure surveys, account controls, PWA and delivery hardening
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -458,12 +458,16 @@ async function ensureProfile(user) {
 async function getTotalEarned(userId) {
   const { data, error } = await sb
     .from("coin_adjustments")
-    .select("amount, reason")
+    .select("amount, reason, source_type")
     .eq("user_id", userId);
 
   if (error || !data) return 0;
   return data
-    .filter((row) => Number(row.amount) > 0 && !String(row.reason || "").toLowerCase().startsWith("level reward"))
+    .filter((row) =>
+      Number(row.amount) > 0 &&
+      String(row.source_type || "").toLowerCase() !== "redemption_refund" &&
+      !String(row.reason || "").toLowerCase().startsWith("level reward")
+    )
     .reduce((sum, row) => sum + Number(row.amount || 0), 0);
 }
 
@@ -619,6 +623,10 @@ function trackProgressAndShowGains(userId, { coins = 0, totalEarned = 0 } = {}) 
   const coinGain = nextCoins - Number(previous.coins || 0);
   const xpGain = nextEarned - Number(previous.totalEarned || 0);
   if (coinGain <= 0 && xpGain <= 0 && nextLevel <= previousLevel) return;
+
+  // A refund restores the wallet but is not an earning event. Genuine earnings
+  // increase both values; suppress wallet-only restoration celebrations here.
+  if (coinGain > 0 && xpGain <= 0 && nextLevel <= previousLevel) return;
 
   window.setTimeout(() => showProgressGain({
     coinGain,
@@ -1090,38 +1098,61 @@ async function updateHomeAuthState() {
 
 async function initOfferwall() {
   const cpxButton = qs("#openCpxWall");
-  if (!cpxButton) return;
+  const bitlabsButton = qs("#openBitlabsWall");
+  if (!cpxButton && !bitlabsButton) return;
 
   const user = await getSessionUser();
 
   if (!user) {
-    cpxButton.href = "#";
-    cpxButton.classList.add("needs-login");
-    cpxButton.addEventListener("click", (event) => {
-      event.preventDefault();
-      openAuthModal("signup");
+    [cpxButton, bitlabsButton].filter(Boolean).forEach((button) => {
+      button.href = "#";
+      button.classList.add("needs-login");
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        openAuthModal("signup");
+      });
     });
     return;
   }
 
-  cpxButton.classList.remove("needs-login");
+  cpxButton?.classList.remove("needs-login");
+  bitlabsButton?.classList.remove("needs-login");
   let wallUrl = `https://offers.cpx-research.com/index.php?app_id=${CPX_APP_ID}&ext_user_id=${encodeURIComponent(user.id)}`;
+  let bitlabsWallUrl = "";
   try {
     const { data, error } = await sb.functions.invoke("survey-feed");
     if (!error && isSafeOfferwallUrl(data?.wall_url)) wallUrl = data.wall_url;
+    if (!error && isSafeOfferwallUrl(data?.bitlabs_wall_url)) bitlabsWallUrl = data.bitlabs_wall_url;
     renderRecommendedSurveys(data?.surveys || []);
   } catch (error) {
     console.warn("Secure survey feed unavailable; using the provider wall fallback.", error);
   }
-  cpxButton.href = wallUrl;
-  cpxButton.target = "_blank";
-  cpxButton.rel = "noopener";
+  if (cpxButton) {
+    cpxButton.href = wallUrl;
+    cpxButton.target = "_blank";
+    cpxButton.rel = "noopener";
+  }
+  if (bitlabsButton) {
+    if (bitlabsWallUrl) {
+      bitlabsButton.href = bitlabsWallUrl;
+      bitlabsButton.target = "_blank";
+      bitlabsButton.rel = "noopener";
+      bitlabsButton.removeAttribute("aria-disabled");
+    } else {
+      bitlabsButton.href = "#";
+      bitlabsButton.setAttribute("aria-disabled", "true");
+      bitlabsButton.addEventListener("click", (event) => {
+        event.preventDefault();
+        showMessage("BitLabs is temporarily unavailable. Please use CPX for now.", "error");
+      });
+    }
+  }
 }
 
 function isSafeOfferwallUrl(value) {
   try {
     const url = new URL(value);
-    return url.protocol === "https:" && ["offers.cpx-research.com", "web.bitlabs.ai"].includes(url.hostname.toLowerCase());
+    return url.protocol === "https:" && ["offers.cpx-research.com", "web.bitlabs.ai", "api.bitlabs.ai"].includes(url.hostname.toLowerCase());
   } catch { return false; }
 }
 
@@ -1130,7 +1161,7 @@ function renderRecommendedSurveys(surveys) {
   if (!container) return;
   const safeSurveys = surveys.filter((survey) => isSafeOfferwallUrl(survey.url)).slice(0, 6);
   if (!safeSurveys.length) {
-    container.innerHTML = '<p class="muted">Open CPX to see the surveys currently available for your country and device.</p>';
+    container.innerHTML = '<p class="muted">Open CPX or BitLabs to see the surveys currently available for your country and device.</p>';
     return;
   }
   container.innerHTML = safeSurveys.map((survey) => `
