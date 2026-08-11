@@ -1,18 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-DFRR03C4BP"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-DFRR03C4BP');
-  </script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="SkinQuest terms for account use, partner tasks, fixed rewards, fair use, and Steam trade review." />
   <title>Terms - SkinQuest</title>
+  <link rel="canonical" href="https://skinquestcs.com/terms" />
+  <meta property="og:type" content="article" /><meta property="og:title" content="SkinQuest Terms" /><meta property="og:url" content="https://skinquestcs.com/terms" /><meta name="twitter:card" content="summary" />
   <script>
     (function () {
       try {
@@ -24,7 +18,7 @@
       }
     }());
   </script>
-  <link rel="stylesheet" href="styles.css?v=1230" />
+  <link rel="stylesheet" href="styles.css?v=1300" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#0b0f16" />
   <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png" />
@@ -61,7 +55,7 @@
 
 <main class="page legal">
   <section class="page-heading compact-heading">
-    <span class="pill">Last updated: June 30, 2026</span>
+    <span class="pill">Last updated: August 11, 2026</span>
     <h1>Terms of Service</h1>
     <p>These terms explain the basic rules for using SkinQuest during the current reward-platform setup.</p>
   </section>
@@ -73,8 +67,8 @@
     </article>
 
     <article class="panel">
-      <h2>2. Account rules</h2>
-      <p class="muted">You are responsible for your account activity. Do not create duplicate accounts, use bots, automate offers, abuse VPNs, or provide fake survey answers. Suspicious activity may lead to denied coins, rejected rewards, or account removal.</p>
+      <h2>2. Eligibility and account rules</h2>
+      <p class="muted">You must meet the minimum age required in your country and by each provider, and have guardian permission where required. Use one account only and keep access secure. Do not use bots, automation, VPN or location abuse, duplicate identities, or dishonest survey answers. Material violations may lead to coin reversal, reward rejection, suspension, or deletion.</p>
     </article>
 
     <article class="panel">
@@ -84,7 +78,7 @@
 
     <article class="panel">
       <h2>4. Rewards and stock</h2>
-      <p class="muted">Rewards have fixed coin prices and limited stock. Redeem requests are manually reviewed. If a request is rejected, refunded, or cancelled, coins may be returned according to the status shown on your dashboard.</p>
+      <p class="muted">Rewards have fixed coin prices and limited stock. A request reserves stock and deducts coins, but remains subject to manual review. If SkinQuest rejects or refunds a request before delivery, the deducted coins are returned once. Returned coins count toward XP in the same way as earned coins. After a valid Steam trade is sent or accepted, a reward is normally final unless mandatory law requires otherwise.</p>
     </article>
 
     <article class="panel">
@@ -93,12 +87,22 @@
     </article>
 
     <article class="panel">
-      <h2>6. No affiliation</h2>
-      <p class="muted">SkinQuest is not affiliated with Valve, Steam, Counter-Strike, or any official CS2 marketplace. All trademarks belong to their respective owners.</p>
+      <h2>6. Availability and changes</h2>
+      <p class="muted">Offers, coin values, stock, and features can change or be unavailable. SkinQuest may correct obvious pricing or stock errors before delivery and will refund deducted coins if a request cannot be fulfilled. We do not guarantee uninterrupted access, a specific survey, or a specific processing time.</p>
     </article>
 
     <article class="panel">
-      <h2>7. Contact</h2>
+      <h2>7. No affiliation and liability</h2>
+      <p class="muted">SkinQuest is not affiliated with Valve, Steam, Counter-Strike, or any official CS2 marketplace. To the extent allowed by law, SkinQuest is not responsible for provider decisions, Steam restrictions, indirect loss, or events outside reasonable control. Nothing here removes mandatory consumer rights.</p>
+    </article>
+
+    <article class="panel">
+      <h2>8. Suspension, termination, and disputes</h2>
+      <p class="muted">We may restrict an account while suspected fraud or abuse is reviewed. You may delete your account after pending reward requests are resolved. Swedish law governs these terms where permitted; mandatory protections in your country continue to apply.</p>
+    </article>
+
+    <article class="panel">
+      <h2>9. Contact</h2>
       <p class="muted">For support questions, reward issues, or account help, contact <a href="mailto:support@skinquestcs.com">support@skinquestcs.com</a>.</p>
     </article>
   </section>
@@ -113,9 +117,10 @@
     <a href="/terms">Terms</a>
     <a href="/privacy">Privacy</a>
     <a href="/how-it-works">Help</a>
+    <a href="/install">Install app</a>
     <a href="mailto:support@skinquestcs.com">Support</a>
   </div>
-  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v12.3.0</a></p>
+  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v13.0.0</a></p>
 </footer>
 <div class="modal-backdrop hidden" id="authModal">
   <div class="auth-modal" role="dialog" aria-modal="true">
@@ -137,18 +142,13 @@
         <strong>Sign in with Steam</strong>
         <small>v12</small>
       </button>
-      <button class="button auth-provider-button google-button" id="googleLoginButton" type="button">
-        <span>G</span>
-        <strong>Continue with Google</strong>
-        <small>v12</small>
-      </button>
     </div>
 
     <div class="divider hidden"><span>or use email</span></div>
 
     <form id="modalSignupForm" class="stack-form auth-pane" data-auth-pane="signup">
       <input id="modalSignupEmail" type="email" placeholder="Email address" required />
-      <input id="modalSignupPassword" type="password" placeholder="Password" required minlength="6" />
+      <input id="modalSignupPassword" type="password" placeholder="Password" required minlength="10" />
       <button class="button button-primary" type="submit">Create account</button>
     </form>
 
@@ -161,7 +161,7 @@
     <p class="fine-auth">Rewards require verified completions. Do not use VPNs, bots, or fake survey answers.</p>
   </div>
 </div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js?v=1230"></script>
+<script src="assets/vendor/supabase-js-2.45.4.js"></script>
+<script src="app.js?v=1300"></script>
 </body>
 </html>

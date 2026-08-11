@@ -4,27 +4,20 @@
 // when offline. Supabase/API calls and any cross-origin requests are
 // always left alone and go straight to network.
 
-const CACHE_NAME = "skinquest-cache-v1230";
+const CACHE_NAME = "skinquest-cache-v1300";
 const APP_SHELL = [
-  "index.html",
-  "dashboard.html",
-  "rewards.html",
-  "earn.html",
-  "how-it-works.html",
-  "styles.css?v=1230",
-  "app.js?v=1230",
-  "manifest.json",
-  "assets/interface/skinquestlogo.png",
-  "assets/interface/coin_logo.png",
-  "assets/icons/icon-192.png",
-  "assets/icons/icon-512.png"
+  "/", "/surveys", "/rewards", "/how-it-works", "/install",
+  "/styles.css?v=1300", "/app.js?v=1300", "/manifest.json",
+  "/assets/vendor/supabase-js-2.45.4.js",
+  "/assets/interface/skinquestlogo.png", "/assets/interface/coin_logo.png",
+  "/assets/icons/icon-192.png", "/assets/icons/icon-512.png"
 ];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
       .open(CACHE_NAME)
-      .then((cache) => cache.addAll(APP_SHELL))
+      .then((cache) => Promise.allSettled(APP_SHELL.map((url) => cache.add(url))))
       .catch(() => {})
   );
   self.skipWaiting();
@@ -55,6 +48,11 @@ self.addEventListener("fetch", (event) => {
         }
         return response;
       })
-      .catch(() => caches.match(request))
+      .catch(async () => {
+        const cached = await caches.match(request, { ignoreSearch: true });
+        if (cached) return cached;
+        if (request.mode === "navigate") return caches.match("/");
+        return Response.error();
+      })
   );
 });

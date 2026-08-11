@@ -1,17 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-DFRR03C4BP"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-DFRR03C4BP');
-  </script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="SkinQuest account confirmation page." />
+  <meta name="robots" content="noindex,nofollow,noarchive" />
   <title>Email confirmed - SkinQuest</title>
   <script>
     (function () {
@@ -24,7 +17,7 @@
       }
     }());
   </script>
-  <link rel="stylesheet" href="styles.css?v=1230" />
+  <link rel="stylesheet" href="styles.css?v=1300" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#0b0f16" />
   <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png" />
@@ -81,9 +74,10 @@
     <a href="/terms">Terms</a>
     <a href="/privacy">Privacy</a>
     <a href="/how-it-works">Help</a>
+    <a href="/install">Install app</a>
     <a href="mailto:support@skinquestcs.com">Support</a>
   </div>
-  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v12.3.0</a></p>
+  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v13.0.0</a></p>
 </footer>
 
 <div class="modal-backdrop hidden" id="authModal">
@@ -104,16 +98,11 @@
         <strong>Continue with Steam</strong>
         <small>Live</small>
       </button>
-      <button class="button auth-provider-button google-button" id="googleLoginButton" type="button">
-        <span>G</span>
-        <strong>Continue with Google</strong>
-        <small>Future</small>
-      </button>
     </div>
     <div class="divider"><span>or use email</span></div>
     <form id="modalSignupForm" class="stack-form auth-pane" data-auth-pane="signup">
       <input id="modalSignupEmail" type="email" placeholder="Email address" required />
-      <input id="modalSignupPassword" type="password" placeholder="Password" required minlength="6" />
+      <input id="modalSignupPassword" type="password" placeholder="Password" required minlength="10" />
       <button class="button button-primary" type="submit">Create account</button>
     </form>
     <form id="modalLoginForm" class="stack-form auth-pane hidden" data-auth-pane="login">
@@ -124,7 +113,7 @@
     <p class="fine-auth">Rewards require verified completions. Do not use VPNs, bots, or fake survey answers.</p>
   </div>
 </div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="app.js?v=1230"></script>
+<script src="assets/vendor/supabase-js-2.45.4.js"></script>
+<script src="app.js?v=1300"></script>
 </body>
 </html>

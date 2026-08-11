@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Install SkinQuest on iPhone, iPad, Android, or desktop for fast home-screen access." />
+  <title>Install SkinQuest</title>
+  <link rel="canonical" href="https://skinquestcs.com/install" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Install SkinQuest" />
+  <meta property="og:description" content="Add SkinQuest to your home screen on mobile or desktop." />
+  <meta property="og:url" content="https://skinquestcs.com/install" />
+  <meta property="og:image" content="https://skinquestcs.com/assets/icons/icon-512.png" />
+  <meta name="twitter:card" content="summary" />
+  <script>(function(){try{var t=localStorage.getItem("skinquest.siteTheme")||"nuke";if(!/^(nuke|train|mirage|dust2|ancient)$/.test(t))t="nuke";document.documentElement.dataset.theme=t}catch(e){document.documentElement.dataset.theme="nuke"}}());</script>
+  <link rel="stylesheet" href="styles.css?v=1300" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#0b0f16" />
+  <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png" />
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="SkinQuest" />
+</head>
+<body>
+<div id="pageLoader" class="page-loader"><div class="loader-card"><span class="loader-mark">SQ</span><span class="loader-line"></span></div></div>
+<header class="site-header">
+  <a class="brand" href="/" aria-label="SkinQuest home"><img class="brand-logo" src="assets/interface/skinquestlogo.png" alt="SkinQuest" /><span class="brand-fallback hidden"><span class="brand-mark">SQ</span><span>SkinQuest</span></span></a>
+  <button class="nav-toggle" aria-label="Open navigation" data-nav-toggle>☰</button>
+  <nav class="site-nav" data-nav><a href="/dashboard">Dashboard</a><a href="/surveys">Surveys</a><a href="/rewards">Rewards</a><a class="hidden-admin-link" href="/admin">Admin</a><a href="/how-it-works">How it works</a></nav>
+  <div class="nav-actions auth-loading" id="navAuthActions" aria-live="polite"><span class="auth-skeleton" aria-hidden="true"></span></div>
+</header>
+
+<main class="page install-page">
+  <section class="page-heading compact-heading install-hero">
+    <span class="pill">Web app</span>
+    <h1>Install SkinQuest</h1>
+    <p>Add SkinQuest to your home screen for a full-screen experience, quick access, and a reliable offline app shell.</p>
+    <button id="installAppButton" class="button button-primary button-large hidden" type="button">Install SkinQuest</button>
+  </section>
+  <section class="install-layout">
+    <article class="panel install-card"><span class="provider-logo">iOS</span><h2>iPhone or iPad</h2><ol><li>Open <strong>skinquestcs.com</strong> in Safari.</li><li>Tap the Share button.</li><li>Choose <strong>Add to Home Screen</strong>.</li><li>Tap <strong>Add</strong>.</li></ol></article>
+    <article class="panel install-card"><span class="provider-logo">A</span><h2>Android</h2><ol><li>Open SkinQuest in Chrome.</li><li>Tap the browser menu.</li><li>Choose <strong>Install app</strong> or <strong>Add to Home screen</strong>.</li><li>Confirm the installation.</li></ol></article>
+    <article class="panel install-card"><span class="provider-logo">PC</span><h2>Desktop</h2><ol><li>Open SkinQuest in Chrome or Edge.</li><li>Click the install icon in the address bar.</li><li>Confirm <strong>Install</strong>.</li></ol></article>
+    <article class="panel install-qr-card"><img src="assets/interface/install-qr.svg" alt="QR code opening skinquestcs.com/install" /><div><h2>Open on your phone</h2><p class="muted">Scan the QR code with your camera, then follow the steps for your device.</p></div></article>
+  </section>
+  <section class="panel install-note"><h2>Updates happen automatically</h2><p class="muted">SkinQuest checks the network first and updates cached app files in the background. When you are offline, the previously cached public app shell remains available.</p></section>
+</main>
+
+<footer class="site-footer"><div><strong>SkinQuest</strong><p>Earn coins from verified partner tasks and redeem CS2 skins.</p></div><div class="footer-links"><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/how-it-works">Help</a>
+    <a href="/install">Install app</a><a href="mailto:support@skinquestcs.com">Support</a></div><p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v13.0.0</a></p></footer>
+
+<div class="modal-backdrop hidden" id="authModal"><div class="auth-modal" role="dialog" aria-modal="true"><button class="modal-close" data-close-auth aria-label="Close">×</button><div class="auth-modal-head"><span class="pill">SkinQuest account</span><h2 id="authTitle">Create your account</h2><p id="authSubtitle">Start earning coins toward CS2 skins.</p></div><div class="auth-tabs"><button class="auth-tab active" data-auth-tab="signup">Sign up</button><button class="auth-tab" data-auth-tab="login">Sign in</button></div><form id="modalSignupForm" class="stack-form auth-pane" data-auth-pane="signup"><input id="modalSignupEmail" type="email" placeholder="Email address" required /><input id="modalSignupPassword" type="password" placeholder="Password" required minlength="10" /><button class="button button-primary" type="submit">Create account</button></form><form id="modalLoginForm" class="stack-form auth-pane hidden" data-auth-pane="login"><input id="modalLoginEmail" type="email" placeholder="Email address" required /><input id="modalLoginPassword" type="password" placeholder="Password" required /><button class="button button-primary" type="submit">Sign in</button></form><p class="fine-auth">Rewards require verified completions. Do not use VPNs, bots, or fake survey answers.</p></div></div>
+<script src="assets/vendor/supabase-js-2.45.4.js"></script><script src="app.js?v=1300"></script>
+</body>
+</html>

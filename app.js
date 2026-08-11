@@ -1,4 +1,4 @@
-// SkinQuest v12.3.0 - reward redemption schema repair + cleaner rank titles
+// SkinQuest v13.0.0 - secure surveys, account controls, PWA and delivery hardening
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -9,6 +9,8 @@ const CPX_APP_ID = 33831;
 const SUPPORT_EMAIL = "support@skinquestcs.com"; // Public support contact. Form requests are saved to Supabase and can trigger server-side email notifications.
 const STEAM_AUTH_START_URL = `${SUPABASE_URL}/functions/v1/steam-auth-start`;
 const STEAM_AUTH_DISCONNECT_URL = `${SUPABASE_URL}/functions/v1/steam-disconnect`;
+let lastAuthTrigger = null;
+let deferredInstallPrompt = null;
 
 const SITE_THEMES = {
   nuke: { label: "Nuke", status: "Cold blue" },
@@ -721,12 +723,17 @@ function initNav() {
 function openAuthModal(mode = "signup") {
   const modal = qs("#authModal");
   if (!modal) return;
+  lastAuthTrigger = document.activeElement;
   setAuthMode(mode);
   modal.classList.remove("hidden");
+  modal.querySelector(`[data-auth-pane="${mode}"] input`)?.focus();
 }
 
 function closeAuthModal() {
-  qs("#authModal")?.classList.add("hidden");
+  const modal = qs("#authModal");
+  if (!modal || modal.classList.contains("hidden")) return;
+  modal.classList.add("hidden");
+  lastAuthTrigger?.focus?.();
 }
 
 function setAuthMode(mode) {
@@ -753,6 +760,41 @@ function initAuthModal() {
   const modal = qs("#authModal");
   if (!modal) return;
 
+  modal.querySelector('[role="dialog"]')?.setAttribute("aria-labelledby", "authTitle");
+  modal.querySelectorAll(".google-button").forEach((button) => button.remove());
+  const signupEmail = qs("#modalSignupEmail");
+  const signupPassword = qs("#modalSignupPassword");
+  const loginEmail = qs("#modalLoginEmail");
+  const loginPassword = qs("#modalLoginPassword");
+  if (signupEmail) { signupEmail.autocomplete = "email"; signupEmail.setAttribute("aria-label", "Email address"); }
+  if (signupPassword) { signupPassword.autocomplete = "new-password"; signupPassword.minLength = 10; signupPassword.setAttribute("aria-label", "Password, at least 10 characters"); }
+  if (loginEmail) { loginEmail.autocomplete = "email"; loginEmail.setAttribute("aria-label", "Email address"); }
+  if (loginPassword) { loginPassword.autocomplete = "current-password"; loginPassword.setAttribute("aria-label", "Password"); }
+
+  const signupForm = qs("#modalSignupForm");
+  if (signupForm && !signupForm.querySelector("[data-auth-consent]")) {
+    signupForm.querySelector('button[type="submit"]')?.insertAdjacentHTML("beforebegin", `
+      <label class="auth-consent"><input type="checkbox" data-auth-consent required />
+        <span>I meet the applicable age requirements and accept the <a href="/terms" target="_blank">Terms</a> and <a href="/privacy" target="_blank">Privacy Policy</a>.</span>
+      </label>`);
+  }
+  const loginForm = qs("#modalLoginForm");
+  if (loginForm && !loginForm.querySelector("[data-auth-forgot]")) {
+    loginForm.querySelector('button[type="submit"]')?.insertAdjacentHTML("afterend", '<button class="auth-text-button" type="button" data-auth-forgot>Forgot password?</button>');
+  }
+
+  modal.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") return closeAuthModal();
+    if (event.key !== "Tab") return;
+    const focusable = [...modal.querySelectorAll('button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled])')]
+      .filter((element) => element.offsetParent !== null);
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+    if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+  });
+
   document.addEventListener("click", async (event) => {
     const openButton = event.target.closest("[data-open-auth]");
     if (openButton) {
@@ -776,6 +818,16 @@ function initAuthModal() {
     if (tab) {
       event.preventDefault();
       setAuthMode(tab.dataset.authTab);
+      return;
+    }
+
+    if (event.target.closest("[data-auth-forgot]")) {
+      event.preventDefault();
+      const email = qs("#modalLoginEmail")?.value.trim();
+      if (!email || !isValidEmailAddress(email)) return showMessage("Enter your email address first.", "error");
+      const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: `${getPageUrl("/auth-confirm")}?mode=recovery` });
+      if (error) return showMessage(error.message, "error");
+      showMessage("Password reset link sent. Check your inbox.", "success");
     }
   });
 
@@ -821,10 +873,6 @@ function initAuthModal() {
 
     closeAuthModal();
     await refreshAll();
-  });
-
-  qs("#googleLoginButton")?.addEventListener("click", () => {
-    showMessage("Google sign-in is planned for version 12. Use email sign-in for now.");
   });
 
   qs("#steamLoginButton")?.addEventListener("click", startSteamAuthFromModal);
@@ -1057,9 +1105,41 @@ async function initOfferwall() {
   }
 
   cpxButton.classList.remove("needs-login");
-  cpxButton.href = `https://offers.cpx-research.com/index.php?app_id=${CPX_APP_ID}&ext_user_id=${encodeURIComponent(user.id)}`;
+  let wallUrl = `https://offers.cpx-research.com/index.php?app_id=${CPX_APP_ID}&ext_user_id=${encodeURIComponent(user.id)}`;
+  try {
+    const { data, error } = await sb.functions.invoke("survey-feed");
+    if (!error && isSafeOfferwallUrl(data?.wall_url)) wallUrl = data.wall_url;
+    renderRecommendedSurveys(data?.surveys || []);
+  } catch (error) {
+    console.warn("Secure survey feed unavailable; using the provider wall fallback.", error);
+  }
+  cpxButton.href = wallUrl;
   cpxButton.target = "_blank";
   cpxButton.rel = "noopener";
+}
+
+function isSafeOfferwallUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && ["offers.cpx-research.com", "web.bitlabs.ai"].includes(url.hostname.toLowerCase());
+  } catch { return false; }
+}
+
+function renderRecommendedSurveys(surveys) {
+  const container = qs("#recommendedSurveys");
+  if (!container) return;
+  const safeSurveys = surveys.filter((survey) => isSafeOfferwallUrl(survey.url)).slice(0, 6);
+  if (!safeSurveys.length) {
+    container.innerHTML = '<p class="muted">Open CPX to see the surveys currently available for your country and device.</p>';
+    return;
+  }
+  container.innerHTML = safeSurveys.map((survey) => `
+    <article class="survey-result-card">
+      <div><span class="provider-badge">${escapeHtml(survey.provider || "CPX")}</span><h3>${escapeHtml(survey.title || "Recommended survey")}</h3></div>
+      <p>${escapeHtml(survey.description || "Availability and reward are confirmed by the provider.")}</p>
+      <div class="survey-result-meta"><span>${Number(survey.coins || 0) > 0 ? formatCoins(survey.coins) : "Live provider rate"}</span><span>${Number(survey.minutes || 0) > 0 ? `${Number(survey.minutes)} min` : "Live availability"}</span></div>
+      <a class="button button-primary" href="${escapeHtml(survey.url)}" target="_blank" rel="noopener">Start survey</a>
+    </article>`).join("");
 }
 
 async function loadRewards() {
@@ -1538,7 +1618,7 @@ function renderRewards() {
             <h2>${escapeHtml(item.name)}</h2>
             <p class="muted reward-description">${escapeHtml(description)}</p>
             <div class="reward-meta">
-              <span class="price">${coinIcon("coin-icon-small")} ${getRewardCost(item).toLocaleString()} coins</span>
+              <span class="price">${coinIcon("coin-icon-small")} ${formatCoins(getRewardCost(item))}</span>
               <span class="stock-pill ${outOfStock ? "stock-out" : ""}">${outOfStock ? "Out of stock" : escapeHtml(stockText)}</span>
               ${total !== null && reserved > 0 ? `<span class="stock-pill reserved-stock">${reserved} reserved</span>` : ""}
             </div>
@@ -1708,6 +1788,9 @@ async function requestRedeem(rewardId, sourceButton = null) {
     }
 
     showMessage("Redeem request created. Coins were deducted and stock was reserved for manual review.", "success");
+    sb.functions.invoke("reward-order-notify", { body: { request_id: data.request_id } })
+      .then(({ error: notifyError }) => { if (notifyError) console.warn("Order notification delayed", notifyError); })
+      .catch((notifyError) => console.warn("Order notification delayed", notifyError));
     await loadRewards();
     renderRewards();
     await updateRewardAccountNotice();
@@ -1749,6 +1832,27 @@ function isValidSteamTradeUrl(url) {
   }
 }
 
+function isValidSteamTradeOfferUrl(url) {
+  if (!url) return false;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" && ["steamcommunity.com", "www.steamcommunity.com"].includes(parsed.hostname.toLowerCase()) && parsed.pathname.startsWith("/tradeoffer/");
+  } catch { return false; }
+}
+
+function isSafeSkinQuestPageUrl(url) {
+  if (!url) return false;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" && ["skinquestcs.com", "www.skinquestcs.com"].includes(parsed.hostname.toLowerCase());
+  } catch { return false; }
+}
+
+function formatCoins(value) {
+  const amount = Number(value || 0);
+  return `${amount.toLocaleString()} ${amount === 1 ? "coin" : "coins"}`;
+}
+
 async function saveSteamTradeUrlForUser(user, steamTradeUrl) {
   if (!user?.id) throw new Error("You need to sign in first.");
 
@@ -1762,21 +1866,8 @@ async function saveSteamTradeUrlForUser(user, steamTradeUrl) {
     const saved = Array.isArray(rpcData) ? rpcData[0] : rpcData;
     return saved || { id: user.id, steam_trade_url: steamTradeUrl || null };
   }
-
-  const { data, error } = await sb
-    .from("profiles")
-    .update({ steam_trade_url: steamTradeUrl || null })
-    .eq("id", user.id)
-    .select("id, steam_trade_url")
-    .maybeSingle();
-
-  if (error || !data) {
-    console.error("Trade URL save failed", { rpcError, fallbackError: error });
-    const details = rpcError?.message || error?.message || "No profile row was updated.";
-    throw new Error(`Could not save your Steam trade URL. ${details}`);
-  }
-
-  return data;
+  console.error("Trade URL save failed", rpcError);
+  throw new Error(`Could not save your Steam trade URL. ${rpcError?.message || "The secure save function is unavailable."}`);
 }
 
 function setTradeSaveFeedback(message = "", type = "") {
@@ -2133,6 +2224,37 @@ async function initSettingsPage() {
     });
   });
 
+  qs("#requestDataButton")?.addEventListener("click", () => {
+    document.querySelector("[data-support-toggle]")?.click();
+    setTimeout(() => {
+      const topic = document.querySelector("[data-support-topic]");
+      const message = document.querySelector("[data-support-message]");
+      if (topic) topic.value = "Account issue";
+      if (message && !message.value) message.value = "I want a copy of the personal data connected to my SkinQuest account.";
+    }, 100);
+  });
+
+  qs("#deleteAccountButton")?.addEventListener("click", async () => {
+    const confirmed = await showConfirm(
+      "This permanently deletes your SkinQuest account and personal profile. It cannot be undone. Pending reward requests must be resolved first.",
+      { title: "Delete account permanently?", confirmText: "Continue", cancelText: "Keep account", icon: "!" }
+    );
+    if (!confirmed) return;
+    const typed = window.prompt('Type DELETE to confirm permanent account deletion.');
+    if (typed !== "DELETE") return showMessage("Account deletion cancelled.");
+    const button = qs("#deleteAccountButton");
+    const reset = setButtonBusy(button, "Deleting...");
+    try {
+      const { data, error } = await sb.functions.invoke("delete-account", { body: { confirmation: typed } });
+      if (error || !data?.ok) throw error || new Error(data?.error || "Account deletion failed.");
+      await sb.auth.signOut();
+      location.href = "/?account=deleted";
+    } catch (error) {
+      reset();
+      showMessage(error.message || "Could not delete the account. Contact support if the problem continues.", "error");
+    }
+  });
+
   qs("#notificationSettingsForm")?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const button = event.currentTarget.querySelector('button[type="submit"]');
@@ -2326,17 +2448,16 @@ function initSupportWidget() {
     try {
       const user = await getSessionUser();
       const context = getSupportContext(user);
-      const { error } = await sb.from("support_requests").insert({
-        user_id: user?.id || null,
+      const { data, error } = await sb.functions.invoke("support-submit", { body: {
         topic,
         message,
-        page_url: context.page_url,
-        user_agent: context.user_agent,
         account_email: email,
-        browser_language: context.browser_language
-      });
+        page_url: context.page_url,
+        browser_language: context.browser_language,
+        website: honeypot
+      } });
 
-      if (error) throw error;
+      if (error || !data?.ok) throw error || new Error(data?.error || "Support request failed.");
 
       showMessage("Support request sent. We’ll reply by email if needed.", "success");
       form.reset();
@@ -2571,8 +2692,8 @@ function renderRedeemHistory(redemptions) {
     <div class="redeem-row ${index >= 5 ? "redeem-extra hidden" : ""}">
       <div>
         <strong>${escapeHtml(item.reward_name)}</strong>
-        <p class="muted">${formatDate(item.created_at)} · ${getRequestCost(item).toLocaleString()} coins</p>
-        ${item.trade_offer_url ? `<a class="mini-link" target="_blank" rel="noopener" href="${escapeHtml(item.trade_offer_url)}">Open trade offer</a>` : ""}
+        <p class="muted">${formatDate(item.created_at)} · ${formatCoins(getRequestCost(item))}</p>
+        ${isValidSteamTradeOfferUrl(item.trade_offer_url) ? `<a class="mini-link" target="_blank" rel="noopener" href="${escapeHtml(item.trade_offer_url)}">Open trade offer</a>` : ""}
         ${item.admin_note ? `<p class="muted admin-note-view">${escapeHtml(item.admin_note)}</p>` : ""}
       </div>
       <span class="status-pill status-${escapeHtml(item.status)}">${escapeHtml(formatStatus(item.status))}</span>
@@ -2673,8 +2794,10 @@ async function initAuthConfirmPage() {
     if (copy) copy.textContent = message;
   }
 
-  const isSteamAuth = new URLSearchParams(location.search).get("steam") === "login";
-  setState("loading", isSteamAuth ? "Signing in with Steam..." : "Confirming your email...", isSteamAuth ? "Finishing your Steam sign-in. This usually takes a second." : "Finishing your SkinQuest sign-in. This usually takes a second.");
+  const initialParams = new URLSearchParams(location.search);
+  const isSteamAuth = initialParams.get("steam") === "login";
+  const isRecovery = initialParams.get("mode") === "recovery" || initialParams.get("type") === "recovery";
+  setState("loading", isRecovery ? "Opening password reset..." : (isSteamAuth ? "Signing in with Steam..." : "Confirming your email..."), isRecovery ? "Checking your secure reset link." : (isSteamAuth ? "Finishing your Steam sign-in. This usually takes a second." : "Finishing your SkinQuest sign-in. This usually takes a second."));
 
   try {
     const params = new URLSearchParams(location.search);
@@ -2697,6 +2820,29 @@ async function initAuthConfirmPage() {
       return;
     }
 
+    if (isRecovery) {
+      setState("success", "Choose a new password", "Use at least 10 characters. A password manager is recommended.");
+      if (actions) actions.innerHTML = `
+        <form id="passwordRecoveryForm" class="stack-form password-recovery-form">
+          <label>New password<input id="recoveryPassword" type="password" minlength="10" autocomplete="new-password" required /></label>
+          <label>Confirm password<input id="recoveryPasswordConfirm" type="password" minlength="10" autocomplete="new-password" required /></label>
+          <button class="button button-primary" type="submit">Save new password</button>
+        </form>`;
+      qs("#passwordRecoveryForm")?.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const password = qs("#recoveryPassword")?.value || "";
+        if (password !== qs("#recoveryPasswordConfirm")?.value) return showMessage("Passwords do not match.", "error");
+        const button = event.currentTarget.querySelector('button[type="submit"]');
+        const reset = setButtonBusy(button, "Saving...");
+        const { error: updateError } = await sb.auth.updateUser({ password });
+        reset();
+        if (updateError) return showMessage(updateError.message, "error");
+        showMessage("Password updated. You are signed in.", "success");
+        location.href = "/dashboard";
+      });
+      return;
+    }
+
     await ensureProfile(user);
     setState("success", isSteamAuth ? "Steam sign-in complete" : "Email confirmed", isSteamAuth ? "You are now signed in with Steam." : "Your SkinQuest account is ready. You can now earn coins and redeem rewards.");
     if (actions) actions.innerHTML = `<a class="button button-primary" href="/dashboard">Go to dashboard</a><a class="button button-ghost" href="/rewards">View rewards</a>`;
@@ -2705,6 +2851,21 @@ async function initAuthConfirmPage() {
     setState("error", isSteamAuth ? "Could not sign in with Steam" : "Could not confirm email", error.message || "The confirmation link could not be processed.");
     if (actions) actions.innerHTML = `<button class="button button-primary" data-open-auth="login">Try signing in</button><a class="button button-ghost" href="/">Home</a>`;
   }
+}
+
+function initInstallPage() {
+  window.addEventListener("beforeinstallprompt", (event) => {
+    event.preventDefault();
+    deferredInstallPrompt = event;
+    qs("#installAppButton")?.classList.remove("hidden");
+  });
+  qs("#installAppButton")?.addEventListener("click", async () => {
+    if (!deferredInstallPrompt) return showMessage("Use your browser menu and choose Add to Home Screen.");
+    deferredInstallPrompt.prompt();
+    await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+    qs("#installAppButton")?.classList.add("hidden");
+  });
 }
 
 function initOwnerRoleForm() {
@@ -2815,7 +2976,7 @@ async function loadAdminSupportRequests() {
           <span><b>Page</b>${escapeHtml(item.page_url || "Unknown")}</span>
           <span><b>Browser</b>${escapeHtml((item.user_agent || "Unknown").slice(0, 120))}</span>
         </div>
-        ${item.page_url ? `<a class="mini-link" href="${escapeHtml(item.page_url)}" target="_blank" rel="noopener">Open reported page</a>` : ""}
+        ${isSafeSkinQuestPageUrl(item.page_url) ? `<a class="mini-link" href="${escapeHtml(item.page_url)}" target="_blank" rel="noopener">Open reported page</a>` : ""}
       </div>
       <div class="admin-actions vertical">
         <button class="button button-ghost" type="button" data-copy="${escapeHtml(item.user_id || "")}" data-copy-label="user id">Copy user ID</button>
@@ -3071,6 +3232,7 @@ async function saveRequestStatus(id) {
   const tradeOfferUrl = qs(`[data-request-trade="${id}"]`)?.value || "";
 
   if (!status) return;
+  if (tradeOfferUrl && !isValidSteamTradeOfferUrl(tradeOfferUrl)) return showMessage("Use a valid HTTPS Steam Community trade offer URL.", "error");
   if (["rejected", "refunded", "cancelled"].includes(status)) {
     const confirmed = await showConfirm(
       "This will refund coins and release reserved stock if it has not already been done.",
@@ -3280,6 +3442,7 @@ async function boot() {
   initProgressRefreshWatcher();
   initAuthModal();
   initSupportWidget();
+  initInstallPage();
   await updateNavAuthState();
   await updateHomeAuthState();
   await initAuthConfirmPage();

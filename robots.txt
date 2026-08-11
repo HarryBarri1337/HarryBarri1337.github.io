@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /settings
+Disallow: /auth-confirm
+Disallow: /steam-callback
+
+Sitemap: https://skinquestcs.com/sitemap.xml

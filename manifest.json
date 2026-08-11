@@ -2,12 +2,19 @@
   "name": "SkinQuest",
   "short_name": "SkinQuest",
   "description": "Earn coins from verified partner tasks and redeem CS2 skins.",
-  "start_url": "index.html",
+  "id": "/",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#0b0f16",
   "theme_color": "#0b0f16",
-  "orientation": "portrait-primary",
+  "orientation": "any",
+  "categories": ["entertainment", "lifestyle"],
+  "shortcuts": [
+    { "name": "Surveys", "short_name": "Surveys", "url": "/surveys", "icons": [{ "src": "assets/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Rewards", "short_name": "Rewards", "url": "/rewards", "icons": [{ "src": "assets/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Dashboard", "short_name": "Dashboard", "url": "/dashboard", "icons": [{ "src": "assets/icons/icon-192.png", "sizes": "192x192" }] }
+  ],
   "icons": [
     {
       "src": "assets/icons/icon-192.png",
