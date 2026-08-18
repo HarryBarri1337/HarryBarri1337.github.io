@@ -1,4 +1,4 @@
-/* SkinQuest v14 additive UI layer. Load after styles.css. */
+/* SkinQuest v14.0.1 additive UI layer. Load after styles.css. */
 :root {
   --sq-v14-surface: rgba(13, 18, 27, .92);
   --sq-v14-surface-2: rgba(255, 255, 255, .045);
@@ -157,6 +157,8 @@
   position: relative;
   flex: 0 0 auto;
 }
+.sq-notification-button { position: relative; flex: 0 0 auto; }
+.sq-notification-button svg { width: 20px; height: 20px; fill: currentColor; }
 .sq-icon-button {
   width: 42px;
   height: 42px;
@@ -234,7 +236,6 @@
 .sq-notification-row time { display: block; margin-top: 5px; color: var(--sq-v14-muted); font-size: .72rem; }
 
 /* Shared v14 panels */
-.sq-home-grid,
 .sq-growth-stats,
 .sq-quest-grid,
 .sq-achievement-grid,
@@ -274,91 +275,9 @@
 .sq-section-head h2,
 .sq-quest-head h3 { margin-top: 0; }
 
-/* Homepage */
-#sqHomeLiveProof { margin: 22px auto 0; }
-.sq-status-strip {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 9px;
-  margin: 0 0 14px;
-  padding: 10px 12px;
-  border: 1px solid var(--sq-v14-border);
-  border-radius: 14px;
-  background: rgba(255,255,255,.025);
-}
-.sq-status-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--sq-v14-muted);
-  font-size: .82rem;
-  font-weight: 800;
-}
-.sq-status-item > span:first-child,
-.sq-live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--sq-v14-good); box-shadow: 0 0 0 5px rgba(89,214,139,.08); }
-.sq-status-item.status-degraded > span:first-child,
-.sq-status-item.status-maintenance > span:first-child,
-.sq-status-item.status-degraded .sq-live-dot,
-.sq-status-item.status-maintenance .sq-live-dot { background: var(--sq-v14-warn); }
-.sq-status-item.status-incident > span:first-child,
-.sq-status-item.status-incident .sq-live-dot { background: var(--sq-v14-bad); }
-.sq-public-stats {
-  display: grid;
-  grid-template-columns: repeat(3,1fr);
-  gap: 9px;
-  margin-bottom: 14px;
-}
-.sq-public-stats > div,
-.sq-growth-stats > div,
-.sq-admin-kpis > div {
-  padding: 13px;
-  border: 1px solid var(--sq-v14-border);
-  border-radius: 14px;
-  background: var(--sq-v14-surface-2);
-}
-.sq-public-stats strong,
-.sq-growth-stats strong,
-.sq-admin-kpis strong { display: block; font-size: 1.25rem; }
-.sq-public-stats span,
-.sq-growth-stats span,
-.sq-admin-kpis span { color: var(--sq-v14-muted); font-size: .76rem; font-weight: 800; }
-.sq-home-reward-list { display: grid; gap: 9px; }
-.sq-home-reward {
-  display: grid;
-  grid-template-columns: 66px 1fr auto;
-  align-items: center;
-  gap: 11px;
-  padding: 10px;
-  border: 1px solid var(--sq-v14-border);
-  border-radius: 14px;
-  background: rgba(255,255,255,.025);
-  text-decoration: none;
-  color: inherit;
-}
-.sq-home-reward:hover { border-color: rgba(255,255,255,.2); transform: translateY(-1px); }
-.sq-home-reward-art {
-  width: 66px;
-  height: 52px;
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-  border-radius: 10px;
-  background: rgba(255,255,255,.045);
-}
-.sq-home-reward-art img { width: 100%; height: 100%; object-fit: contain; }
-.sq-home-reward small { display: block; margin-top: 3px; color: var(--sq-v14-muted); }
-.sq-home-reward-price { white-space: nowrap; font-weight: 900; color: var(--sq-v14-brand-2); }
-.sq-delivered-list { display: grid; gap: 7px; }
-.sq-delivered-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 0;
-  border-bottom: 1px solid rgba(255,255,255,.07);
-}
-.sq-delivered-row:last-child { border-bottom: 0; }
-.sq-delivered-row time { color: var(--sq-v14-muted); font-size: .78rem; }
+/* Homepage
+   v14.0.1 intentionally keeps the public landing page on the core SkinQuest
+   design system. No dashboard-style live-stat block is injected here. */
 
 /* Dashboard */
 #sqGrowthHub { display: grid; gap: 14px; margin-top: 14px; }
@@ -578,13 +497,9 @@
   .sq-admin-promo-form .button { align-self: end; }
 }
 @media (max-width: 760px) {
-  .sq-home-grid,
-  .sq-promo-ref-grid,
+    .sq-promo-ref-grid,
   .sq-admin-two-col,
   .sq-reward-detail { grid-template-columns: 1fr; }
-  .sq-public-stats { grid-template-columns: repeat(3,minmax(0,1fr)); }
-  .sq-home-reward { grid-template-columns: 58px 1fr; }
-  .sq-home-reward-price { grid-column: 2; }
   .sq-detail-art { min-height: 190px; }
   .sq-admin-status-row { grid-template-columns: 1fr; }
   #sqCookieBanner { bottom: calc(82px + env(safe-area-inset-bottom)); }
@@ -596,7 +511,6 @@
   .sq-achievement-grid,
   .sq-admin-kpis,
   .sq-admin-promo-form { grid-template-columns: 1fr; }
-  .sq-public-stats { grid-template-columns: 1fr; }
   .sq-inline-form { flex-direction: column; }
   #sqRewardExtraFilters { align-items: stretch; }
   .sq-extra-filter-group { min-width: 100%; }

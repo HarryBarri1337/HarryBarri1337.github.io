@@ -1,0 +1,11 @@
+SkinQuest v14.0.1 release checks
+================================
+[ ] Copy complete package over the current project and replace files.
+[ ] Run skinquest_upgrade_existing_to_v14_0_1.sql in the EXISTING Supabase project.
+[ ] Do not run skinquest_full_setup_v14_0_1.sql on production.
+[ ] Test logged-out desktop navbar: logo / nav / Sign in / Sign up stay on one row.
+[ ] Test logged-in desktop navbar: notification / coins / level / account stay in nav actions.
+[ ] Test mobile navbar open/close.
+[ ] Confirm homepage has no injected Real platform data block.
+[ ] Test Dashboard, Surveys, Rewards, Settings and Admin.
+[ ] Deploy.

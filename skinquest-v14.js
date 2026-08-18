@@ -1,6 +1,6 @@
-/* SkinQuest v14 product upgrade layer
-   Add AFTER app.js. Requires the SQL migration in skinquest_v14_upgrade.sql.
-   It intentionally avoids replacing the existing SkinQuest core.
+/* SkinQuest v14.0.1 product upgrade layer.
+   Loaded after app.js. Database additions are included in the current v14.0.1 SQL files.
+   This layer extends the secure SkinQuest core without replacing reward authority.
 */
 
 (() => {
@@ -367,47 +367,66 @@
   let notificationDrawer = null;
 
   function ensureNotificationUi() {
-    const header = $(".site-header");
-    if (!header || $("#sqNotificationButton")) return;
+    // The notification button is rendered INSIDE #navAuthActions by app.js.
+    // Never insert another direct child into .site-header: that breaks its
+    // three-column desktop grid and pushes auth controls onto another row.
+    notificationButton = $("#sqNotificationButton");
 
-    notificationButton = create("button", "sq-notification-button", `
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22a2.6 2.6 0 0 0 2.45-1.75h-4.9A2.6 2.6 0 0 0 12 22Zm7-6.2-1.65-2.05V9a5.36 5.36 0 0 0-4.1-5.2V3a1.25 1.25 0 0 0-2.5 0v.8A5.36 5.36 0 0 0 6.65 9v4.75L5 15.8V18h14v-2.2Z"/></svg>
-      <span class="sq-notification-count hidden" data-sq-notification-count>0</span>
-    `);
-    notificationButton.id = "sqNotificationButton";
-    notificationButton.type = "button";
-    notificationButton.setAttribute("aria-label", "Notifications");
-    notificationButton.setAttribute("aria-expanded", "false");
-    header.insertBefore(notificationButton, $("#navAuthActions"));
+    if (!notificationDrawer) {
+      notificationDrawer = $("#sqNotificationDrawer");
+    }
 
-    notificationDrawer = create("aside", "sq-notification-drawer", `
-      <div class="sq-drawer-head">
-        <div><span class="pill">Activity</span><h2>Notifications</h2></div>
-        <button type="button" class="sq-icon-button" data-sq-close-notifications aria-label="Close notifications">×</button>
-      </div>
-      <div class="sq-drawer-actions">
-        <button type="button" class="mini-button" data-sq-mark-all-read>Mark all read</button>
-      </div>
-      <div class="sq-notification-list" data-sq-notification-list><div class="empty-state">Loading…</div></div>
-    `);
-    notificationDrawer.id = "sqNotificationDrawer";
-    notificationDrawer.setAttribute("aria-hidden", "true");
-    document.body.appendChild(notificationDrawer);
+    if (!notificationDrawer) {
+      notificationDrawer = create("aside", "sq-notification-drawer", `
+        <div class="sq-drawer-head">
+          <div><span class="pill">Activity</span><h2>Notifications</h2></div>
+          <button type="button" class="sq-icon-button" data-sq-close-notifications aria-label="Close notifications">×</button>
+        </div>
+        <div class="sq-drawer-actions">
+          <button type="button" class="mini-button" data-sq-mark-all-read>Mark all read</button>
+        </div>
+        <div class="sq-notification-list" data-sq-notification-list><div class="empty-state">Loading…</div></div>
+      `);
+      notificationDrawer.id = "sqNotificationDrawer";
+      notificationDrawer.setAttribute("aria-hidden", "true");
+      document.body.appendChild(notificationDrawer);
 
-    notificationButton.addEventListener("click", () => toggleNotificationDrawer());
-    notificationDrawer.querySelector("[data-sq-close-notifications]")?.addEventListener("click", () => toggleNotificationDrawer(false));
-    notificationDrawer.querySelector("[data-sq-mark-all-read]")?.addEventListener("click", async () => {
-      try {
-        await rpc("sq_mark_all_notifications_read");
-        await Promise.all([loadNotifications(), refreshNotificationCount()]);
-      } catch (error) {
-        notify(error.message || "Could not update notifications.", "error");
+      notificationDrawer.querySelector("[data-sq-close-notifications]")?.addEventListener("click", () => toggleNotificationDrawer(false));
+      notificationDrawer.querySelector("[data-sq-mark-all-read]")?.addEventListener("click", async () => {
+        try {
+          await rpc("sq_mark_all_notifications_read");
+          await Promise.all([loadNotifications(), refreshNotificationCount()]);
+        } catch (error) {
+          notify(error.message || "Could not update notifications.", "error");
+        }
+      });
+    }
+
+    // app.js re-renders #navAuthActions when auth/profile data changes, so use
+    // delegated events instead of attaching a click handler to a disposable node.
+    if (!window.__skinquestV14NotificationDelegation) {
+      window.__skinquestV14NotificationDelegation = true;
+      document.addEventListener("click", (event) => {
+        const button = event.target.closest("#sqNotificationButton");
+        if (!button) return;
+        notificationButton = button;
+        toggleNotificationDrawer();
+      });
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") toggleNotificationDrawer(false);
+      });
+
+      const actions = $("#navAuthActions");
+      if (actions && "MutationObserver" in window) {
+        const observer = new MutationObserver(() => {
+          const button = $("#sqNotificationButton");
+          if (!button) return;
+          notificationButton = button;
+          refreshNotificationCount();
+        });
+        observer.observe(actions, { childList: true, subtree: true });
       }
-    });
-
-    document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") toggleNotificationDrawer(false);
-    });
+    }
   }
 
   async function refreshNotificationCount() {
@@ -492,106 +511,23 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Homepage: stronger conversion + real trust proof + reward preview + status
+  // Homepage: keep the landing page focused and visually clean.
+  // v14.0.1 deliberately avoids injecting dashboard-style stats or status cards
+  // below the hero. Those features live on the dashboard/admin pages instead.
   // ---------------------------------------------------------------------------
   async function enhanceHomepage() {
     if (path !== "index.html" || IS_CAMPAIGN_PAGE) return;
+
     const hero = $(".hero-copy");
-    if (hero) {
-      const h1 = $("h1", hero);
-      const p = $("p", hero);
-      const pill = $(".pill", hero);
-      if (pill) pill.textContent = "Complete tasks · choose your skin";
-      if (h1) h1.textContent = "Complete tasks. Earn CS2 skins.";
-      if (p) p.textContent = "Earn coins from verified partner tasks, save toward the exact reward you want, and receive approved rewards through Steam. No deposits, no cases, no roulette.";
-    }
+    if (!hero) return;
 
-    const main = $("main");
-    if (!main || $("#sqHomeLiveProof")) return;
-    const section = create("section", "sq-home-live-proof", `
-      <div class="sq-section-head">
-        <div><span class="pill">Real platform data</span><h2>What is happening on SkinQuest</h2></div>
-        <a class="button button-ghost" href="/rewards">Browse rewards</a>
-      </div>
-      <div class="sq-public-stats" data-sq-public-stats>
-        <div><strong>—</strong><span>active rewards</span></div>
-        <div><strong>—</strong><span>completed rewards</span></div>
-        <div><strong>—</strong><span>open requests</span></div>
-      </div>
-      <div class="sq-home-grid">
-        <article class="panel sq-home-rewards-panel">
-          <div class="sq-section-head compact"><div><span class="pill">Available now</span><h2>Rewards worth saving for</h2></div></div>
-          <div class="sq-home-reward-list" data-sq-home-rewards><div class="empty-state">Loading rewards…</div></div>
-        </article>
-        <article class="panel sq-delivered-panel">
-          <div class="sq-section-head compact"><div><span class="pill">Proof</span><h2>Recently completed</h2></div></div>
-          <div class="sq-delivered-list" data-sq-delivered><div class="empty-state">Loading completed rewards…</div></div>
-        </article>
-      </div>
-      <div class="sq-status-strip" data-sq-status-strip></div>
-    `);
-    section.id = "sqHomeLiveProof";
-    main.appendChild(section);
+    const h1 = $("h1", hero);
+    const p = $("p", hero);
+    const pill = $(".pill", hero);
 
-    const c = client();
-    if (!c) return;
-
-    try {
-      const stats = await rpc("sq_public_stats");
-      const boxes = $$('[data-sq-public-stats] > div');
-      const values = [stats?.active_rewards, stats?.completed_rewards, stats?.open_rewards];
-      boxes.forEach((box, i) => { $("strong", box).textContent = formatNumber(values[i]); });
-    } catch {}
-
-    try {
-      const { data } = await c
-        .from("reward_items")
-        .select("id,name,points_coins,image_url,condition,rarity,quantity_total,quantity_reserved")
-        .eq("active", true)
-        .order("sort_order", { ascending: true })
-        .limit(4);
-      const target = $("[data-sq-home-rewards]");
-      if (target) {
-        if (!data?.length) target.innerHTML = `<div class="empty-state">No rewards are listed right now.</div>`;
-        else target.innerHTML = data.map((item) => {
-          const cost = Number(item.points_coins ?? 0);
-          const available = Math.max(0, Number(item.quantity_total ?? 0) - Number(item.quantity_reserved ?? 0));
-          return `
-            <a class="sq-home-reward" href="/rewards?reward=${Number(item.id)}">
-              <span class="sq-home-reward-art">${item.image_url ? `<img src="${safeText(item.image_url)}" alt="" loading="lazy" />` : `<strong>${safeText(item.name?.split("|")[0] || "CS2")}</strong>`}</span>
-              <span><strong>${safeText(item.name)}</strong><small>${safeText(item.condition || item.rarity || "CS2 reward")}</small></span>
-              <span class="sq-home-reward-price">${formatNumber(cost)} <small>coins</small>${available ? `<em>${available} available</em>` : `<em>Out of stock</em>`}</span>
-            </a>`;
-        }).join("");
-      }
-    } catch {}
-
-    try {
-      const completed = await rpc("sq_recent_completed_rewards", { p_limit: 6 });
-      const target = $("[data-sq-delivered]");
-      if (target) {
-        if (!completed?.length) target.innerHTML = `<div class="empty-state">Completed rewards will appear here after real deliveries are recorded.</div>`;
-        else target.innerHTML = completed.map((item) => `
-          <div class="sq-delivered-row"><span class="sq-live-dot"></span><span><strong>${safeText(item.reward_name)}</strong><small>Completed ${safeText(formatDate(item.completed_at))}</small></span><span class="status-pill">Delivered</span></div>
-        `).join("");
-      }
-    } catch {}
-
-    loadStatusStrip();
-  }
-
-  async function loadStatusStrip() {
-    const target = $("[data-sq-status-strip]");
-    if (!target) return;
-    const c = client();
-    if (!c) return;
-    try {
-      const { data, error } = await c.from("sq_system_status").select("component,display_name,status,message").order("sort_order");
-      if (error) throw error;
-      target.innerHTML = (data || []).map((item) => `
-        <div class="sq-status-item status-${safeText(item.status)}"><span></span><strong>${safeText(item.display_name)}</strong><small>${safeText(item.status === "operational" ? "Operational" : item.message || item.status)}</small></div>
-      `).join("");
-    } catch {}
+    if (pill) pill.textContent = "Fixed CS2 rewards";
+    if (h1) h1.textContent = "Earn coins. Redeem real CS2 rewards.";
+    if (p) p.textContent = "Complete verified partner tasks, collect SkinQuest coins, and choose the exact CS2 reward you want. No deposits, no cases, no roulette.";
   }
 
   // ---------------------------------------------------------------------------

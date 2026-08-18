@@ -1,4 +1,4 @@
-// SkinQuest v14.0.0 core - v13.1.0 secure base; enhanced by skinquest-v14.js
+// SkinQuest v14.0.1 core - secure base; enhanced by skinquest-v14.js
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -932,6 +932,10 @@ function renderSignedInNav(actions, { user, email, coins = 0, navLevel = null, a
   `;
 
   actions.innerHTML = `
+    <button class="sq-notification-button sq-icon-button" id="sqNotificationButton" type="button" aria-label="Notifications" aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22a2.6 2.6 0 0 0 2.45-1.75h-4.9A2.6 2.6 0 0 0 12 22Zm7-6.2-1.65-2.05V9a5.36 5.36 0 0 0-4.1-5.2V3a1.25 1.25 0 0 0-2.5 0v.8A5.36 5.36 0 0 0 6.65 9v4.75L5 15.8V18h14v-2.2Z"/></svg>
+      <span class="sq-notification-count hidden" data-sq-notification-count>0</span>
+    </button>
     <a class="coin-pill" href="/dashboard" aria-label="Your coin balance">
       ${coinIcon("coin-icon-small")}
       <strong>${Number(coins || 0).toLocaleString()}</strong>
