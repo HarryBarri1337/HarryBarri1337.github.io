@@ -5,5 +5,10 @@ Disallow: /dashboard
 Disallow: /settings
 Disallow: /auth-confirm
 Disallow: /steam-callback
+Disallow: /01
+Disallow: /02
+Disallow: /03
+Disallow: /04
+Disallow: /05
 
 Sitemap: https://skinquestcs.com/sitemap.xml

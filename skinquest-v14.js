@@ -1,0 +1,1279 @@
+/* SkinQuest v14 product upgrade layer
+   Add AFTER app.js. Requires the SQL migration in skinquest_v14_upgrade.sql.
+   It intentionally avoids replacing the existing SkinQuest core.
+*/
+
+(() => {
+  "use strict";
+
+  const VERSION = "14.0.0";
+  const GA_ID = "G-DFRR03C4BP";
+  const ATTRIBUTION_KEY = "skinquest.firstTouch.v14";
+  const CONSENT_KEY = "skinquest.cookieConsent.v1";
+  const VISIT_KEY = "skinquest.visitCount.v1";
+  const LAST_PROMO_KEY = "skinquest.pendingPromo.v1";
+  const LAST_REF_KEY = "skinquest.pendingReferral.v1";
+  const MAX_TEXT = 500;
+
+  const $ = (selector, root = document) => root.querySelector(selector);
+  const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
+  const routeSegment = (location.pathname.split("/").filter(Boolean).pop() || "").toLowerCase();
+  const path = !routeSegment
+    ? "index.html"
+    : routeSegment === "surveys"
+      ? "earn.html"
+      : routeSegment.endsWith(".html")
+        ? routeSegment
+        : `${routeSegment}.html`;
+  const IS_CAMPAIGN_PAGE = /^\/0?[1-5](?:\/|$)/.test(location.pathname);
+
+  function client() {
+    try {
+      return typeof sb !== "undefined" ? sb : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function safeText(value) {
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function clampText(value, length = MAX_TEXT) {
+    return String(value ?? "").slice(0, length);
+  }
+
+  function formatNumber(value) {
+    return Number(value || 0).toLocaleString();
+  }
+
+  function formatDate(value) {
+    if (!value) return "";
+    try {
+      return new Intl.DateTimeFormat(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      }).format(new Date(value));
+    } catch {
+      return String(value);
+    }
+  }
+
+  function notify(message, type = "success") {
+    try {
+      if (typeof showMessage === "function") {
+        showMessage(message, type);
+        return;
+      }
+    } catch {}
+
+    let shell = $("#sqV14ToastShell");
+    if (!shell) {
+      shell = document.createElement("div");
+      shell.id = "sqV14ToastShell";
+      shell.className = "sq-v14-toast-shell";
+      document.body.appendChild(shell);
+    }
+    const toast = document.createElement("div");
+    toast.className = `sq-v14-toast sq-v14-toast-${type}`;
+    toast.textContent = message;
+    shell.appendChild(toast);
+    setTimeout(() => toast.classList.add("show"), 10);
+    setTimeout(() => {
+      toast.classList.remove("show");
+      setTimeout(() => toast.remove(), 180);
+    }, 3200);
+  }
+
+  async function currentUser() {
+    const c = client();
+    if (!c) return null;
+    try {
+      const { data } = await c.auth.getUser();
+      return data?.user || null;
+    } catch {
+      return null;
+    }
+  }
+
+  async function rpc(name, args = undefined) {
+    const c = client();
+    if (!c) throw new Error("Supabase is not available on this page.");
+    const result = await c.rpc(name, args);
+    if (result.error) throw result.error;
+    return result.data;
+  }
+
+  async function copy(value, success = "Copied.") {
+    try {
+      await navigator.clipboard.writeText(value);
+      notify(success);
+    } catch {
+      const temp = document.createElement("textarea");
+      temp.value = value;
+      temp.style.position = "fixed";
+      temp.style.opacity = "0";
+      document.body.appendChild(temp);
+      temp.select();
+      document.execCommand("copy");
+      temp.remove();
+      notify(success);
+    }
+  }
+
+  function create(tag, className, html = "") {
+    const el = document.createElement(tag);
+    if (className) el.className = className;
+    if (html) el.innerHTML = html;
+    return el;
+  }
+
+  function isStandalone() {
+    return window.matchMedia?.("(display-mode: standalone)")?.matches || window.navigator.standalone === true;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Consent-controlled analytics
+  // ---------------------------------------------------------------------------
+  function getConsent() {
+    try {
+      return JSON.parse(localStorage.getItem(CONSENT_KEY) || "null");
+    } catch {
+      return null;
+    }
+  }
+
+  function setConsent(analytics) {
+    const value = { analytics: !!analytics, updatedAt: new Date().toISOString() };
+    localStorage.setItem(CONSENT_KEY, JSON.stringify(value));
+    if (value.analytics) loadAnalytics();
+    $("#sqCookieBanner")?.remove();
+    return value;
+  }
+
+  function loadAnalytics() {
+    if (!getConsent()?.analytics || window.__skinquestGaLoaded) return;
+    window.__skinquestGaLoaded = true;
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = window.gtag || function gtag() { window.dataLayer.push(arguments); };
+    window.gtag("js", new Date());
+    window.gtag("config", GA_ID, { anonymize_ip: true });
+
+    const script = document.createElement("script");
+    script.async = true;
+    script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(GA_ID)}`;
+    document.head.appendChild(script);
+  }
+
+  function showConsentManager(force = false) {
+    if (!force && getConsent()) {
+      loadAnalytics();
+      return;
+    }
+    if ($("#sqCookieBanner")) return;
+
+    const banner = create("section", "sq-cookie-banner", `
+      <div>
+        <strong>Cookie preferences</strong>
+        <p>SkinQuest uses essential storage for account/site features. Analytics is optional and only loads if you allow it.</p>
+      </div>
+      <div class="sq-cookie-actions">
+        <button class="button button-ghost" type="button" data-sq-consent="reject">Essential only</button>
+        <button class="button button-primary" type="button" data-sq-consent="accept">Allow analytics</button>
+      </div>
+    `);
+    banner.id = "sqCookieBanner";
+    document.body.appendChild(banner);
+    banner.querySelector('[data-sq-consent="reject"]')?.addEventListener("click", () => setConsent(false));
+    banner.querySelector('[data-sq-consent="accept"]')?.addEventListener("click", () => setConsent(true));
+  }
+
+  function addCookiePreferencesLink() {
+    const links = $(".footer-links");
+    if (!links || $("[data-sq-cookie-settings]", links)) return;
+    const a = document.createElement("a");
+    a.href = "#cookie-preferences";
+    a.dataset.sqCookieSettings = "true";
+    a.textContent = "Cookie preferences";
+    a.addEventListener("click", (event) => {
+      event.preventDefault();
+      showConsentManager(true);
+    });
+    links.appendChild(a);
+  }
+
+  function gaEvent(name, params = {}) {
+    if (!getConsent()?.analytics) return;
+    loadAnalytics();
+    try { window.gtag?.("event", name, params); } catch {}
+  }
+
+  // ---------------------------------------------------------------------------
+  // Attribution + campaign tracking
+  // ---------------------------------------------------------------------------
+  function captureAttribution() {
+    let existing = null;
+    try { existing = JSON.parse(localStorage.getItem(ATTRIBUTION_KEY) || "null"); } catch {}
+    const params = new URLSearchParams(location.search);
+
+    const referral = params.get("ref") || params.get("referral");
+    const promo = params.get("code") || params.get("promo");
+    if (referral) localStorage.setItem(LAST_REF_KEY, referral.slice(0, 64));
+    if (promo) localStorage.setItem(LAST_PROMO_KEY, promo.slice(0, 64));
+
+    if (existing) return existing;
+
+    const value = {
+      source: params.get("utm_source") || null,
+      medium: params.get("utm_medium") || null,
+      campaign: params.get("utm_campaign") || null,
+      content: params.get("utm_content") || null,
+      term: params.get("utm_term") || null,
+      landing_path: clampText(location.pathname + location.search, 500),
+      referrer: clampText(document.referrer, 500) || null,
+      referral_code: referral?.slice(0, 64) || null,
+      promo_code: promo?.slice(0, 64) || null,
+      captured_at: new Date().toISOString()
+    };
+    try { localStorage.setItem(ATTRIBUTION_KEY, JSON.stringify(value)); } catch {}
+    return value;
+  }
+
+  async function persistAttribution(user) {
+    if (!user) return;
+    let a;
+    try { a = JSON.parse(localStorage.getItem(ATTRIBUTION_KEY) || "null"); } catch {}
+    if (!a) return;
+    try {
+      await rpc("sq_set_acquisition", {
+        p_source: a.source,
+        p_medium: a.medium,
+        p_campaign: a.campaign,
+        p_content: a.content,
+        p_term: a.term,
+        p_landing_path: a.landing_path,
+        p_referrer: a.referrer,
+        p_referral_code: a.referral_code,
+        p_promo_code: a.promo_code
+      });
+    } catch {}
+  }
+
+  async function applyPendingReferral(user) {
+    if (!user) return;
+    const code = localStorage.getItem(LAST_REF_KEY);
+    if (!code) return;
+    try {
+      await rpc("sq_claim_referral_code", { p_code: code });
+      localStorage.removeItem(LAST_REF_KEY);
+    } catch (error) {
+      const message = String(error?.message || "").toLowerCase();
+      if (message.includes("yourself") || message.includes("not found")) localStorage.removeItem(LAST_REF_KEY);
+    }
+  }
+
+  async function trackProduct(eventName, properties = {}) {
+    const user = await currentUser();
+    if (!user) return false;
+    try {
+      await rpc("sq_track_event", {
+        p_event_name: eventName,
+        p_page_path: location.pathname,
+        p_properties: properties
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  function bindFunnelTracking() {
+    document.addEventListener("click", (event) => {
+      const reward = event.target.closest?.("[data-redeem]");
+      if (reward) {
+        trackProduct("redeem_click", { reward_id: Number(reward.dataset.redeem || 0) || null });
+        gaEvent("redeem_click", { reward_id: reward.dataset.redeem || "" });
+      }
+
+      const provider = event.target.closest?.(".provider-action, #openCpxWall, #openBitLabsWall, [data-provider]");
+      if (provider) {
+        const label = provider.dataset.provider || provider.id || provider.textContent?.trim().slice(0, 80) || "provider";
+        trackProduct("provider_open", { provider: label });
+        gaEvent("provider_open", { provider: label });
+      }
+
+      const favorite = event.target.closest?.("[data-favorite-star]");
+      if (favorite) {
+        trackProduct("reward_goal_click", { reward_id: Number(favorite.dataset.favoriteStar || 0) || null });
+      }
+    }, { passive: true });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Activity / streak
+  // ---------------------------------------------------------------------------
+  async function recordActivity(user) {
+    if (!user) return null;
+    try {
+      const data = await rpc("sq_record_activity");
+      return data;
+    } catch {
+      return null;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Offline indicator
+  // ---------------------------------------------------------------------------
+  function initOfflineIndicator() {
+    const bar = create("div", "sq-offline-bar", "Offline — account balances and reward stock may be outdated.");
+    bar.id = "sqOfflineBar";
+    document.body.prepend(bar);
+
+    const sync = () => bar.classList.toggle("show", !navigator.onLine);
+    window.addEventListener("online", sync);
+    window.addEventListener("offline", sync);
+    sync();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Mobile navigation
+  // ---------------------------------------------------------------------------
+  function initMobileNav() {
+    if ($("#sqMobileNav")) return;
+    const nav = create("nav", "sq-mobile-nav", `
+      <a href="/" data-page="index.html" aria-label="Home"><span>⌂</span><small>Home</small></a>
+      <a href="/surveys" data-page="earn.html" aria-label="Surveys"><span>✓</span><small>Surveys</small></a>
+      <a href="/rewards" data-page="rewards.html" aria-label="Rewards"><span>◇</span><small>Rewards</small></a>
+      <a href="/dashboard" data-page="dashboard.html" aria-label="Dashboard"><span>◎</span><small>Dashboard</small></a>
+    `);
+    nav.id = "sqMobileNav";
+    nav.querySelector(`[data-page="${path}"]`)?.classList.add("active");
+    document.body.appendChild(nav);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Notification center
+  // ---------------------------------------------------------------------------
+  let notificationButton = null;
+  let notificationDrawer = null;
+
+  function ensureNotificationUi() {
+    const header = $(".site-header");
+    if (!header || $("#sqNotificationButton")) return;
+
+    notificationButton = create("button", "sq-notification-button", `
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22a2.6 2.6 0 0 0 2.45-1.75h-4.9A2.6 2.6 0 0 0 12 22Zm7-6.2-1.65-2.05V9a5.36 5.36 0 0 0-4.1-5.2V3a1.25 1.25 0 0 0-2.5 0v.8A5.36 5.36 0 0 0 6.65 9v4.75L5 15.8V18h14v-2.2Z"/></svg>
+      <span class="sq-notification-count hidden" data-sq-notification-count>0</span>
+    `);
+    notificationButton.id = "sqNotificationButton";
+    notificationButton.type = "button";
+    notificationButton.setAttribute("aria-label", "Notifications");
+    notificationButton.setAttribute("aria-expanded", "false");
+    header.insertBefore(notificationButton, $("#navAuthActions"));
+
+    notificationDrawer = create("aside", "sq-notification-drawer", `
+      <div class="sq-drawer-head">
+        <div><span class="pill">Activity</span><h2>Notifications</h2></div>
+        <button type="button" class="sq-icon-button" data-sq-close-notifications aria-label="Close notifications">×</button>
+      </div>
+      <div class="sq-drawer-actions">
+        <button type="button" class="mini-button" data-sq-mark-all-read>Mark all read</button>
+      </div>
+      <div class="sq-notification-list" data-sq-notification-list><div class="empty-state">Loading…</div></div>
+    `);
+    notificationDrawer.id = "sqNotificationDrawer";
+    notificationDrawer.setAttribute("aria-hidden", "true");
+    document.body.appendChild(notificationDrawer);
+
+    notificationButton.addEventListener("click", () => toggleNotificationDrawer());
+    notificationDrawer.querySelector("[data-sq-close-notifications]")?.addEventListener("click", () => toggleNotificationDrawer(false));
+    notificationDrawer.querySelector("[data-sq-mark-all-read]")?.addEventListener("click", async () => {
+      try {
+        await rpc("sq_mark_all_notifications_read");
+        await Promise.all([loadNotifications(), refreshNotificationCount()]);
+      } catch (error) {
+        notify(error.message || "Could not update notifications.", "error");
+      }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") toggleNotificationDrawer(false);
+    });
+  }
+
+  async function refreshNotificationCount() {
+    const user = await currentUser();
+    const badge = $("[data-sq-notification-count]");
+    if (!badge) return;
+    if (!user) {
+      badge.classList.add("hidden");
+      return;
+    }
+
+    const c = client();
+    try {
+      const { count, error } = await c
+        .from("sq_notifications")
+        .select("id", { count: "exact", head: true })
+        .is("read_at", null);
+      if (error) throw error;
+      const n = Number(count || 0);
+      badge.textContent = n > 99 ? "99+" : String(n);
+      badge.classList.toggle("hidden", n === 0);
+    } catch {
+      badge.classList.add("hidden");
+    }
+  }
+
+  function toggleNotificationDrawer(open = null) {
+    if (!notificationDrawer || !notificationButton) return;
+    const willOpen = open ?? !notificationDrawer.classList.contains("open");
+    notificationDrawer.classList.toggle("open", willOpen);
+    notificationDrawer.setAttribute("aria-hidden", String(!willOpen));
+    notificationButton.setAttribute("aria-expanded", String(willOpen));
+    if (willOpen) loadNotifications();
+  }
+
+  async function loadNotifications() {
+    const list = $("[data-sq-notification-list]");
+    if (!list) return;
+    const user = await currentUser();
+    if (!user) {
+      list.innerHTML = `<div class="empty-state">Sign in to see notifications.</div>`;
+      return;
+    }
+
+    const c = client();
+    const { data, error } = await c
+      .from("sq_notifications")
+      .select("id, notification_type, title, body, href, read_at, created_at")
+      .order("created_at", { ascending: false })
+      .limit(30);
+
+    if (error) {
+      list.innerHTML = `<div class="empty-state">Notifications are unavailable right now.</div>`;
+      return;
+    }
+    if (!data?.length) {
+      list.innerHTML = `<div class="empty-state">Nothing new yet.</div>`;
+      return;
+    }
+
+    list.innerHTML = data.map((item) => `
+      <button class="sq-notification-row ${item.read_at ? "" : "unread"}" type="button" data-sq-notification-id="${item.id}" data-href="${safeText(item.href || "")}">
+        <span class="sq-notification-dot"></span>
+        <span>
+          <strong>${safeText(item.title)}</strong>
+          ${item.body ? `<small>${safeText(item.body)}</small>` : ""}
+          <time>${safeText(formatDate(item.created_at))}</time>
+        </span>
+      </button>
+    `).join("");
+
+    $$('[data-sq-notification-id]', list).forEach((row) => {
+      row.addEventListener("click", async () => {
+        const id = Number(row.dataset.sqNotificationId);
+        try { await rpc("sq_mark_notification_read", { p_notification_id: id }); } catch {}
+        row.classList.remove("unread");
+        refreshNotificationCount();
+        const href = row.dataset.href;
+        if (href) location.href = href;
+      });
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Homepage: stronger conversion + real trust proof + reward preview + status
+  // ---------------------------------------------------------------------------
+  async function enhanceHomepage() {
+    if (path !== "index.html" || IS_CAMPAIGN_PAGE) return;
+    const hero = $(".hero-copy");
+    if (hero) {
+      const h1 = $("h1", hero);
+      const p = $("p", hero);
+      const pill = $(".pill", hero);
+      if (pill) pill.textContent = "Complete tasks · choose your skin";
+      if (h1) h1.textContent = "Complete tasks. Earn CS2 skins.";
+      if (p) p.textContent = "Earn coins from verified partner tasks, save toward the exact reward you want, and receive approved rewards through Steam. No deposits, no cases, no roulette.";
+    }
+
+    const main = $("main");
+    if (!main || $("#sqHomeLiveProof")) return;
+    const section = create("section", "sq-home-live-proof", `
+      <div class="sq-section-head">
+        <div><span class="pill">Real platform data</span><h2>What is happening on SkinQuest</h2></div>
+        <a class="button button-ghost" href="/rewards">Browse rewards</a>
+      </div>
+      <div class="sq-public-stats" data-sq-public-stats>
+        <div><strong>—</strong><span>active rewards</span></div>
+        <div><strong>—</strong><span>completed rewards</span></div>
+        <div><strong>—</strong><span>open requests</span></div>
+      </div>
+      <div class="sq-home-grid">
+        <article class="panel sq-home-rewards-panel">
+          <div class="sq-section-head compact"><div><span class="pill">Available now</span><h2>Rewards worth saving for</h2></div></div>
+          <div class="sq-home-reward-list" data-sq-home-rewards><div class="empty-state">Loading rewards…</div></div>
+        </article>
+        <article class="panel sq-delivered-panel">
+          <div class="sq-section-head compact"><div><span class="pill">Proof</span><h2>Recently completed</h2></div></div>
+          <div class="sq-delivered-list" data-sq-delivered><div class="empty-state">Loading completed rewards…</div></div>
+        </article>
+      </div>
+      <div class="sq-status-strip" data-sq-status-strip></div>
+    `);
+    section.id = "sqHomeLiveProof";
+    main.appendChild(section);
+
+    const c = client();
+    if (!c) return;
+
+    try {
+      const stats = await rpc("sq_public_stats");
+      const boxes = $$('[data-sq-public-stats] > div');
+      const values = [stats?.active_rewards, stats?.completed_rewards, stats?.open_rewards];
+      boxes.forEach((box, i) => { $("strong", box).textContent = formatNumber(values[i]); });
+    } catch {}
+
+    try {
+      const { data } = await c
+        .from("reward_items")
+        .select("id,name,points_coins,image_url,condition,rarity,quantity_total,quantity_reserved")
+        .eq("active", true)
+        .order("sort_order", { ascending: true })
+        .limit(4);
+      const target = $("[data-sq-home-rewards]");
+      if (target) {
+        if (!data?.length) target.innerHTML = `<div class="empty-state">No rewards are listed right now.</div>`;
+        else target.innerHTML = data.map((item) => {
+          const cost = Number(item.points_coins ?? 0);
+          const available = Math.max(0, Number(item.quantity_total ?? 0) - Number(item.quantity_reserved ?? 0));
+          return `
+            <a class="sq-home-reward" href="/rewards?reward=${Number(item.id)}">
+              <span class="sq-home-reward-art">${item.image_url ? `<img src="${safeText(item.image_url)}" alt="" loading="lazy" />` : `<strong>${safeText(item.name?.split("|")[0] || "CS2")}</strong>`}</span>
+              <span><strong>${safeText(item.name)}</strong><small>${safeText(item.condition || item.rarity || "CS2 reward")}</small></span>
+              <span class="sq-home-reward-price">${formatNumber(cost)} <small>coins</small>${available ? `<em>${available} available</em>` : `<em>Out of stock</em>`}</span>
+            </a>`;
+        }).join("");
+      }
+    } catch {}
+
+    try {
+      const completed = await rpc("sq_recent_completed_rewards", { p_limit: 6 });
+      const target = $("[data-sq-delivered]");
+      if (target) {
+        if (!completed?.length) target.innerHTML = `<div class="empty-state">Completed rewards will appear here after real deliveries are recorded.</div>`;
+        else target.innerHTML = completed.map((item) => `
+          <div class="sq-delivered-row"><span class="sq-live-dot"></span><span><strong>${safeText(item.reward_name)}</strong><small>Completed ${safeText(formatDate(item.completed_at))}</small></span><span class="status-pill">Delivered</span></div>
+        `).join("");
+      }
+    } catch {}
+
+    loadStatusStrip();
+  }
+
+  async function loadStatusStrip() {
+    const target = $("[data-sq-status-strip]");
+    if (!target) return;
+    const c = client();
+    if (!c) return;
+    try {
+      const { data, error } = await c.from("sq_system_status").select("component,display_name,status,message").order("sort_order");
+      if (error) throw error;
+      target.innerHTML = (data || []).map((item) => `
+        <div class="sq-status-item status-${safeText(item.status)}"><span></span><strong>${safeText(item.display_name)}</strong><small>${safeText(item.status === "operational" ? "Operational" : item.message || item.status)}</small></div>
+      `).join("");
+    } catch {}
+  }
+
+  // ---------------------------------------------------------------------------
+  // Dashboard: quests, achievements, streak, onboarding, referrals, promo codes
+  // ---------------------------------------------------------------------------
+  function injectDashboardShell() {
+    if (path !== "dashboard.html") return;
+    const account = $("#accountSection");
+    if (!account || $("#sqGrowthHub")) return;
+
+    const hub = create("section", "sq-growth-hub", `
+      <section class="panel sq-next-action-panel" data-sq-next-action>
+        <div><span class="pill">Next move</span><h2>Keep your next reward moving</h2><p class="muted">Complete another verified task and move closer to your starred goals.</p></div>
+        <a class="button button-primary" href="/surveys">Continue earning</a>
+      </section>
+
+      <section class="sq-growth-stats" data-sq-growth-stats>
+        <article class="stat-card"><span>Current streak</span><strong>—</strong><p>Consecutive active days.</p></article>
+        <article class="stat-card"><span>Longest streak</span><strong>—</strong><p>Your personal best.</p></article>
+        <article class="stat-card"><span>Quests</span><strong>—</strong><p>Progress milestones completed.</p></article>
+        <article class="stat-card"><span>Achievements</span><strong>—</strong><p>Permanent milestones unlocked.</p></article>
+      </section>
+
+      <section class="panel sq-onboarding-panel">
+        <div class="sq-section-head compact"><div><span class="pill">Setup</span><h2>Your SkinQuest checklist</h2></div><strong data-sq-onboarding-percent>—</strong></div>
+        <div class="sq-onboarding-progress"><span data-sq-onboarding-fill></span></div>
+        <div class="sq-checklist" data-sq-onboarding-list></div>
+      </section>
+
+      <section class="panel sq-quests-panel">
+        <div class="sq-section-head compact"><div><span class="pill">SkinQuest</span><h2>Quests</h2><p class="muted">Milestones are verified from your real account activity.</p></div></div>
+        <div class="sq-quest-grid" data-sq-quests><div class="empty-state">Loading quests…</div></div>
+      </section>
+
+      <section class="panel sq-achievement-panel">
+        <div class="sq-section-head compact"><div><span class="pill">Profile</span><h2>Achievements</h2></div></div>
+        <div class="sq-achievement-grid" data-sq-achievements><div class="empty-state">Loading achievements…</div></div>
+      </section>
+
+      <section class="sq-promo-ref-grid">
+        <article class="panel">
+          <div class="sq-section-head compact"><div><span class="pill">Bonus cards</span><h2>Redeem a code</h2></div></div>
+          <form class="sq-inline-form" data-sq-promo-form>
+            <input type="text" maxlength="64" placeholder="SQ-XXXXX" autocomplete="off" data-sq-promo-input required />
+            <button class="button button-primary" type="submit">Redeem</button>
+          </form>
+          <p class="muted compact-copy">One-use promotional codes can come from SkinQuest campaigns, QR cards, or creator promotions.</p>
+        </article>
+        <article class="panel">
+          <div class="sq-section-head compact"><div><span class="pill">Invite</span><h2>Your referral link</h2></div></div>
+          <div class="sq-referral-box" data-sq-referral-box><div class="empty-state compact-empty">Loading referral code…</div></div>
+        </article>
+      </section>
+    `);
+    hub.id = "sqGrowthHub";
+    account.appendChild(hub);
+
+    const pendingPromo = localStorage.getItem(LAST_PROMO_KEY);
+    if (pendingPromo) {
+      const input = $("[data-sq-promo-input]", hub);
+      if (input) input.value = pendingPromo;
+    }
+
+    hub.querySelector("[data-sq-promo-form]")?.addEventListener("submit", redeemPromoFromForm);
+  }
+
+  async function loadGrowthHub() {
+    if (path !== "dashboard.html") return;
+    injectDashboardShell();
+    const user = await currentUser();
+    if (!user) return;
+
+    try { await rpc("sq_refresh_my_progress"); } catch {}
+
+    try {
+      const summary = await rpc("sq_get_my_growth_summary");
+      const cards = $$('[data-sq-growth-stats] .stat-card');
+      const values = [
+        `${formatNumber(summary?.current_streak)}d`,
+        `${formatNumber(summary?.longest_streak)}d`,
+        `${formatNumber(summary?.quests_completed)}/${formatNumber(summary?.quests_total)}`,
+        formatNumber(summary?.achievements)
+      ];
+      cards.forEach((card, i) => { $("strong", card).textContent = values[i]; });
+    } catch {}
+
+    const c = client();
+    try {
+      const [{ data: quests }, { data: progress }] = await Promise.all([
+        c.from("sq_quests").select("quest_key,title,description,category,target,sort_order").eq("active", true).order("sort_order"),
+        c.from("sq_user_quest_progress").select("quest_key,progress,completed_at")
+      ]);
+      renderQuests(quests || [], progress || []);
+      renderOnboarding(quests || [], progress || []);
+    } catch {}
+
+    try {
+      const [{ data: achievements }, { data: unlocked }] = await Promise.all([
+        c.from("sq_achievements").select("achievement_key,title,description,icon,sort_order").eq("active", true).order("sort_order"),
+        c.from("sq_user_achievements").select("achievement_key,unlocked_at")
+      ]);
+      renderAchievements(achievements || [], unlocked || []);
+    } catch {}
+
+    loadReferralBox();
+  }
+
+  function renderQuests(quests, progressRows) {
+    const target = $("[data-sq-quests]");
+    if (!target) return;
+    const map = new Map(progressRows.map((p) => [p.quest_key, p]));
+    target.innerHTML = quests.map((quest) => {
+      const row = map.get(quest.quest_key) || { progress: 0, completed_at: null };
+      const p = Math.min(Number(row.progress || 0), Number(quest.target || 1));
+      const pct = Math.max(0, Math.min(100, (p / Number(quest.target || 1)) * 100));
+      const completed = !!row.completed_at || pct >= 100;
+      return `
+        <article class="sq-quest-card ${completed ? "complete" : ""}">
+          <div class="sq-quest-head"><span class="sq-quest-category">${safeText(quest.category)}</span><span>${completed ? "✓ Complete" : `${formatNumber(p)} / ${formatNumber(quest.target)}`}</span></div>
+          <h3>${safeText(quest.title)}</h3>
+          <p>${safeText(quest.description)}</p>
+          <div class="sq-mini-progress"><span style="width:${pct}%"></span></div>
+        </article>`;
+    }).join("");
+  }
+
+  function renderOnboarding(quests, progressRows) {
+    const list = $("[data-sq-onboarding-list]");
+    const pctText = $("[data-sq-onboarding-percent]");
+    const fill = $("[data-sq-onboarding-fill]");
+    if (!list) return;
+
+    const setupKeys = ["add_trade_url", "star_goal", "first_earn", "first_redeem"];
+    const qMap = new Map(quests.map((q) => [q.quest_key, q]));
+    const pMap = new Map(progressRows.map((p) => [p.quest_key, p]));
+    const items = setupKeys.map((key) => ({ quest: qMap.get(key), progress: pMap.get(key) })).filter((x) => x.quest);
+    const done = items.filter((x) => x.progress?.completed_at || Number(x.progress?.progress || 0) >= Number(x.quest.target)).length;
+    const pct = items.length ? Math.round((done / items.length) * 100) : 0;
+    if (pctText) pctText.textContent = `${pct}%`;
+    if (fill) fill.style.width = `${pct}%`;
+
+    const links = {
+      add_trade_url: "/settings#tradeForm",
+      star_goal: "/rewards",
+      first_earn: "/surveys",
+      first_redeem: "/rewards"
+    };
+    list.innerHTML = items.map(({ quest, progress }) => {
+      const completed = progress?.completed_at || Number(progress?.progress || 0) >= Number(quest.target);
+      return `<a class="sq-check-row ${completed ? "complete" : ""}" href="${links[quest.quest_key] || "/dashboard"}"><span>${completed ? "✓" : ""}</span><strong>${safeText(quest.title)}</strong><small>${completed ? "Done" : "Open"}</small></a>`;
+    }).join("");
+  }
+
+  function renderAchievements(items, unlockedRows) {
+    const target = $("[data-sq-achievements]");
+    if (!target) return;
+    const unlocked = new Map(unlockedRows.map((a) => [a.achievement_key, a]));
+    target.innerHTML = items.map((item) => {
+      const row = unlocked.get(item.achievement_key);
+      return `
+        <article class="sq-achievement ${row ? "unlocked" : "locked"}">
+          <span class="sq-achievement-icon">${safeText(item.icon || "★")}</span>
+          <div><strong>${safeText(item.title)}</strong><p>${safeText(item.description)}</p>${row ? `<small>Unlocked ${safeText(formatDate(row.unlocked_at))}</small>` : `<small>Locked</small>`}</div>
+        </article>`;
+    }).join("");
+  }
+
+  async function redeemPromoFromForm(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const input = $("[data-sq-promo-input]", form);
+    const button = $('button[type="submit"]', form);
+    const code = input?.value.trim();
+    if (!code) return;
+    button.disabled = true;
+    const old = button.textContent;
+    button.textContent = "Checking…";
+    try {
+      const data = await rpc("sq_redeem_promo_code", { p_code: code });
+      localStorage.removeItem(LAST_PROMO_KEY);
+      notify(`Code redeemed: +${formatNumber(data?.coins_awarded)} coins.`);
+      input.value = "";
+      trackProduct("promo_success", { coins: Number(data?.coins_awarded || 0) });
+      setTimeout(() => location.reload(), 800);
+    } catch (error) {
+      notify(error.message || "Could not redeem that code.", "error");
+    } finally {
+      button.disabled = false;
+      button.textContent = old;
+    }
+  }
+
+  async function loadReferralBox() {
+    const target = $("[data-sq-referral-box]");
+    if (!target) return;
+    try {
+      const code = await rpc("sq_get_or_create_referral_code");
+      const link = `${location.origin}/?ref=${encodeURIComponent(code)}`;
+      const c = client();
+      const { data } = await c.from("sq_referrals").select("referred_user_id,qualified_at,reward_issued_at");
+      const total = data?.length || 0;
+      const qualified = (data || []).filter((r) => r.qualified_at).length;
+      target.innerHTML = `
+        <div class="sq-referral-link"><code>${safeText(link)}</code><button class="mini-button" type="button" data-sq-copy-ref>Copy</button></div>
+        <div class="sq-referral-stats"><span><strong>${formatNumber(total)}</strong> referrals</span><span><strong>${formatNumber(qualified)}</strong> qualified</span></div>
+        <p class="muted compact-copy">Referral rewards are only issued after a referral qualifies; creating accounts alone does not pay a bonus.</p>`;
+      target.querySelector("[data-sq-copy-ref]")?.addEventListener("click", () => copy(link, "Referral link copied."));
+    } catch (error) {
+      target.innerHTML = `<div class="empty-state compact-empty">Referral link unavailable.</div>`;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Rewards: extra filters, progress-to-price, details, restock alerts
+  // ---------------------------------------------------------------------------
+  const rewardFilters = { weapon: "all", condition: "all", rarity: "all", goals: false };
+  let rewardObserver = null;
+
+  function injectRewardExtraFilters() {
+    if (path !== "rewards.html") return;
+    const status = $(".reward-shop-status");
+    if (!status || $("#sqRewardExtraFilters")) return;
+    const bar = create("section", "sq-extra-reward-filters", `
+      <div class="sq-extra-filter-group"><span>Weapon</span><select data-sq-filter="weapon"><option value="all">All weapons</option><option>AK-47</option><option>M4A1-S</option><option>M4A4</option><option>AWP</option><option>USP-S</option><option>Glock-18</option><option>Desert Eagle</option><option>P250</option><option>Case</option></select></div>
+      <div class="sq-extra-filter-group"><span>Condition</span><select data-sq-filter="condition"><option value="all">All conditions</option><option value="fn">Factory New</option><option value="mw">Minimal Wear</option><option value="ft">Field-Tested</option><option value="ww">Well-Worn</option><option value="bs">Battle-Scarred</option></select></div>
+      <div class="sq-extra-filter-group"><span>Rarity</span><select data-sq-filter="rarity"><option value="all">All rarities</option><option value="consumer">Consumer</option><option value="industrial">Industrial</option><option value="mil-spec">Mil-Spec</option><option value="restricted">Restricted</option><option value="classified">Classified</option><option value="covert">Covert</option></select></div>
+      <button class="sq-filter-toggle" type="button" data-sq-goals-only aria-pressed="false">★ Goals only</button>
+      <button class="mini-button" type="button" data-sq-clear-extra>Reset extra filters</button>
+    `);
+    bar.id = "sqRewardExtraFilters";
+    status.parentNode.insertBefore(bar, status);
+
+    $$('[data-sq-filter]', bar).forEach((select) => {
+      select.addEventListener("change", () => {
+        rewardFilters[select.dataset.sqFilter] = select.value.toLowerCase();
+        applyRewardEnhancements();
+      });
+    });
+    bar.querySelector("[data-sq-goals-only]")?.addEventListener("click", (event) => {
+      rewardFilters.goals = !rewardFilters.goals;
+      event.currentTarget.setAttribute("aria-pressed", String(rewardFilters.goals));
+      event.currentTarget.classList.toggle("active", rewardFilters.goals);
+      applyRewardEnhancements();
+    });
+    bar.querySelector("[data-sq-clear-extra]")?.addEventListener("click", () => {
+      rewardFilters.weapon = rewardFilters.condition = rewardFilters.rarity = "all";
+      rewardFilters.goals = false;
+      $$('[data-sq-filter]', bar).forEach((select) => { select.value = "all"; });
+      const goals = $("[data-sq-goals-only]", bar);
+      goals?.setAttribute("aria-pressed", "false");
+      goals?.classList.remove("active");
+      applyRewardEnhancements();
+    });
+  }
+
+  function conditionMatches(text, filter) {
+    if (filter === "all") return true;
+    const aliases = {
+      fn: ["factory new", " fn"],
+      mw: ["minimal wear", " mw"],
+      ft: ["field-tested", "field tested", " ft"],
+      ww: ["well-worn", "well worn", " ww"],
+      bs: ["battle-scarred", "battle scarred", " bs"]
+    };
+    return (aliases[filter] || [filter]).some((x) => text.includes(x));
+  }
+
+  async function getBalance() {
+    const user = await currentUser();
+    if (!user) return 0;
+    const c = client();
+    try {
+      const { data } = await c.from("profiles").select("points_balance").eq("id", user.id).maybeSingle();
+      return Number(data?.points_balance || 0);
+    } catch {
+      return 0;
+    }
+  }
+
+  function parseCardCost(card) {
+    const priceText = $(".price", card)?.textContent || "";
+    const n = Number(priceText.replace(/[^0-9]/g, ""));
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  async function applyRewardEnhancements() {
+    if (path !== "rewards.html") return;
+    const grid = $("#rewardsGrid");
+    if (!grid) return;
+    const balance = await getBalance();
+    const cards = $$(".reward-card", grid);
+
+    for (const card of cards) {
+      const text = ` ${card.textContent?.toLowerCase() || ""}`;
+      const title = $("h2", card)?.textContent?.toLowerCase() || "";
+      const weaponMatch = rewardFilters.weapon === "all" || title.includes(rewardFilters.weapon.toLowerCase());
+      const conditionMatch = conditionMatches(text, rewardFilters.condition);
+      const rarityMatch = rewardFilters.rarity === "all" || text.includes(rewardFilters.rarity);
+      const star = $("[data-favorite-star]", card);
+      const goalMatch = !rewardFilters.goals || star?.classList.contains("is-favorited") || star?.getAttribute("aria-pressed") === "true";
+      card.classList.toggle("sq-extra-hidden", !(weaponMatch && conditionMatch && rarityMatch && goalMatch));
+
+      if (!$(".sq-reward-progress", card)) {
+        const cost = parseCardCost(card);
+        if (cost > 0) {
+          const remaining = Math.max(0, cost - balance);
+          const pct = Math.min(100, (balance / cost) * 100);
+          const progress = create("div", "sq-reward-progress", `
+            <div><span>${balance > 0 ? `${formatNumber(balance)} / ${formatNumber(cost)} coins` : `${formatNumber(cost)} coins`}</span><strong>${remaining === 0 ? "Ready to redeem" : `${formatNumber(remaining)} remaining`}</strong></div>
+            <div class="sq-mini-progress"><span style="width:${pct}%"></span></div>
+          `);
+          const actions = $(".reward-actions", card);
+          actions?.parentNode.insertBefore(progress, actions);
+        }
+      }
+
+      const redeem = $("[data-redeem]", card);
+      const rewardId = Number(redeem?.dataset.redeem || star?.dataset.favoriteStar || 0);
+      if (rewardId && card.classList.contains("is-out") && !$("[data-sq-stock-alert]", card)) {
+        const btn = create("button", "mini-button sq-stock-alert", "Notify when available");
+        btn.type = "button";
+        btn.dataset.sqStockAlert = String(rewardId);
+        $(".reward-actions", card)?.appendChild(btn);
+        btn.addEventListener("click", async (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          if (!await currentUser()) {
+            try { if (typeof openAuthModal === "function") openAuthModal("signup"); } catch {}
+            return;
+          }
+          btn.disabled = true;
+          try {
+            const result = await rpc("sq_toggle_stock_alert", { p_reward_id: rewardId });
+            btn.textContent = result?.subscribed ? "Alert enabled ✓" : "Notify when available";
+            btn.classList.toggle("active", !!result?.subscribed);
+            notify(result?.subscribed ? "We’ll add an in-app notification when this reward is restocked." : "Stock alert removed.");
+          } catch (error) {
+            notify(error.message || "Could not update stock alert.", "error");
+          } finally {
+            btn.disabled = false;
+          }
+        });
+      }
+
+      if (!card.dataset.sqDetailBound) {
+        card.dataset.sqDetailBound = "true";
+        const art = $(".reward-art, .reward-image, h2", card);
+        art?.addEventListener("click", (event) => {
+          if (event.target.closest("button,a")) return;
+          openRewardDetail(card);
+        });
+      }
+    }
+
+    const visible = cards.filter((card) => !card.classList.contains("sq-extra-hidden")).length;
+    const count = $("#rewardResultCount");
+    const extraActive = rewardFilters.weapon !== "all" || rewardFilters.condition !== "all" || rewardFilters.rarity !== "all" || rewardFilters.goals;
+    if (count && extraActive) count.textContent = `Showing ${formatNumber(visible)} rewards with extra filters`;
+  }
+
+  function openRewardDetail(card) {
+    $("#sqRewardDetail")?.remove();
+    const title = $("h2", card)?.textContent?.trim() || "CS2 reward";
+    const description = $(".reward-description", card)?.textContent?.trim() || "Fixed SkinQuest reward delivered through a reviewed Steam trade.";
+    const price = $(".price", card)?.textContent?.trim() || "";
+    const stock = $$(".stock-pill", card).map((x) => x.textContent.trim()).join(" · ");
+    const image = $(".reward-art img, img", card)?.src || "";
+    const rewardId = Number($("[data-redeem]", card)?.dataset.redeem || $("[data-favorite-star]", card)?.dataset.favoriteStar || 0);
+
+    const modal = create("div", "sq-modal-backdrop", `
+      <article class="sq-reward-detail" role="dialog" aria-modal="true" aria-labelledby="sqRewardDetailTitle">
+        <button type="button" class="sq-icon-button sq-detail-close" aria-label="Close">×</button>
+        <div class="sq-detail-art">${image ? `<img src="${safeText(image)}" alt="" />` : `<strong>CS2</strong>`}</div>
+        <div class="sq-detail-copy">
+          <span class="pill">Fixed reward</span>
+          <h2 id="sqRewardDetailTitle">${safeText(title)}</h2>
+          <p>${safeText(description)}</p>
+          <div class="sq-detail-meta"><strong>${safeText(price)}</strong><span>${safeText(stock || "Stock shown in the reward store")}</span></div>
+          <div class="sq-detail-safety"><strong>How delivery works</strong><span>Redeem at a fixed coin price. SkinQuest reviews the request and sends approved rewards using the Steam trade URL saved to your account.</span></div>
+          <div class="hero-actions"><button class="button button-primary" type="button" data-sq-detail-redeem>Use reward action</button><button class="button button-ghost" type="button" data-sq-detail-close>Close</button></div>
+        </div>
+      </article>`);
+    modal.id = "sqRewardDetail";
+    document.body.appendChild(modal);
+    modal.querySelectorAll("[data-sq-detail-close], .sq-detail-close").forEach((btn) => btn.addEventListener("click", () => modal.remove()));
+    modal.addEventListener("click", (event) => { if (event.target === modal) modal.remove(); });
+    modal.querySelector("[data-sq-detail-redeem]")?.addEventListener("click", () => {
+      modal.remove();
+      const original = card.querySelector(`[data-redeem="${rewardId}"]`) || card.querySelector("[data-reward-action]");
+      original?.click();
+    });
+    setTimeout(() => modal.classList.add("open"), 10);
+  }
+
+  function watchRewardGrid() {
+    const grid = $("#rewardsGrid");
+    if (!grid || rewardObserver) return;
+    let timer;
+    rewardObserver = new MutationObserver(() => {
+      clearTimeout(timer);
+      timer = setTimeout(applyRewardEnhancements, 35);
+    });
+    rewardObserver.observe(grid, { childList: true, subtree: true });
+    applyRewardEnhancements();
+
+    const params = new URLSearchParams(location.search);
+    const rewardId = Number(params.get("reward") || 0);
+    if (rewardId) {
+      const attempt = () => {
+        const card = $(`[data-redeem="${rewardId}"]`)?.closest(".reward-card");
+        if (card) {
+          card.scrollIntoView({ behavior: "smooth", block: "center" });
+          card.classList.add("sq-highlight-reward");
+          setTimeout(() => card.classList.remove("sq-highlight-reward"), 2400);
+        }
+      };
+      setTimeout(attempt, 700);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Hide user-facing development leakage
+  // ---------------------------------------------------------------------------
+  function hideDevelopmentLeakage() {
+    const phrases = ["credentials required", "before launch", "future integration", "provider approval first", "not connected yet"];
+    $$(".provider-card, .settings-card, .readiness-item").forEach((card) => {
+      const text = card.textContent?.toLowerCase() || "";
+      if (phrases.some((phrase) => text.includes(phrase))) card.classList.add("sq-development-hidden");
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Admin: real KPIs, promo creator, status editor, audit log
+  // ---------------------------------------------------------------------------
+  async function enhanceAdmin() {
+    if (path !== "admin.html") return;
+    const panel = $("#adminPanel");
+    if (!panel || $("#sqAdminV14")) return;
+
+    const shell = create("section", "sq-admin-v14", `
+      <section class="panel">
+        <div class="sq-section-head"><div><span class="pill">v${VERSION}</span><h2>Operating overview</h2></div><button class="mini-button" type="button" data-sq-refresh-admin>Refresh</button></div>
+        <div class="sq-admin-kpis" data-sq-admin-kpis><div class="empty-state">Loading KPIs…</div></div>
+      </section>
+      <section class="sq-admin-two-col">
+        <article class="panel">
+          <div class="sq-section-head compact"><div><span class="pill">Campaigns</span><h2>Create promo code</h2></div></div>
+          <form class="sq-admin-promo-form" data-sq-admin-promo-form>
+            <label>Code<input name="code" maxlength="64" placeholder="SQ-UPPSALA-01" required /></label>
+            <label>Coins<input name="coins" type="number" min="1" max="100000" value="50" required /></label>
+            <label>Campaign<input name="campaign" maxlength="160" placeholder="Printed cards August" /></label>
+            <label>Maximum uses<input name="max" type="number" min="1" placeholder="50" /></label>
+            <button class="button button-primary" type="submit">Create code</button>
+          </form>
+        </article>
+        <article class="panel">
+          <div class="sq-section-head compact"><div><span class="pill">Health</span><h2>Public system status</h2></div></div>
+          <div data-sq-admin-status><div class="empty-state">Loading status…</div></div>
+        </article>
+      </section>
+      <section class="panel">
+        <div class="sq-section-head compact"><div><span class="pill">Security</span><h2>Recent admin audit</h2></div></div>
+        <div class="sq-audit-list" data-sq-audit-list><div class="empty-state">Loading audit log…</div></div>
+      </section>
+    `);
+    shell.id = "sqAdminV14";
+    panel.prepend(shell);
+
+    shell.querySelector("[data-sq-refresh-admin]")?.addEventListener("click", () => loadAdminV14Data());
+    shell.querySelector("[data-sq-admin-promo-form]")?.addEventListener("submit", createAdminPromo);
+    await loadAdminV14Data();
+  }
+
+  async function loadAdminV14Data() {
+    const kpiTarget = $("[data-sq-admin-kpis]");
+    try {
+      const kpi = await rpc("sq_admin_kpis");
+      if (kpiTarget) kpiTarget.innerHTML = [
+        ["Users", kpi.users, `${formatNumber(kpi.new_users_24h)} new / 24h`],
+        ["Coin liability", kpi.coin_liability, "coins held by users"],
+        ["Open rewards", kpi.open_rewards, `${formatNumber(kpi.completed_rewards)} completed total`],
+        ["Support", kpi.open_support, "new / open tickets"],
+        ["Active rewards", kpi.active_rewards, "listed now"],
+        ["Positive credits", kpi.positive_coin_credits_24h, "coins / 24h"]
+      ].map(([label, value, detail]) => `<div><span>${safeText(label)}</span><strong>${formatNumber(value)}</strong><small>${safeText(detail)}</small></div>`).join("");
+    } catch (error) {
+      if (kpiTarget) kpiTarget.innerHTML = `<div class="empty-state">Admin KPIs unavailable.</div>`;
+    }
+
+    const c = client();
+    const statusTarget = $("[data-sq-admin-status]");
+    try {
+      const { data } = await c.from("sq_system_status").select("component,display_name,status,message,updated_at").order("sort_order");
+      if (statusTarget) {
+        statusTarget.innerHTML = (data || []).map((item) => `
+          <div class="sq-admin-status-row" data-component="${safeText(item.component)}">
+            <div><strong>${safeText(item.display_name)}</strong><small>${safeText(item.message || "")}</small></div>
+            <select data-sq-status-select>
+              ${["operational","degraded","maintenance","incident"].map((status) => `<option value="${status}" ${item.status === status ? "selected" : ""}>${status}</option>`).join("")}
+            </select>
+            <button class="mini-button" type="button" data-sq-save-status>Save</button>
+          </div>`).join("");
+        $$('[data-sq-save-status]', statusTarget).forEach((button) => button.addEventListener("click", saveSystemStatus));
+      }
+    } catch {
+      if (statusTarget) statusTarget.innerHTML = `<div class="empty-state">Status controls unavailable.</div>`;
+    }
+
+    const auditTarget = $("[data-sq-audit-list]");
+    try {
+      const { data } = await c.from("sq_admin_audit_log").select("id,actor_user_id,action,entity_type,entity_id,details,created_at").order("created_at", { ascending: false }).limit(30);
+      if (auditTarget) auditTarget.innerHTML = data?.length ? data.map((row) => `
+        <div class="sq-audit-row"><span><strong>${safeText(row.action)}</strong><small>${safeText(row.entity_type)} · ${safeText(row.entity_id || "")}</small></span><code>${safeText(JSON.stringify(row.details || {}))}</code><time>${safeText(formatDate(row.created_at))}</time></div>
+      `).join("") : `<div class="empty-state">No audit events yet.</div>`;
+    } catch {
+      if (auditTarget) auditTarget.innerHTML = `<div class="empty-state">Audit log unavailable.</div>`;
+    }
+  }
+
+  async function createAdminPromo(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const button = $('button[type="submit"]', form);
+    const fd = new FormData(form);
+    button.disabled = true;
+    try {
+      const result = await rpc("sq_admin_create_promo_code", {
+        p_code: fd.get("code"),
+        p_coin_amount: Number(fd.get("coins")),
+        p_campaign: String(fd.get("campaign") || "") || null,
+        p_max_redemptions: fd.get("max") ? Number(fd.get("max")) : null,
+        p_starts_at: null,
+        p_ends_at: null
+      });
+      notify(`Promo code ${result.code} created.`);
+      form.reset();
+      form.elements.coins.value = 50;
+      loadAdminV14Data();
+    } catch (error) {
+      notify(error.message || "Could not create promo code.", "error");
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  async function saveSystemStatus(event) {
+    const row = event.currentTarget.closest("[data-component]");
+    const component = row?.dataset.component;
+    const status = $("[data-sq-status-select]", row)?.value;
+    if (!component || !status) return;
+    const c = client();
+    try {
+      const { error } = await c.rpc("sq_admin_set_system_status", {
+        p_component: component,
+        p_status: status,
+        p_message: null
+      });
+      if (error) throw error;
+      notify("System status updated.");
+      loadAdminV14Data();
+    } catch (error) {
+      notify(error.message || "Could not update status.", "error");
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Install prompt after repeat visit (not first-page harassment)
+  // ---------------------------------------------------------------------------
+  let deferredInstallPrompt = null;
+
+  function initInstallPrompt() {
+    if (isStandalone()) return;
+    let visits = Number(localStorage.getItem(VISIT_KEY) || 0) + 1;
+    localStorage.setItem(VISIT_KEY, String(Math.min(visits, 999)));
+
+    window.addEventListener("beforeinstallprompt", (event) => {
+      event.preventDefault();
+      deferredInstallPrompt = event;
+      if (visits >= 2) showInstallNudge();
+    });
+  }
+
+  function showInstallNudge() {
+    if ($("#sqInstallNudge") || isStandalone()) return;
+    const nudge = create("aside", "sq-install-nudge", `
+      <div><strong>Add SkinQuest to your device</strong><span>Faster access to Surveys, Rewards and your Dashboard.</span></div>
+      <div><button class="button button-primary" type="button" data-sq-install-now>Install</button><button class="sq-icon-button" type="button" data-sq-dismiss-install aria-label="Dismiss">×</button></div>
+    `);
+    nudge.id = "sqInstallNudge";
+    document.body.appendChild(nudge);
+    nudge.querySelector("[data-sq-dismiss-install]")?.addEventListener("click", () => nudge.remove());
+    nudge.querySelector("[data-sq-install-now]")?.addEventListener("click", async () => {
+      if (deferredInstallPrompt) {
+        deferredInstallPrompt.prompt();
+        const choice = await deferredInstallPrompt.userChoice;
+        gaEvent("pwa_install_prompt", { outcome: choice?.outcome || "unknown" });
+        deferredInstallPrompt = null;
+        nudge.remove();
+      } else {
+        location.href = "/install";
+      }
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Small accessibility and product polish
+  // ---------------------------------------------------------------------------
+  function improveAccessibility() {
+    $$('button:not([type])').forEach((button) => button.setAttribute("type", "button"));
+    $$('img:not([alt])').forEach((img) => img.setAttribute("alt", ""));
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") $("#sqRewardDetail")?.remove();
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Auth-aware refresh loop
+  // ---------------------------------------------------------------------------
+  async function afterAuthReady() {
+    const user = await currentUser();
+    if (!IS_CAMPAIGN_PAGE) ensureNotificationUi();
+    if (user) {
+      await Promise.allSettled([
+        persistAttribution(user),
+        applyPendingReferral(user),
+        recordActivity(user)
+      ]);
+      refreshNotificationCount();
+      if (path === "dashboard.html") loadGrowthHub();
+    } else {
+      refreshNotificationCount();
+    }
+  }
+
+  function bindAuthWatcher() {
+    const c = client();
+    if (!c) return;
+    try {
+      c.auth.onAuthStateChange((_event, session) => {
+        if (session?.user) {
+          setTimeout(() => afterAuthReady(), 120);
+        } else {
+          setTimeout(() => refreshNotificationCount(), 120);
+        }
+      });
+    } catch {}
+  }
+
+  async function bootV14() {
+    captureAttribution();
+    addCookiePreferencesLink();
+    showConsentManager(false);
+    initOfflineIndicator();
+    improveAccessibility();
+    bindFunnelTracking();
+    hideDevelopmentLeakage();
+    bindAuthWatcher();
+
+    if (!IS_CAMPAIGN_PAGE) {
+      initMobileNav();
+      initInstallPrompt();
+      injectRewardExtraFilters();
+      watchRewardGrid();
+      injectDashboardShell();
+    }
+
+    await Promise.allSettled([
+      enhanceHomepage(),
+      IS_CAMPAIGN_PAGE ? Promise.resolve() : enhanceAdmin(),
+      afterAuthReady()
+    ]);
+
+    window.addEventListener("focus", () => refreshNotificationCount());
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) refreshNotificationCount();
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", () => setTimeout(bootV14, 80), { once: true });
+  } else {
+    setTimeout(bootV14, 80);
+  }
+})();
