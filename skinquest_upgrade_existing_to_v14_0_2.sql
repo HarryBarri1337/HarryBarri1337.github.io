@@ -1,0 +1,3 @@
+-- SkinQuest upgrade for EXISTING projects -> v14.0.2
+-- No database changes in this release.
+-- If you already ran the previous v14 upgrade SQL, nothing needs to be run now.

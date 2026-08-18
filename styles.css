@@ -1,4 +1,4 @@
-/* SkinQuest v14.0.1 core styles - v13.1.0 base + v14 feature layer */
+/* SkinQuest v14.0.2 core styles - v13.1.0 base + v14 feature layer */
 
 :root {
   --bg: #0b0f16;
@@ -4278,4 +4278,20 @@ body > footer {
   .install-qr-card { grid-template-columns: 76px minmax(0, 1fr); }
   .install-qr-card img { width: 76px; height: 76px; }
   .mini-stats { grid-template-columns: 1fr; }
+}
+
+
+/* v14.0.2 UI polish */
+.site-nav { flex-wrap: nowrap; min-width: 0; }
+.site-nav a { white-space: nowrap; }
+
+.survey-provider-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.provider-muted-panel { margin-top: 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.provider-muted-panel .provider-head { flex: 1 1 auto; margin: 0; }
+.provider-muted-panel h2,
+.provider-muted-panel p { margin: 0; }
+
+@media (max-width: 900px) {
+  .survey-provider-grid { grid-template-columns: 1fr; }
+  .provider-muted-panel { display: grid; justify-content: stretch; }
 }

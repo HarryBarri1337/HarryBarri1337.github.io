@@ -7,7 +7,7 @@
   <title>Surveys - SkinQuest</title>
   <link rel="canonical" href="https://skinquestcs.com/surveys" />
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="Recommended surveys - SkinQuest" />
+  <meta property="og:title" content="Survey providers - SkinQuest" />
   <meta property="og:description" content="Complete verified survey tasks and earn SkinQuest coins." />
   <meta property="og:url" content="https://skinquestcs.com/surveys" />
   <meta property="og:image" content="https://skinquestcs.com/assets/icons/icon-512.png" />
@@ -23,7 +23,7 @@
       }
     }());
   </script>
-  <link rel="stylesheet" href="styles.css?v=1401" />
+  <link rel="stylesheet" href="styles.css?v=1402" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#0b0f16" />
   <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png" />
@@ -33,7 +33,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="SkinQuest" />
   <meta property="og:site_name" content="SkinQuest" />
-  <link rel="stylesheet" href="skinquest-v14.css?v=1401" />
+  <link rel="stylesheet" href="skinquest-v14.css?v=1402" />
 </head>
 <body>
 <div id="pageLoader" class="page-loader">
@@ -63,22 +63,13 @@
 <main class="page earn-page">
   <section class="page-heading compact-heading">
     <span class="pill">Earn coins</span>
-    <h1>Recommended surveys</h1>
+    <h1>Survey providers</h1>
     <p>
-      Complete available survey tasks through connected providers. Coins appear after the provider verifies the completion.
+      Choose a connected survey provider below. Coins appear after the provider verifies the completion.
     </p>
   </section>
 
-  <section class="panel recommended-surveys-panel">
-    <div class="section-headline">
-      <div><span class="pill">For you</span><h2>Available now</h2><p class="muted">Recommendations depend on country, device, and provider availability.</p></div>
-    </div>
-    <div id="recommendedSurveys" class="recommended-surveys-grid" aria-live="polite">
-      <p class="muted">Sign in to load secure recommendations.</p>
-    </div>
-  </section>
-
-  <section class="provider-grid clean-providers">
+  <section class="provider-grid clean-providers survey-provider-grid">
     <article class="provider-card featured provider-main-card">
       <div class="provider-head">
         <span class="provider-logo">CPX</span>
@@ -110,17 +101,17 @@
       </ul>
       <a class="button button-ghost button-large provider-action" id="openBitlabsWall" href="#" target="_blank" rel="noopener">Open BitLabs surveys</a>
     </article>
+  </section>
 
-    <article class="provider-card provider-muted-card">
-      <div class="provider-head">
-        <span class="provider-logo">LT</span>
-        <div>
-          <h2>Lootably</h2>
-          <p>Postback support prepared; placement credentials required before launch.</p>
-        </div>
+  <section class="panel provider-muted-panel">
+    <div class="provider-head">
+      <span class="provider-logo">LT</span>
+      <div>
+        <h2>Lootably</h2>
+        <p>Postback support is prepared, but placement credentials are still required before launch.</p>
       </div>
-      <span class="provider-status">Not active yet</span>
-    </article>
+    </div>
+    <span class="provider-status">Not active yet</span>
   </section>
 
   <section class="panel fair-use-panel">
@@ -141,7 +132,7 @@
     <a href="/install">Install app</a>
     <a href="mailto:support@skinquestcs.com">Support</a>
   </div>
-  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v14.0.1</a></p>
+  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v14.0.2</a></p>
 </footer>
 <div class="modal-backdrop hidden" id="authModal">
   <div class="auth-modal" role="dialog" aria-modal="true">
@@ -183,7 +174,7 @@
   </div>
 </div>
 <script src="assets/vendor/supabase-js-2.45.4.js"></script>
-<script src="app.js?v=1401"></script>
-<script src="skinquest-v14.js?v=1401"></script>
+<script src="app.js?v=1402"></script>
+<script src="skinquest-v14.js?v=1402"></script>
 </body>
 </html>

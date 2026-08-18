@@ -1,4 +1,4 @@
-/* SkinQuest v14.0.1 additive UI layer. Load after styles.css. */
+/* SkinQuest v14.0.2 additive UI layer. Load after styles.css. */
 :root {
   --sq-v14-surface: rgba(13, 18, 27, .92);
   --sq-v14-surface-2: rgba(255, 255, 255, .045);
@@ -276,7 +276,7 @@
 .sq-quest-head h3 { margin-top: 0; }
 
 /* Homepage
-   v14.0.1 intentionally keeps the public landing page on the core SkinQuest
+   v14.0.2 intentionally keeps the public landing page on the core SkinQuest
    design system. No dashboard-style live-stat block is injected here. */
 
 /* Dashboard */
@@ -524,4 +524,18 @@
     animation-iteration-count: 1 !important;
     transition-duration: .001ms !important;
   }
+}
+
+
+/* v14.0.2 dashboard cleanup */
+.sq-growth-stats-compact { grid-template-columns: repeat(3, minmax(0,1fr)); }
+.sq-achievement-grid-compact { grid-template-columns: repeat(3, minmax(0,1fr)); }
+.sq-promo-help { margin-top: 12px; }
+
+@media (max-width: 980px) {
+  .sq-achievement-grid-compact { grid-template-columns: repeat(2, minmax(0,1fr)); }
+}
+@media (max-width: 760px) {
+  .sq-growth-stats-compact,
+  .sq-achievement-grid-compact { grid-template-columns: 1fr; }
 }

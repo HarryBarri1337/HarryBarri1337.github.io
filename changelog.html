@@ -18,7 +18,7 @@
       }
     }());
   </script>
-  <link rel="stylesheet" href="styles.css?v=1401" />
+  <link rel="stylesheet" href="styles.css?v=1402" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#0b0f16" />
   <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png" />
@@ -30,7 +30,7 @@
   <meta property="og:site_name" content="SkinQuest" />
   <meta property="og:description" content="SkinQuest version history and recent platform updates." />
   <meta property="og:image" content="https://skinquestcs.com/assets/interface/skinquestlogo.png" />
-  <link rel="stylesheet" href="skinquest-v14.css?v=1401" />
+  <link rel="stylesheet" href="skinquest-v14.css?v=1402" />
 </head>
 <body>
 <div id="pageLoader" class="page-loader">
@@ -66,15 +66,14 @@
   <section class="panel changelog-list">
     <article class="changelog-entry current">
       <span class="pill">Current</span>
-      <h2>v14.0.1 - Quests, trust, retention, referrals, and operations</h2>
+      <h2>v14.0.2 - Interface polish and layout cleanup</h2>
       <ul>
-        <li>Added SkinQuest Quests, achievements, onboarding progress, daily activity streaks, and a stronger dashboard next-action flow.</li>
-        <li>Added an in-app notification center for coin credits, reward status changes, and reward restocks.</li>
-        <li>Added real homepage platform statistics, recently completed reward proof, reward previews, and public system-status indicators.</li>
-        <li>Expanded Rewards with weapon, condition, rarity, and goal filters, balance-to-reward progress, detail views, and restock alerts.</li>
-        <li>Added promotional codes for QR/social campaigns, referral attribution without signup payouts, first-touch campaign tracking, and product funnel events.</li>
-        <li>Added admin KPIs, promo-code creation, system-status controls, and reward inventory audit logging.</li>
-        <li>Added consent-controlled analytics, cookie preferences, offline-state warnings, a proper offline page, mobile bottom navigation, and accessibility polish.</li>
+        <li>Fixed the logged-in desktop navbar so How it works stays on one line.</li>
+        <li>Removed the dashboard setup checklist.</li>
+        <li>Kept a single Achievements section on the dashboard instead of showing both quests and achievements.</li>
+        <li>Added more breathing room under the Redeem a code input.</li>
+        <li>Cleaned up the Surveys page and removed the awkward oversized recommended-surveys block.</li>
+        <li>No database changes in this release.</li>
       </ul>
     </article>
 
@@ -309,7 +308,7 @@
     <a href="/install">Install app</a>
     <a href="mailto:support@skinquestcs.com">Support</a>
   </div>
-  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v14.0.1</a></p>
+  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v14.0.2</a></p>
 </footer>
 <div class="modal-backdrop hidden" id="authModal">
   <div class="auth-modal" role="dialog" aria-modal="true">
@@ -351,7 +350,7 @@
   </div>
 </div>
 <script src="assets/vendor/supabase-js-2.45.4.js"></script>
-<script src="app.js?v=1401"></script>
-<script src="skinquest-v14.js?v=1401"></script>
+<script src="app.js?v=1402"></script>
+<script src="skinquest-v14.js?v=1402"></script>
 </body>
 </html>

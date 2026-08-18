@@ -1,5 +1,5 @@
-/* SkinQuest v14.0.1 product upgrade layer.
-   Loaded after app.js. Database additions are included in the current v14.0.1 SQL files.
+/* SkinQuest v14.0.2 product upgrade layer.
+   Loaded after app.js. Database additions are included in the current v14.0.2 SQL files.
    This layer extends the secure SkinQuest core without replacing reward authority.
 */
 
@@ -512,7 +512,7 @@
 
   // ---------------------------------------------------------------------------
   // Homepage: keep the landing page focused and visually clean.
-  // v14.0.1 deliberately avoids injecting dashboard-style stats or status cards
+  // v14.0.2 deliberately avoids injecting dashboard-style stats or status cards
   // below the hero. Those features live on the dashboard/admin pages instead.
   // ---------------------------------------------------------------------------
   async function enhanceHomepage() {
@@ -531,7 +531,7 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Dashboard: quests, achievements, streak, onboarding, referrals, promo codes
+  // Dashboard: achievements, streak, referrals, promo codes
   // ---------------------------------------------------------------------------
   function injectDashboardShell() {
     if (path !== "dashboard.html") return;
@@ -540,31 +540,19 @@
 
     const hub = create("section", "sq-growth-hub", `
       <section class="panel sq-next-action-panel" data-sq-next-action>
-        <div><span class="pill">Next move</span><h2>Keep your next reward moving</h2><p class="muted">Complete another verified task and move closer to your starred goals.</p></div>
+        <div><span class="pill">Next move</span><h2>Keep your next reward moving</h2><p class="muted">Complete another verified task and move closer to your next reward.</p></div>
         <a class="button button-primary" href="/surveys">Continue earning</a>
       </section>
 
-      <section class="sq-growth-stats" data-sq-growth-stats>
+      <section class="sq-growth-stats sq-growth-stats-compact" data-sq-growth-stats>
         <article class="stat-card"><span>Current streak</span><strong>—</strong><p>Consecutive active days.</p></article>
         <article class="stat-card"><span>Longest streak</span><strong>—</strong><p>Your personal best.</p></article>
-        <article class="stat-card"><span>Quests</span><strong>—</strong><p>Progress milestones completed.</p></article>
         <article class="stat-card"><span>Achievements</span><strong>—</strong><p>Permanent milestones unlocked.</p></article>
       </section>
 
-      <section class="panel sq-onboarding-panel">
-        <div class="sq-section-head compact"><div><span class="pill">Setup</span><h2>Your SkinQuest checklist</h2></div><strong data-sq-onboarding-percent>—</strong></div>
-        <div class="sq-onboarding-progress"><span data-sq-onboarding-fill></span></div>
-        <div class="sq-checklist" data-sq-onboarding-list></div>
-      </section>
-
-      <section class="panel sq-quests-panel">
-        <div class="sq-section-head compact"><div><span class="pill">SkinQuest</span><h2>Quests</h2><p class="muted">Milestones are verified from your real account activity.</p></div></div>
-        <div class="sq-quest-grid" data-sq-quests><div class="empty-state">Loading quests…</div></div>
-      </section>
-
       <section class="panel sq-achievement-panel">
-        <div class="sq-section-head compact"><div><span class="pill">Profile</span><h2>Achievements</h2></div></div>
-        <div class="sq-achievement-grid" data-sq-achievements><div class="empty-state">Loading achievements…</div></div>
+        <div class="sq-section-head compact"><div><span class="pill">Profile</span><h2>Achievements</h2><p class="muted">Permanent milestones unlocked from real account activity.</p></div></div>
+        <div class="sq-achievement-grid sq-achievement-grid-compact" data-sq-achievements><div class="empty-state">Loading achievements…</div></div>
       </section>
 
       <section class="sq-promo-ref-grid">
@@ -574,7 +562,7 @@
             <input type="text" maxlength="64" placeholder="SQ-XXXXX" autocomplete="off" data-sq-promo-input required />
             <button class="button button-primary" type="submit">Redeem</button>
           </form>
-          <p class="muted compact-copy">One-use promotional codes can come from SkinQuest campaigns, QR cards, or creator promotions.</p>
+          <p class="muted compact-copy sq-promo-help">One-use promotional codes can come from SkinQuest campaigns, QR cards, or creator promotions.</p>
         </article>
         <article class="panel">
           <div class="sq-section-head compact"><div><span class="pill">Invite</span><h2>Your referral link</h2></div></div>
@@ -608,22 +596,15 @@
       const values = [
         `${formatNumber(summary?.current_streak)}d`,
         `${formatNumber(summary?.longest_streak)}d`,
-        `${formatNumber(summary?.quests_completed)}/${formatNumber(summary?.quests_total)}`,
         formatNumber(summary?.achievements)
       ];
-      cards.forEach((card, i) => { $("strong", card).textContent = values[i]; });
+      cards.forEach((card, i) => {
+        const strong = $("strong", card);
+        if (strong) strong.textContent = values[i] ?? "—";
+      });
     } catch {}
 
     const c = client();
-    try {
-      const [{ data: quests }, { data: progress }] = await Promise.all([
-        c.from("sq_quests").select("quest_key,title,description,category,target,sort_order").eq("active", true).order("sort_order"),
-        c.from("sq_user_quest_progress").select("quest_key,progress,completed_at")
-      ]);
-      renderQuests(quests || [], progress || []);
-      renderOnboarding(quests || [], progress || []);
-    } catch {}
-
     try {
       const [{ data: achievements }, { data: unlocked }] = await Promise.all([
         c.from("sq_achievements").select("achievement_key,title,description,icon,sort_order").eq("active", true).order("sort_order"),
@@ -635,51 +616,6 @@
     loadReferralBox();
   }
 
-  function renderQuests(quests, progressRows) {
-    const target = $("[data-sq-quests]");
-    if (!target) return;
-    const map = new Map(progressRows.map((p) => [p.quest_key, p]));
-    target.innerHTML = quests.map((quest) => {
-      const row = map.get(quest.quest_key) || { progress: 0, completed_at: null };
-      const p = Math.min(Number(row.progress || 0), Number(quest.target || 1));
-      const pct = Math.max(0, Math.min(100, (p / Number(quest.target || 1)) * 100));
-      const completed = !!row.completed_at || pct >= 100;
-      return `
-        <article class="sq-quest-card ${completed ? "complete" : ""}">
-          <div class="sq-quest-head"><span class="sq-quest-category">${safeText(quest.category)}</span><span>${completed ? "✓ Complete" : `${formatNumber(p)} / ${formatNumber(quest.target)}`}</span></div>
-          <h3>${safeText(quest.title)}</h3>
-          <p>${safeText(quest.description)}</p>
-          <div class="sq-mini-progress"><span style="width:${pct}%"></span></div>
-        </article>`;
-    }).join("");
-  }
-
-  function renderOnboarding(quests, progressRows) {
-    const list = $("[data-sq-onboarding-list]");
-    const pctText = $("[data-sq-onboarding-percent]");
-    const fill = $("[data-sq-onboarding-fill]");
-    if (!list) return;
-
-    const setupKeys = ["add_trade_url", "star_goal", "first_earn", "first_redeem"];
-    const qMap = new Map(quests.map((q) => [q.quest_key, q]));
-    const pMap = new Map(progressRows.map((p) => [p.quest_key, p]));
-    const items = setupKeys.map((key) => ({ quest: qMap.get(key), progress: pMap.get(key) })).filter((x) => x.quest);
-    const done = items.filter((x) => x.progress?.completed_at || Number(x.progress?.progress || 0) >= Number(x.quest.target)).length;
-    const pct = items.length ? Math.round((done / items.length) * 100) : 0;
-    if (pctText) pctText.textContent = `${pct}%`;
-    if (fill) fill.style.width = `${pct}%`;
-
-    const links = {
-      add_trade_url: "/settings#tradeForm",
-      star_goal: "/rewards",
-      first_earn: "/surveys",
-      first_redeem: "/rewards"
-    };
-    list.innerHTML = items.map(({ quest, progress }) => {
-      const completed = progress?.completed_at || Number(progress?.progress || 0) >= Number(quest.target);
-      return `<a class="sq-check-row ${completed ? "complete" : ""}" href="${links[quest.quest_key] || "/dashboard"}"><span>${completed ? "✓" : ""}</span><strong>${safeText(quest.title)}</strong><small>${completed ? "Done" : "Open"}</small></a>`;
-    }).join("");
-  }
 
   function renderAchievements(items, unlockedRows) {
     const target = $("[data-sq-achievements]");
