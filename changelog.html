@@ -18,7 +18,7 @@
       }
     }());
   </script>
-  <link rel="stylesheet" href="styles.css?v=1411" />
+  <link rel="stylesheet" href="styles.css?v=1412" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#0b0f16" />
   <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png" />
@@ -30,7 +30,7 @@
   <meta property="og:site_name" content="SkinQuest" />
   <meta property="og:description" content="SkinQuest version history and recent platform updates." />
   <meta property="og:image" content="https://skinquestcs.com/assets/interface/skinquestlogo.png" />
-  <link rel="stylesheet" href="skinquest-v14.css?v=1411" />
+  <link rel="stylesheet" href="skinquest-v14.css?v=1412" />
 </head>
 <body>
 <div id="pageLoader" class="page-loader">
@@ -66,6 +66,17 @@
   <section class="panel changelog-list">
     <article class="changelog-entry current">
       <span class="pill">Current</span>
+      <h2>v14.1.2 - Clearer admin controls and balanced CPX spacing</h2>
+      <ul>
+        <li>Redistributed CPX summary spacing so the availability count, guidance, and action no longer crowd one another.</li>
+        <li>Rebuilt Operating overview as six distinct KPI cards with separated labels, values, and context.</li>
+        <li>Reworked Public system status into clear component cards with readable messages and aligned controls.</li>
+        <li>Made every admin panel collapsible to its title and remembered collapsed sections in the current browser.</li>
+        <li>No database or Edge Function changes in this release.</li>
+      </ul>
+    </article>
+
+    <article class="changelog-entry">
       <h2>v14.1.1 - Roomier surveys and custom reward filters</h2>
       <ul>
         <li>Gave the CPX survey workspace a wider desktop canvas and more spacing between its panels.</li>
@@ -352,7 +363,7 @@
     <a href="/install">Install app</a>
     <a href="mailto:support@skinquestcs.com">Support</a>
   </div>
-  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v14.1.1</a></p>
+  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v14.1.2</a></p>
 </footer>
 <div class="modal-backdrop hidden" id="authModal">
   <div class="auth-modal" role="dialog" aria-modal="true">
@@ -394,7 +405,7 @@
   </div>
 </div>
 <script src="assets/vendor/supabase-js-2.45.4.js"></script>
-<script src="app.js?v=1411"></script>
-<script src="skinquest-v14.js?v=1411"></script>
+<script src="app.js?v=1412"></script>
+<script src="skinquest-v14.js?v=1412"></script>
 </body>
 </html>

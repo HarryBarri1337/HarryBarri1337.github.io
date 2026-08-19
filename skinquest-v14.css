@@ -1,4 +1,4 @@
-/* SkinQuest v14.1.1 additive UI layer. Load after styles.css. */
+/* SkinQuest v14.1.2 additive UI layer. Load after styles.css. */
 :root {
   --sq-v14-surface: rgba(13, 18, 27, .92);
   --sq-v14-surface-2: rgba(255, 255, 255, .045);
@@ -563,17 +563,134 @@
 
 /* Admin */
 #sqAdminV14 { display: grid; gap: 14px; margin-bottom: 14px; }
+.sq-admin-collapsible { transition: border-color 160ms ease, background 160ms ease; }
+.sq-admin-collapsible.is-collapsed {
+  padding-top: 16px;
+  padding-bottom: 16px;
+  border-color: rgba(232,179,77,.18);
+  background: rgba(14,20,30,.94);
+}
+.sq-admin-collapse-head {
+  min-width: 0;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between;
+  gap: 14px;
+}
+.sq-admin-collapse-head > div:first-child { min-width: 0; }
+.sq-admin-collapse-head h2 { margin: 0; }
+.sq-admin-collapse-head::after { display: none !important; }
+.sq-admin-collapse-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.sq-admin-collapse-toggle {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 11px;
+  background: rgba(255,255,255,.035);
+  color: var(--sq-v14-text);
+  cursor: pointer;
+  transition: border-color 150ms ease, background 150ms ease, color 150ms ease;
+}
+.sq-admin-collapse-toggle:hover {
+  border-color: rgba(232,179,77,.4);
+  background: rgba(232,179,77,.08);
+  color: var(--sq-v14-brand-2);
+}
+.sq-admin-collapse-toggle svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 160ms ease;
+}
+.sq-admin-collapsible.is-collapsed .sq-admin-collapse-toggle svg { transform: rotate(-90deg); }
+.sq-admin-collapse-body { min-width: 0; padding-top: 18px; }
+.sq-admin-collapse-body[hidden] { display: none !important; }
+.sq-admin-collapsible.is-collapsed .sq-admin-collapse-head .pill,
+.sq-admin-collapsible.is-collapsed .sq-admin-collapse-head p,
+.sq-admin-collapsible.is-collapsed .sq-admin-collapse-head .role-badge,
+.sq-admin-collapsible.is-collapsed .sq-admin-collapse-actions > :not(.sq-admin-collapse-toggle) { display: none !important; }
+.admin-request-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.admin-request-controls > p { max-width: 720px; margin: 0; }
+.admin-request-controls .admin-toolbar-actions { flex: 0 0 auto; }
+
+.sq-admin-two-col { align-items: start; }
+.sq-admin-kpis { grid-template-columns: repeat(3, minmax(0,1fr)); }
+.sq-admin-kpi-card {
+  min-width: 0;
+  min-height: 112px;
+  display: grid;
+  align-content: center;
+  gap: 6px;
+  padding: 16px 18px;
+  border: 1px solid rgba(255,255,255,.085);
+  border-radius: 15px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(232,179,77,.07), transparent 44%),
+    rgba(255,255,255,.025);
+}
+.sq-admin-kpi-card > span {
+  color: var(--sq-v14-muted);
+  font-size: .72rem;
+  font-weight: 900;
+  letter-spacing: .055em;
+  text-transform: uppercase;
+}
+.sq-admin-kpi-card > strong {
+  color: var(--sq-v14-text);
+  font-size: clamp(1.45rem, 2.6vw, 2rem);
+  line-height: 1;
+  letter-spacing: -.035em;
+}
+.sq-admin-kpi-card > small {
+  color: var(--sq-v14-muted);
+  font-size: .78rem;
+  line-height: 1.35;
+}
+
 .sq-admin-promo-form { display: grid; grid-template-columns: 1.2fr .7fr .8fr .8fr auto; gap: 8px; align-items: end; }
 .sq-admin-promo-form label { display: grid; gap: 5px; color: var(--sq-v14-muted); font-size: .72rem; font-weight: 800; }
+.sq-admin-status-list { display: grid; gap: 10px; }
 .sq-admin-status-row {
   display: grid;
-  grid-template-columns: 1fr 150px minmax(180px,1.4fr) auto;
-  gap: 8px;
+  grid-template-columns: minmax(0,1fr) auto;
+  gap: 10px;
   align-items: center;
-  padding: 9px 0;
-  border-bottom: 1px solid rgba(255,255,255,.065);
+  padding: 14px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 14px;
+  background: rgba(255,255,255,.022);
 }
-.sq-admin-status-row:last-child { border-bottom: 0; }
+.sq-admin-status-copy {
+  min-width: 0;
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 4px;
+}
+.sq-admin-status-copy strong { color: var(--sq-v14-text); font-size: .96rem; line-height: 1.25; }
+.sq-admin-status-copy span { color: var(--sq-v14-muted); font-size: .78rem; line-height: 1.45; }
+.sq-admin-status-row select { min-width: 0; min-height: 42px; text-transform: none; }
+.sq-admin-status-save { min-width: 86px; min-height: 42px; }
 .sq-audit-list { display: grid; gap: 8px; }
 .sq-audit-row { padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,.065); }
 .sq-audit-row:last-child { border-bottom: 0; }
@@ -615,11 +732,17 @@
   .sq-extra-filter-reset { justify-self: stretch; }
 }
 @media (max-width: 760px) {
-    .sq-promo-ref-grid,
+  .sq-promo-ref-grid,
   .sq-admin-two-col,
   .sq-reward-detail { grid-template-columns: 1fr; }
   .sq-detail-art { min-height: 190px; }
   .sq-admin-status-row { grid-template-columns: 1fr; }
+  .admin-request-controls { display: grid; align-items: stretch; }
+  .admin-request-controls .admin-toolbar-actions { width: 100%; }
+  .admin-request-controls .admin-toolbar-actions select { flex: 1 1 auto; }
+  .sq-admin-collapse-head { align-items: flex-start !important; flex-wrap: wrap; }
+  .sq-admin-collapsible.is-collapsed .sq-admin-collapse-head { align-items: center !important; flex-wrap: nowrap; }
+  .sq-admin-collapse-actions { flex-wrap: wrap; }
   #sqCookieBanner { bottom: calc(82px + env(safe-area-inset-bottom)); }
   .sq-v14-toast-shell { bottom: calc(84px + env(safe-area-inset-bottom)); }
 }

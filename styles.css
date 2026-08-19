@@ -1,4 +1,4 @@
-/* SkinQuest v14.1.1 core styles - v13.1.0 base + v14 feature layer */
+/* SkinQuest v14.1.2 core styles - v13.1.0 base + v14 feature layer */
 
 :root {
   --bg: #0b0f16;
@@ -4333,7 +4333,7 @@ body > footer {
   .provider-muted-panel { display: grid; justify-content: stretch; }
 }
 
-/* v14.1.1 spacious CPX survey workspace */
+/* v14.1.2 spacious CPX survey workspace */
 .earn-page { width: min(1320px, calc(100% - 32px)); }
 .earn-page .compact-heading { padding-bottom: 34px; }
 .survey-workspace {
@@ -4348,7 +4348,7 @@ body > footer {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: clamp(22px, 3vw, 30px);
+  padding: 26px 30px 28px;
   text-align: center;
   background:
     radial-gradient(circle at 50% 18%, rgba(232, 179, 77, .08), transparent 34%),
@@ -4358,7 +4358,7 @@ body > footer {
   width: 100%;
   display: grid;
   justify-items: center;
-  gap: 12px;
+  gap: 14px;
 }
 .survey-provider-brand img {
   display: block;
@@ -4378,7 +4378,7 @@ body > footer {
   align-items: center;
   justify-content: center;
   min-height: 32px;
-  margin-top: 18px;
+  margin-top: 14px;
   padding: 5px 13px;
   border: 1px solid rgba(53, 201, 139, .32);
   border-radius: 999px;
@@ -4402,27 +4402,28 @@ body > footer {
   width: 100%;
   display: grid;
   justify-items: center;
-  gap: 1px;
-  margin-top: 20px;
-  padding-top: 20px;
+  gap: 7px;
+  margin-top: 14px;
+  padding-top: 16px;
   border-top: 1px solid var(--border);
 }
 .cpx-availability strong {
   color: var(--green);
   font-size: clamp(2.25rem, 4vw, 3rem);
-  line-height: 1;
+  line-height: .92;
   letter-spacing: -.045em;
 }
 .cpx-availability span {
   color: var(--text);
   font-size: .9rem;
   font-weight: 850;
+  line-height: 1.25;
 }
 .cpx-guidelines {
   width: 100%;
   display: grid;
-  gap: 13px;
-  margin: 24px 0 22px;
+  gap: 15px;
+  margin: 20px 0 22px;
   padding: 0;
   list-style: none;
   text-align: left;
@@ -4458,7 +4459,8 @@ body > footer {
 }
 .survey-provider-card .provider-action {
   width: 100%;
-  margin-top: auto;
+  min-height: 50px;
+  margin-top: 4px;
   border-color: rgba(232, 179, 77, .72);
   background: rgba(232, 179, 77, .04);
   color: var(--brand-2);

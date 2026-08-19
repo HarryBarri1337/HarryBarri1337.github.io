@@ -1,13 +1,13 @@
-/* SkinQuest v14.1.1 product upgrade layer.
+/* SkinQuest v14.1.2 product upgrade layer.
    Loaded after app.js. The full setup includes the v14 database layer;
-   v14.1.1 itself requires no schema changes.
+   v14.1.2 itself requires no schema changes.
    This layer extends the secure SkinQuest core without replacing reward authority.
 */
 
 (() => {
   "use strict";
 
-  const VERSION = "14.1.1";
+  const VERSION = "14.1.2";
   const GA_ID = "G-DFRR03C4BP";
   const ATTRIBUTION_KEY = "skinquest.firstTouch.v14";
   const CONSENT_KEY = "skinquest.cookieConsent.v1";
@@ -1058,18 +1058,84 @@
   // ---------------------------------------------------------------------------
   // Admin: real KPIs, promo creator, status editor, audit log
   // ---------------------------------------------------------------------------
+  const ADMIN_COLLAPSE_STORAGE_KEY = "skinquest.adminCollapsed.v1";
+
+  function initAdminCollapsibles(root) {
+    if (!root) return;
+    let collapsedSections = new Set();
+    try {
+      const saved = JSON.parse(localStorage.getItem(ADMIN_COLLAPSE_STORAGE_KEY) || "[]");
+      if (Array.isArray(saved)) collapsedSections = new Set(saved.map(String));
+    } catch {}
+
+    const saveCollapsedSections = () => {
+      try { localStorage.setItem(ADMIN_COLLAPSE_STORAGE_KEY, JSON.stringify([...collapsedSections])); } catch {}
+    };
+
+    $$(".panel", root).forEach((section, index) => {
+      if (section.dataset.sqAdminCollapsible === "true") return;
+      const header = section.querySelector(":scope > .section-headline, :scope > .sq-section-head");
+      const title = header?.querySelector("h2");
+      if (!header || !title) return;
+
+      const titleSlug = (title.textContent || `section-${index + 1}`)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "") || `section-${index + 1}`;
+      const sectionKey = `${titleSlug}-${index + 1}`;
+      const bodyId = `sqAdminSectionBody${index + 1}`;
+
+      section.dataset.sqAdminCollapsible = "true";
+      section.dataset.sqAdminSection = sectionKey;
+      section.classList.add("sq-admin-collapsible");
+      header.classList.add("sq-admin-collapse-head");
+
+      const titleBlock = [...header.children].find((child) => child.contains(title)) || header.firstElementChild;
+      const actions = create("div", "sq-admin-collapse-actions");
+      [...header.children].filter((child) => child !== titleBlock).forEach((child) => actions.appendChild(child));
+      header.appendChild(actions);
+
+      const toggle = create("button", "sq-admin-collapse-toggle", `
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 10l4 4 4-4"/></svg>
+      `);
+      toggle.type = "button";
+      toggle.setAttribute("aria-controls", bodyId);
+      actions.appendChild(toggle);
+
+      const body = create("div", "sq-admin-collapse-body");
+      body.id = bodyId;
+      [...section.children].filter((child) => child !== header).forEach((child) => body.appendChild(child));
+      section.appendChild(body);
+
+      const setCollapsed = (collapsed) => {
+        section.classList.toggle("is-collapsed", collapsed);
+        body.hidden = collapsed;
+        toggle.setAttribute("aria-expanded", String(!collapsed));
+        toggle.setAttribute("aria-label", `${collapsed ? "Expand" : "Collapse"} ${title.textContent.trim()}`);
+        if (collapsed) collapsedSections.add(sectionKey);
+        else collapsedSections.delete(sectionKey);
+      };
+
+      setCollapsed(collapsedSections.has(sectionKey));
+      toggle.addEventListener("click", () => {
+        setCollapsed(!section.classList.contains("is-collapsed"));
+        saveCollapsedSections();
+      });
+    });
+  }
+
   async function enhanceAdmin() {
     if (path !== "admin.html") return;
     const panel = $("#adminPanel");
     if (!panel || $("#sqAdminV14")) return;
 
     const shell = create("section", "sq-admin-v14", `
-      <section class="panel">
+      <section class="panel sq-admin-overview-panel">
         <div class="sq-section-head"><div><span class="pill">v${VERSION}</span><h2>Operating overview</h2></div><button class="mini-button" type="button" data-sq-refresh-admin>Refresh</button></div>
         <div class="sq-admin-kpis" data-sq-admin-kpis><div class="empty-state">Loading KPIs…</div></div>
       </section>
       <section class="sq-admin-two-col">
-        <article class="panel">
+        <article class="panel sq-admin-promo-panel">
           <div class="sq-section-head compact"><div><span class="pill">Campaigns</span><h2>Create promo code</h2></div></div>
           <form class="sq-admin-promo-form" data-sq-admin-promo-form>
             <label>Code<input name="code" maxlength="64" placeholder="SQ-UPPSALA-01" required /></label>
@@ -1079,12 +1145,12 @@
             <button class="button button-primary" type="submit">Create code</button>
           </form>
         </article>
-        <article class="panel">
+        <article class="panel sq-admin-health-panel">
           <div class="sq-section-head compact"><div><span class="pill">Health</span><h2>Public system status</h2></div></div>
-          <div data-sq-admin-status><div class="empty-state">Loading status…</div></div>
+          <div class="sq-admin-status-list" data-sq-admin-status><div class="empty-state">Loading status…</div></div>
         </article>
       </section>
-      <section class="panel">
+      <section class="panel sq-admin-audit-panel">
         <div class="sq-section-head compact"><div><span class="pill">Security</span><h2>Recent admin audit</h2></div></div>
         <div class="sq-audit-list" data-sq-audit-list><div class="empty-state">Loading audit log…</div></div>
       </section>
@@ -1092,6 +1158,7 @@
     shell.id = "sqAdminV14";
     panel.prepend(shell);
 
+    initAdminCollapsibles(panel);
     shell.querySelector("[data-sq-refresh-admin]")?.addEventListener("click", () => loadAdminV14Data());
     shell.querySelector("[data-sq-admin-promo-form]")?.addEventListener("submit", createAdminPromo);
     await loadAdminV14Data();
@@ -1108,7 +1175,12 @@
         ["Support", kpi.open_support, "new / open tickets"],
         ["Active rewards", kpi.active_rewards, "listed now"],
         ["Positive credits", kpi.positive_coin_credits_24h, "coins / 24h"]
-      ].map(([label, value, detail]) => `<div><span>${safeText(label)}</span><strong>${formatNumber(value)}</strong><small>${safeText(detail)}</small></div>`).join("");
+      ].map(([label, value, detail]) => `
+        <article class="sq-admin-kpi-card">
+          <span>${safeText(label)}</span>
+          <strong>${formatNumber(value)}</strong>
+          <small>${safeText(detail)}</small>
+        </article>`).join("");
     } catch (error) {
       if (kpiTarget) kpiTarget.innerHTML = `<div class="empty-state">Admin KPIs unavailable.</div>`;
     }
@@ -1119,12 +1191,12 @@
       const { data } = await c.from("sq_system_status").select("component,display_name,status,message,updated_at").order("sort_order");
       if (statusTarget) {
         statusTarget.innerHTML = (data || []).map((item) => `
-          <div class="sq-admin-status-row" data-component="${safeText(item.component)}">
-            <div><strong>${safeText(item.display_name)}</strong><small>${safeText(item.message || "")}</small></div>
-            <select data-sq-status-select>
-              ${["operational","degraded","maintenance","incident"].map((status) => `<option value="${status}" ${item.status === status ? "selected" : ""}>${status}</option>`).join("")}
+          <div class="sq-admin-status-row" data-component="${safeText(item.component)}" data-current-status="${safeText(item.status)}">
+            <div class="sq-admin-status-copy"><strong>${safeText(item.display_name)}</strong><span>${safeText(item.message || "No public message set")}</span></div>
+            <select data-sq-status-select aria-label="Status for ${safeText(item.display_name)}">
+              ${["operational","degraded","maintenance","incident"].map((status) => `<option value="${status}" ${item.status === status ? "selected" : ""}>${status[0].toUpperCase()}${status.slice(1)}</option>`).join("")}
             </select>
-            <button class="mini-button" type="button" data-sq-save-status>Save</button>
+            <button class="mini-button sq-admin-status-save" type="button" data-sq-save-status>Save</button>
           </div>`).join("");
         $$('[data-sq-save-status]', statusTarget).forEach((button) => button.addEventListener("click", saveSystemStatus));
       }

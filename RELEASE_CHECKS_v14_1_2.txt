@@ -1,10 +1,12 @@
-SkinQuest v14.1.1 release checks
+SkinQuest v14.1.2 release checks
 
-[ ] Do NOT run upgrade SQL when updating an existing v14.1.0 project.
+[ ] Do NOT run upgrade SQL when updating an existing v14.1.1 project.
 [ ] Do NOT redeploy survey-feed.
 [ ] Confirm signed-out users see a sign-in state and no CPX widget is loaded.
 [ ] Confirm signed-in users see six embedded offers with comfortable spacing at desktop, tablet, and mobile widths.
 [ ] Confirm the CPX summary stacks above the offer panel before the split layout becomes cramped.
+[ ] Confirm the CPX availability number and label have a readable gap.
+[ ] Confirm all three CPX guidelines remain separated from the bottom action button.
 [ ] Confirm the signed "Open CPX Research" button opens CPX in a new tab.
 [ ] Confirm a missing CPX secret produces the friendly unavailable state and never opens an unsigned URL.
 [ ] Confirm BitLabs and Lootably do not appear on Surveys.
@@ -12,7 +14,12 @@ SkinQuest v14.1.1 release checks
 [ ] Confirm Weapon, Condition, and Rarity use styled custom menus rather than browser-native select lists.
 [ ] Confirm Goals only is removed and goal stars still work on reward cards.
 [ ] Confirm Reset filters aligns with the menus, enables after a selection, and clears every extra filter.
+[ ] Confirm Operating overview renders six distinct KPI cards without concatenated labels and values.
+[ ] Confirm each Public system status component has separate copy, selector, and Save button.
+[ ] Confirm every admin panel can collapse to its title and expand again.
+[ ] Confirm collapsed admin sections remain collapsed after reloading in the same browser.
+[ ] Confirm owner-only sections still follow owner/admin permissions after collapsible wrappers are added.
 [ ] Confirm reward progress and remaining coins appear on separate readable lines on mobile.
 [ ] Confirm reward notifications still scroll to and highlight the matching dashboard request.
 [ ] Confirm dashboard tab returns still refresh silently without hiding existing content.
-[ ] Only use skinquest_full_setup_v14_1_1.sql on a NEW empty Supabase project.
+[ ] Only use skinquest_full_setup_v14_1_2.sql on a NEW empty Supabase project.

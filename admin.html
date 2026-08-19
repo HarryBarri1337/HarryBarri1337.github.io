@@ -17,7 +17,7 @@
       }
     }());
   </script>
-  <link rel="stylesheet" href="styles.css?v=1411" />
+  <link rel="stylesheet" href="styles.css?v=1412" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#0b0f16" />
   <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png" />
@@ -26,7 +26,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="SkinQuest" />
-  <link rel="stylesheet" href="skinquest-v14.css?v=1411" />
+  <link rel="stylesheet" href="skinquest-v14.css?v=1412" />
 </head>
 <body>
 <div id="pageLoader" class="page-loader">
@@ -67,27 +67,32 @@
   </section>
 
   <section id="adminPanel" class="hidden admin-layout">
-    <div class="admin-toolbar panel">
-      <div>
-        <span class="pill">Manual workflow</span>
-        <h2>Redeem requests <span class="role-badge" id="adminRoleBadge">Admin</span></h2>
+    <section class="panel admin-request-panel">
+      <div class="section-headline">
+        <div>
+          <span class="pill">Manual workflow</span>
+          <h2>Redeem requests <span class="role-badge" id="adminRoleBadge">Admin</span></h2>
+        </div>
+      </div>
+      <div class="admin-request-controls">
         <p class="muted">Use this while you send skins manually. Rejected, refunded, or cancelled requests refund coins and release reserved stock.</p>
+        <div class="admin-toolbar-actions">
+          <select id="adminStatusFilter">
+            <option value="open">Open requests</option>
+            <option value="pending">Pending</option>
+            <option value="reviewing">Reviewing</option>
+            <option value="trade_sent">Trade sent</option>
+            <option value="completed">Completed</option>
+            <option value="rejected">Rejected</option>
+            <option value="refunded">Refunded</option>
+            <option value="cancelled">Cancelled</option>
+            <option value="all">All</option>
+          </select>
+          <button class="button button-primary" id="refreshAdmin">Refresh</button>
+        </div>
       </div>
-      <div class="admin-toolbar-actions">
-        <select id="adminStatusFilter">
-          <option value="open">Open requests</option>
-          <option value="pending">Pending</option>
-          <option value="reviewing">Reviewing</option>
-          <option value="trade_sent">Trade sent</option>
-          <option value="completed">Completed</option>
-          <option value="rejected">Rejected</option>
-          <option value="refunded">Refunded</option>
-          <option value="cancelled">Cancelled</option>
-          <option value="all">All</option>
-        </select>
-        <button class="button button-primary" id="refreshAdmin">Refresh</button>
-      </div>
-    </div>
+      <div id="adminRequests" class="admin-list empty-state">Loading requests...</div>
+    </section>
 
     <section class="panel admin-system-panel">
       <div class="section-headline">
@@ -102,8 +107,6 @@
       </div>
     </section>
 
-    <div id="adminRequests" class="admin-list empty-state">Loading requests...</div>
-
     <section class="panel admin-support-panel">
       <div class="section-headline">
         <div>
@@ -116,8 +119,12 @@
     </section>
 
     <section id="ownerToolsLocked" class="panel owner-lock hidden">
-      <span class="pill">Owner tools locked</span>
-      <h2>Owner role required</h2>
+      <div class="section-headline">
+        <div>
+          <span class="pill">Owner tools locked</span>
+          <h2>Owner role required</h2>
+        </div>
+      </div>
       <p class="muted">Regular admins can review redeem requests and support, but only owner accounts can adjust coins or manage reward stock.</p>
     </section>
 
@@ -265,7 +272,7 @@
     <a href="/install">Install app</a>
     <a href="mailto:support@skinquestcs.com">Support</a>
   </div>
-  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v14.1.1</a></p>
+  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v14.1.2</a></p>
 </footer>
 
 <div class="modal-backdrop hidden" id="authModal">
@@ -302,7 +309,7 @@
   </div>
 </div>
 <script src="assets/vendor/supabase-js-2.45.4.js"></script>
-<script src="app.js?v=1411"></script>
-<script src="skinquest-v14.js?v=1411"></script>
+<script src="app.js?v=1412"></script>
+<script src="skinquest-v14.js?v=1412"></script>
 </body>
 </html>
