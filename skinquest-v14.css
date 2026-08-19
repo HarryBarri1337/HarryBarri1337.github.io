@@ -1,4 +1,4 @@
-/* SkinQuest v14.1.0 additive UI layer. Load after styles.css. */
+/* SkinQuest v14.1.1 additive UI layer. Load after styles.css. */
 :root {
   --sq-v14-surface: rgba(13, 18, 27, .92);
   --sq-v14-surface-2: rgba(255, 255, 255, .045);
@@ -405,40 +405,93 @@
 
 /* Reward filters + cards */
 #sqRewardExtraFilters {
-  display: flex;
-  flex-wrap: wrap;
+  position: relative;
+  z-index: 12;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(150px, 1fr)) auto;
   align-items: end;
-  gap: 10px;
-  margin: -4px 0 14px;
-  padding: 12px;
+  gap: 12px;
+  margin: 4px 0 16px;
+  padding: 14px;
   border: 1px solid var(--sq-v14-border);
-  border-radius: 15px;
-  background: rgba(255,255,255,.025);
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(232,179,77,.055), transparent 34%),
+    rgba(255,255,255,.025);
 }
-.sq-extra-filter-group { display: grid; gap: 5px; min-width: 145px; }
-.sq-extra-filter-group label { color: var(--sq-v14-muted); font-size: .72rem; font-weight: 850; }
-.sq-extra-filter-group select {
-  min-height: 39px;
-  border: 1px solid var(--sq-v14-border);
-  border-radius: 11px;
-  padding: 0 10px;
-  background: rgba(8,12,18,.88);
-  color: var(--sq-v14-text);
+.sq-extra-filter-group {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
 }
-.sq-filter-toggle {
-  min-height: 39px;
+.sq-extra-filter-label {
+  color: var(--sq-v14-muted);
+  font-size: .75rem;
+  font-weight: 850;
+  letter-spacing: .01em;
+}
+.sq-extra-custom-select { min-width: 0; }
+.sq-extra-select-trigger {
+  min-height: 44px;
+  padding-inline: 13px 12px;
+  border-color: rgba(255,255,255,.12);
+  background: rgba(8,12,18,.76);
+  font-size: .9rem;
+}
+.sq-extra-select-trigger > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sq-extra-select-menu {
+  max-height: min(320px, 58vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(232,179,77,.56) rgba(255,255,255,.035);
+}
+.sq-extra-select-menu::-webkit-scrollbar { width: 8px; }
+.sq-extra-select-menu::-webkit-scrollbar-track { background: rgba(255,255,255,.035); border-radius: 999px; }
+.sq-extra-select-menu::-webkit-scrollbar-thumb {
+  border: 2px solid rgba(10,14,21,.96);
+  border-radius: 999px;
+  background: rgba(232,179,77,.58);
+}
+.sq-extra-filter-reset {
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  padding: 0 11px;
+  padding: 0 15px;
   border: 1px solid var(--sq-v14-border);
-  border-radius: 11px;
-  background: rgba(255,255,255,.03);
+  border-radius: 12px;
+  background: rgba(255,255,255,.035);
   color: var(--sq-v14-text);
   cursor: pointer;
   font-weight: 800;
+  white-space: nowrap;
+  transition: border-color 150ms ease, background 150ms ease, color 150ms ease, opacity 150ms ease;
 }
-.sq-filter-toggle input { accent-color: var(--sq-v14-brand); }
+.sq-extra-filter-reset svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.sq-extra-filter-reset.is-active:hover {
+  border-color: rgba(232,179,77,.48);
+  background: rgba(232,179,77,.09);
+  color: var(--sq-v14-brand-2);
+}
+.sq-extra-filter-reset:disabled {
+  opacity: .42;
+  cursor: default;
+}
 .sq-reward-progress {
   min-width: 0;
   display: grid;
@@ -558,6 +611,8 @@
   .sq-achievement-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .sq-admin-promo-form { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .sq-admin-promo-form .button { align-self: end; }
+  #sqRewardExtraFilters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sq-extra-filter-reset { justify-self: stretch; }
 }
 @media (max-width: 760px) {
     .sq-promo-ref-grid,
@@ -575,9 +630,13 @@
   .sq-admin-kpis,
   .sq-admin-promo-form { grid-template-columns: 1fr; }
   .sq-inline-form { flex-direction: column; }
-  #sqRewardExtraFilters { align-items: stretch; }
+  #sqRewardExtraFilters {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    padding: 12px;
+  }
   .sq-extra-filter-group { min-width: 100%; }
-  .sq-filter-toggle { justify-content: center; }
+  .sq-extra-filter-reset { width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {

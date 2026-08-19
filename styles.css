@@ -1,4 +1,4 @@
-/* SkinQuest v14.1.0 core styles - v13.1.0 base + v14 feature layer */
+/* SkinQuest v14.1.1 core styles - v13.1.0 base + v14 feature layer */
 
 :root {
   --bg: #0b0f16;
@@ -4333,14 +4333,15 @@ body > footer {
   .provider-muted-panel { display: grid; justify-content: stretch; }
 }
 
-/* v14.1.0 split CPX survey workspace */
-.earn-page .compact-heading { padding-bottom: 30px; }
+/* v14.1.1 spacious CPX survey workspace */
+.earn-page { width: min(1320px, calc(100% - 32px)); }
+.earn-page .compact-heading { padding-bottom: 34px; }
 .survey-workspace {
   min-width: 0;
   display: grid;
-  grid-template-columns: minmax(250px, .34fr) minmax(0, 1fr);
-  gap: 16px;
-  align-items: stretch;
+  grid-template-columns: minmax(280px, 300px) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
 }
 .survey-provider-card {
   min-width: 0;
@@ -4471,7 +4472,7 @@ body > footer {
 .cpx-widget-panel {
   min-width: 0;
   margin: 0;
-  padding: clamp(20px, 3vw, 30px);
+  padding: clamp(26px, 3vw, 34px);
   overflow: hidden;
   background:
     radial-gradient(circle at 96% 0%, rgba(232, 179, 77, .08), transparent 30%),
@@ -4479,8 +4480,8 @@ body > footer {
 }
 .cpx-widget-heading {
   display: grid;
-  gap: 3px;
-  margin-bottom: 18px;
+  gap: 5px;
+  margin-bottom: 22px;
 }
 .cpx-widget-heading h2 { margin: 0; }
 .cpx-widget-heading p { max-width: 680px; margin: 0; }
@@ -4521,13 +4522,14 @@ body > footer {
 }
 .cpx-fullscreen-widget:empty { min-height: 1px; }
 
-@media (max-width: 900px) {
+@media (max-width: 1180px) {
   .survey-workspace { grid-template-columns: minmax(0, 1fr); }
   .survey-provider-card {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     gap: 15px 24px;
+    padding: 24px 26px;
     text-align: left;
   }
   .survey-provider-brand { justify-items: start; }
@@ -4555,7 +4557,8 @@ body > footer {
   .survey-provider-card .provider-action { grid-column: 1 / -1; margin-top: 0; }
 }
 
-@media (max-width: 680px) {
+@media (max-width: 720px) {
+  .earn-page { width: 100%; }
   .earn-page .compact-heading { padding-bottom: 20px; }
   .survey-provider-card {
     display: flex;

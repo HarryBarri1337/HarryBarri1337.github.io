@@ -1,13 +1,13 @@
-/* SkinQuest v14.1.0 product upgrade layer.
+/* SkinQuest v14.1.1 product upgrade layer.
    Loaded after app.js. The full setup includes the v14 database layer;
-   v14.1.0 itself requires no schema changes.
+   v14.1.1 itself requires no schema changes.
    This layer extends the secure SkinQuest core without replacing reward authority.
 */
 
 (() => {
   "use strict";
 
-  const VERSION = "14.1.0";
+  const VERSION = "14.1.1";
   const GA_ID = "G-DFRR03C4BP";
   const ATTRIBUTION_KEY = "skinquest.firstTouch.v14";
   const CONSENT_KEY = "skinquest.cookieConsent.v1";
@@ -702,42 +702,175 @@
   // ---------------------------------------------------------------------------
   // Rewards: extra filters, progress-to-price, details, restock alerts
   // ---------------------------------------------------------------------------
-  const rewardFilters = { weapon: "all", condition: "all", rarity: "all", goals: false };
+  const rewardFilters = { weapon: "all", condition: "all", rarity: "all" };
   let rewardObserver = null;
+
+  const rewardFilterOptions = {
+    weapon: [
+      ["all", "All weapons"], ["ak-47", "AK-47"], ["m4a1-s", "M4A1-S"], ["m4a4", "M4A4"],
+      ["awp", "AWP"], ["usp-s", "USP-S"], ["glock-18", "Glock-18"],
+      ["desert eagle", "Desert Eagle"], ["p250", "P250"], ["case", "Case"]
+    ],
+    condition: [
+      ["all", "All conditions"], ["fn", "Factory New"], ["mw", "Minimal Wear"],
+      ["ft", "Field-Tested"], ["ww", "Well-Worn"], ["bs", "Battle-Scarred"]
+    ],
+    rarity: [
+      ["all", "All rarities"], ["consumer", "Consumer"], ["industrial", "Industrial"],
+      ["mil-spec", "Mil-Spec"], ["restricted", "Restricted"], ["classified", "Classified"],
+      ["covert", "Covert"]
+    ]
+  };
+
+  function rewardFilterDropdown(label, key) {
+    const options = rewardFilterOptions[key] || [];
+    const labelId = `sq${key[0].toUpperCase()}${key.slice(1)}FilterLabel`;
+    const valueId = `sq${key[0].toUpperCase()}${key.slice(1)}FilterValue`;
+    return `
+      <div class="sq-extra-filter-group">
+        <span class="sq-extra-filter-label" id="${labelId}">${label}</span>
+        <div class="custom-select sq-extra-custom-select" data-sq-filter-dropdown="${key}">
+          <button class="custom-select-trigger sq-extra-select-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="${labelId} ${valueId}">
+            <span id="${valueId}" data-sq-selected-label>${options[0]?.[1] || label}</span>
+            <span class="select-chevron" aria-hidden="true">⌄</span>
+          </button>
+          <div class="custom-select-menu sq-extra-select-menu" role="listbox" aria-labelledby="${labelId}" aria-hidden="true">
+            ${options.map(([value, optionLabel], index) => `<button class="custom-select-option${index === 0 ? " active" : ""}" type="button" role="option" tabindex="-1" aria-selected="${index === 0}" data-sq-filter-option="${value}">${optionLabel}</button>`).join("")}
+          </div>
+        </div>
+      </div>`;
+  }
 
   function injectRewardExtraFilters() {
     if (path !== "rewards.html") return;
     const status = $(".reward-shop-status");
     if (!status || $("#sqRewardExtraFilters")) return;
     const bar = create("section", "sq-extra-reward-filters", `
-      <div class="sq-extra-filter-group"><span>Weapon</span><select data-sq-filter="weapon"><option value="all">All weapons</option><option>AK-47</option><option>M4A1-S</option><option>M4A4</option><option>AWP</option><option>USP-S</option><option>Glock-18</option><option>Desert Eagle</option><option>P250</option><option>Case</option></select></div>
-      <div class="sq-extra-filter-group"><span>Condition</span><select data-sq-filter="condition"><option value="all">All conditions</option><option value="fn">Factory New</option><option value="mw">Minimal Wear</option><option value="ft">Field-Tested</option><option value="ww">Well-Worn</option><option value="bs">Battle-Scarred</option></select></div>
-      <div class="sq-extra-filter-group"><span>Rarity</span><select data-sq-filter="rarity"><option value="all">All rarities</option><option value="consumer">Consumer</option><option value="industrial">Industrial</option><option value="mil-spec">Mil-Spec</option><option value="restricted">Restricted</option><option value="classified">Classified</option><option value="covert">Covert</option></select></div>
-      <button class="sq-filter-toggle" type="button" data-sq-goals-only aria-pressed="false">★ Goals only</button>
-      <button class="mini-button" type="button" data-sq-clear-extra>Reset extra filters</button>
+      ${rewardFilterDropdown("Weapon", "weapon")}
+      ${rewardFilterDropdown("Condition", "condition")}
+      ${rewardFilterDropdown("Rarity", "rarity")}
+      <button class="sq-extra-filter-reset" type="button" data-sq-clear-extra disabled>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.9 7.5A8 8 0 1 1 4 14"/><path d="M4.9 3.5v4h4"/></svg>
+        <span>Reset filters</span>
+      </button>
     `);
     bar.id = "sqRewardExtraFilters";
+    bar.setAttribute("aria-label", "More reward filters");
     status.parentNode.insertBefore(bar, status);
 
-    $$('[data-sq-filter]', bar).forEach((select) => {
-      select.addEventListener("change", () => {
-        rewardFilters[select.dataset.sqFilter] = select.value.toLowerCase();
-        applyRewardEnhancements();
+    const dropdowns = $$('[data-sq-filter-dropdown]', bar);
+    const resetButton = $("[data-sq-clear-extra]", bar);
+
+    const closeDropdown = (dropdown, returnFocus = false) => {
+      if (!dropdown) return;
+      dropdown.classList.remove("open");
+      const trigger = $(".sq-extra-select-trigger", dropdown);
+      $(".sq-extra-select-menu", dropdown)?.setAttribute("aria-hidden", "true");
+      trigger?.setAttribute("aria-expanded", "false");
+      if (returnFocus) trigger?.focus();
+    };
+
+    const closeAllDropdowns = (except = null) => {
+      dropdowns.forEach((dropdown) => {
+        if (dropdown !== except) closeDropdown(dropdown);
+      });
+    };
+
+    const updateResetButton = () => {
+      const active = Object.values(rewardFilters).some((value) => value !== "all");
+      if (!resetButton) return;
+      resetButton.disabled = !active;
+      resetButton.classList.toggle("is-active", active);
+    };
+
+    const chooseOption = (dropdown, option) => {
+      const key = dropdown?.dataset.sqFilterDropdown;
+      if (!key || !option) return;
+      const value = option.dataset.sqFilterOption || "all";
+      rewardFilters[key] = value.toLowerCase();
+      $("[data-sq-selected-label]", dropdown).textContent = option.textContent.trim();
+      $$('[data-sq-filter-option]', dropdown).forEach((candidate) => {
+        const selected = candidate === option;
+        candidate.classList.toggle("active", selected);
+        candidate.setAttribute("aria-selected", String(selected));
+      });
+      closeDropdown(dropdown, true);
+      updateResetButton();
+      applyRewardEnhancements();
+    };
+
+    dropdowns.forEach((dropdown) => {
+      const trigger = $(".sq-extra-select-trigger", dropdown);
+      const menu = $(".sq-extra-select-menu", dropdown);
+      const options = $$('[data-sq-filter-option]', dropdown);
+
+      const openDropdown = (focusOption = false, fromEnd = false) => {
+        closeAllDropdowns(dropdown);
+        dropdown.classList.add("open");
+        menu?.setAttribute("aria-hidden", "false");
+        trigger?.setAttribute("aria-expanded", "true");
+        if (focusOption) {
+          const activeOption = options.find((option) => option.classList.contains("active"));
+          (fromEnd ? options[options.length - 1] : activeOption || options[0])?.focus();
+        }
+      };
+
+      trigger?.addEventListener("click", (event) => {
+        event.preventDefault();
+        if (dropdown.classList.contains("open")) closeDropdown(dropdown);
+        else openDropdown();
+      });
+
+      trigger?.addEventListener("keydown", (event) => {
+        if (!["ArrowDown", "ArrowUp", "Enter", " "].includes(event.key)) return;
+        event.preventDefault();
+        openDropdown(true, event.key === "ArrowUp");
+      });
+
+      options.forEach((option) => option.addEventListener("click", () => chooseOption(dropdown, option)));
+
+      menu?.addEventListener("keydown", (event) => {
+        const currentIndex = options.indexOf(document.activeElement);
+        let nextIndex = currentIndex;
+        if (event.key === "ArrowDown") nextIndex = Math.min(options.length - 1, currentIndex + 1);
+        else if (event.key === "ArrowUp") nextIndex = Math.max(0, currentIndex - 1);
+        else if (event.key === "Home") nextIndex = 0;
+        else if (event.key === "End") nextIndex = options.length - 1;
+        else if (event.key === "Escape") {
+          event.preventDefault();
+          closeDropdown(dropdown, true);
+          return;
+        } else return;
+        event.preventDefault();
+        options[nextIndex]?.focus();
       });
     });
-    bar.querySelector("[data-sq-goals-only]")?.addEventListener("click", (event) => {
-      rewardFilters.goals = !rewardFilters.goals;
-      event.currentTarget.setAttribute("aria-pressed", String(rewardFilters.goals));
-      event.currentTarget.classList.toggle("active", rewardFilters.goals);
-      applyRewardEnhancements();
+
+    document.addEventListener("click", (event) => {
+      if (!bar.contains(event.target)) closeAllDropdowns();
     });
-    bar.querySelector("[data-sq-clear-extra]")?.addEventListener("click", () => {
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") closeAllDropdowns();
+    });
+    bar.addEventListener("focusout", () => {
+      window.setTimeout(() => {
+        if (!bar.contains(document.activeElement)) closeAllDropdowns();
+      }, 0);
+    });
+
+    resetButton?.addEventListener("click", () => {
       rewardFilters.weapon = rewardFilters.condition = rewardFilters.rarity = "all";
-      rewardFilters.goals = false;
-      $$('[data-sq-filter]', bar).forEach((select) => { select.value = "all"; });
-      const goals = $("[data-sq-goals-only]", bar);
-      goals?.setAttribute("aria-pressed", "false");
-      goals?.classList.remove("active");
+      dropdowns.forEach((dropdown) => {
+        const firstOption = $("[data-sq-filter-option]", dropdown);
+        if (!firstOption) return;
+        $("[data-sq-selected-label]", dropdown).textContent = firstOption.textContent.trim();
+        $$('[data-sq-filter-option]', dropdown).forEach((option, index) => {
+          option.classList.toggle("active", index === 0);
+          option.setAttribute("aria-selected", String(index === 0));
+        });
+        closeDropdown(dropdown);
+      });
+      updateResetButton();
       applyRewardEnhancements();
     });
   }
@@ -786,8 +919,7 @@
       const conditionMatch = conditionMatches(text, rewardFilters.condition);
       const rarityMatch = rewardFilters.rarity === "all" || text.includes(rewardFilters.rarity);
       const star = $("[data-favorite-star]", card);
-      const goalMatch = !rewardFilters.goals || star?.classList.contains("is-favorited") || star?.getAttribute("aria-pressed") === "true";
-      card.classList.toggle("sq-extra-hidden", !(weaponMatch && conditionMatch && rarityMatch && goalMatch));
+      card.classList.toggle("sq-extra-hidden", !(weaponMatch && conditionMatch && rarityMatch));
 
       if (!$(".sq-reward-progress", card)) {
         const cost = parseCardCost(card);
@@ -843,8 +975,13 @@
 
     const visible = cards.filter((card) => !card.classList.contains("sq-extra-hidden")).length;
     const count = $("#rewardResultCount");
-    const extraActive = rewardFilters.weapon !== "all" || rewardFilters.condition !== "all" || rewardFilters.rarity !== "all" || rewardFilters.goals;
-    if (count && extraActive) count.textContent = `Showing ${formatNumber(visible)} rewards with extra filters`;
+    const extraActive = rewardFilters.weapon !== "all" || rewardFilters.condition !== "all" || rewardFilters.rarity !== "all";
+    if (count) {
+      if (!count.textContent.includes("with extra filters")) count.dataset.sqBaseText = count.textContent;
+      count.textContent = extraActive
+        ? `Showing ${formatNumber(visible)} rewards with extra filters`
+        : count.dataset.sqBaseText || `Showing ${formatNumber(visible)} rewards`;
+    }
   }
 
   function openRewardDetail(card) {
