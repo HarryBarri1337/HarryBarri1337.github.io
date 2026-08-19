@@ -1,5 +1,5 @@
--- SkinQuest full Supabase setup v14.0.4
--- No database changes were added beyond v14.0.1 in this release.
+-- SkinQuest full Supabase setup v14.1.0
+-- No database changes were added in v14.1.0.
 -- This full setup remains complete for brand-new Supabase projects.
 -- Run this in Supabase SQL Editor only when setting up a fresh project.
 -- Stable full setup including BitLabs accounting and the refund XP repair.
@@ -1150,7 +1150,7 @@ notify pgrst, 'reload schema';
 -- ============================================================================
 -- SkinQuest v14 product layer (included in full fresh-project setup)
 -- Existing v14.0.2 projects already contain this database layer.
--- v14.0.4 has no database changes, so its upgrade file contains comments only.
+-- v14.1.0 has no database changes, so its upgrade file contains comments only.
 -- ============================================================================
 
 
@@ -1165,7 +1165,7 @@ begin
      or to_regclass('public.redemption_requests') is null
      or to_regclass('public.coin_adjustments') is null
      or to_regclass('public.favorite_rewards') is null then
-    raise exception 'SkinQuest v14 upgrade requires the existing v13.1.0 database schema. Use skinquest_full_setup_v14_0_4.sql only for a NEW empty Supabase project.';
+    raise exception 'SkinQuest v14 upgrade requires the existing v13.1.0 database schema. Use skinquest_full_setup_v14_1_0.sql only for a NEW empty Supabase project.';
   end if;
 end $$;
 

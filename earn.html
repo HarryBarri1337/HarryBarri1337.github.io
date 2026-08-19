@@ -23,7 +23,7 @@
       }
     }());
   </script>
-  <link rel="stylesheet" href="styles.css?v=1404" />
+  <link rel="stylesheet" href="styles.css?v=1410" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#0b0f16" />
   <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png" />
@@ -33,7 +33,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="SkinQuest" />
   <meta property="og:site_name" content="SkinQuest" />
-  <link rel="stylesheet" href="skinquest-v14.css?v=1404" />
+  <link rel="stylesheet" href="skinquest-v14.css?v=1410" />
 </head>
 <body>
 <div id="pageLoader" class="page-loader">
@@ -69,48 +69,54 @@
     </p>
   </section>
 
-  <section class="provider-grid clean-providers single-provider-grid">
-    <article class="provider-card featured provider-main-card">
-      <div class="provider-head">
-        <span class="provider-logo-mark" aria-hidden="true"><img src="assets/providers/cpx-research-logo.png" alt="" /></span>
-        <div>
-          <h2>CPX Research</h2>
-          <p>Live surveys securely connected to your SkinQuest account.</p>
-        </div>
+  <section class="survey-workspace" aria-label="CPX Research surveys">
+    <aside class="provider-card featured survey-provider-card">
+      <div class="survey-provider-brand">
+        <img src="assets/providers/cpx-research-logo.png" alt="CPX Research" />
+        <p>Live surveys securely connected to your SkinQuest account.</p>
       </div>
-      <ul>
-        <li>Complete surveys honestly</li>
-        <li>Rewards are credited after verification</li>
-        <li>Avoid VPNs, bots, or fake answers</li>
-      </ul>
-      <a class="button button-primary button-large provider-action" id="openCpxWall" href="#" aria-disabled="true">Preparing secure surveys…</a>
-    </article>
-  </section>
 
-  <section class="panel cpx-widget-panel" id="cpxSurveyPanel" aria-labelledby="cpxSurveyTitle">
-    <div class="cpx-widget-heading">
-      <div>
-        <span class="pill">Live CPX offers</span>
+      <span class="cpx-live-badge" id="cpxLiveStatus" data-state="loading">Connecting</span>
+
+      <div class="cpx-availability" aria-live="polite">
+        <strong id="cpxWidgetCount">—</strong>
+        <span id="cpxWidgetStatus">available</span>
+      </div>
+
+      <ul class="cpx-guidelines">
+        <li>
+          <span class="cpx-guideline-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.6-2.8 8.2-7 10-4.2-1.8-7-5.4-7-10V6l7-3z"/><path d="M9 12l2 2 4-5"/></svg></span>
+          <span>Complete surveys honestly</span>
+        </li>
+        <li>
+          <span class="cpx-guideline-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l3 2 3.5.5.5 3.5 2 3-2 3-.5 3.5-3.5.5-3 2-3-2-3.5-.5-.5-3.5-2-3 2-3 .5-3.5 3.5-.5 3-2z"/><path d="M9 12l2 2 4-4"/></svg></span>
+          <span>Rewards are credited after verification</span>
+        </li>
+        <li>
+          <span class="cpx-guideline-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M6 18L18 6"/></svg></span>
+          <span>Avoid VPNs, bots, or fake answers</span>
+        </li>
+      </ul>
+
+      <a class="button button-ghost button-large provider-action" id="openCpxWall" href="#" aria-disabled="true">Preparing secure surveys…</a>
+    </aside>
+
+    <section class="panel cpx-widget-panel" id="cpxSurveyPanel" aria-labelledby="cpxSurveyTitle">
+      <div class="cpx-widget-heading">
         <h2 id="cpxSurveyTitle">Available surveys</h2>
         <p class="muted">Choose a survey below. Availability and reward amounts are provided live by CPX Research.</p>
       </div>
-      <span class="cpx-widget-status" id="cpxWidgetStatus" aria-live="polite">Connecting…</span>
-    </div>
 
-    <div class="cpx-widget-stage" id="cpxWidgetStage" data-state="loading" aria-busy="true">
-      <div class="cpx-widget-state" id="cpxWidgetState" role="status" aria-live="polite">
-        <div class="account-loading-animation" id="cpxWidgetLoader" aria-hidden="true"><span></span><span></span><span></span></div>
-        <strong id="cpxWidgetStateTitle">Loading secure surveys</strong>
-        <span id="cpxWidgetStateDetail">Connecting your SkinQuest account to CPX Research.</span>
-        <button class="button button-ghost hidden" id="retryCpxWidget" type="button">Try again</button>
+      <div class="cpx-widget-stage" id="cpxWidgetStage" data-state="loading" aria-busy="true">
+        <div class="cpx-widget-state" id="cpxWidgetState" role="status" aria-live="polite">
+          <div class="account-loading-animation" id="cpxWidgetLoader" aria-hidden="true"><span></span><span></span><span></span></div>
+          <strong id="cpxWidgetStateTitle">Loading secure surveys</strong>
+          <span id="cpxWidgetStateDetail">Connecting your SkinQuest account to CPX Research.</span>
+          <button class="button button-ghost hidden" id="retryCpxWidget" type="button">Try again</button>
+        </div>
+        <div id="cpxFullscreen" class="cpx-fullscreen-widget" aria-label="CPX Research surveys"></div>
       </div>
-      <div id="cpxFullscreen" class="cpx-fullscreen-widget" aria-label="CPX Research surveys"></div>
-    </div>
-  </section>
-
-  <section class="panel fair-use-panel">
-    <h2>Verified completions only</h2>
-    <p class="muted">Coins are added after provider confirmation. Delays, rejections, reversals, and availability limits can occur. VPN abuse, bots, duplicate accounts, and dishonest answers are prohibited.</p>
+    </section>
   </section>
 </main>
 
@@ -126,7 +132,7 @@
     <a href="/install">Install app</a>
     <a href="mailto:support@skinquestcs.com">Support</a>
   </div>
-  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v14.0.4</a></p>
+  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v14.1.0</a></p>
 </footer>
 <div class="modal-backdrop hidden" id="authModal">
   <div class="auth-modal" role="dialog" aria-modal="true">
@@ -168,7 +174,7 @@
   </div>
 </div>
 <script src="assets/vendor/supabase-js-2.45.4.js"></script>
-<script src="app.js?v=1404"></script>
-<script src="skinquest-v14.js?v=1404"></script>
+<script src="app.js?v=1410"></script>
+<script src="skinquest-v14.js?v=1410"></script>
 </body>
 </html>

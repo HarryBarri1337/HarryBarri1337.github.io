@@ -1,4 +1,4 @@
-/* SkinQuest v14.0.4 additive UI layer. Load after styles.css. */
+/* SkinQuest v14.1.0 additive UI layer. Load after styles.css. */
 :root {
   --sq-v14-surface: rgba(13, 18, 27, .92);
   --sq-v14-surface-2: rgba(255, 255, 255, .045);
@@ -439,8 +439,31 @@
   font-weight: 800;
 }
 .sq-filter-toggle input { accent-color: var(--sq-v14-brand); }
-.sq-reward-progress { margin-top: 2px; }
-.sq-reward-progress .sq-mini-progress { margin-top: 5px; }
+.sq-reward-progress {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+  margin-top: 2px;
+}
+.sq-reward-progress-copy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  line-height: 1.3;
+}
+.sq-reward-progress-copy span {
+  min-width: 0;
+  color: var(--sq-v14-muted);
+  font-size: .74rem;
+  overflow-wrap: anywhere;
+}
+.sq-reward-progress-copy strong {
+  min-width: 0;
+  color: var(--sq-v14-text);
+  font-size: .78rem;
+  overflow-wrap: anywhere;
+}
+.sq-reward-progress .sq-mini-progress { margin-top: 0; }
 .sq-reward-progress small { color: var(--sq-v14-muted); font-size: .72rem; }
 .sq-stock-alert { width: 100%; }
 .sq-highlight-reward { animation: sq-highlight 1.4s ease; }
