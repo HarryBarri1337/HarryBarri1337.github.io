@@ -1,0 +1,15 @@
+SkinQuest v14.0.4 release checks
+
+[ ] Do NOT run upgrade SQL when updating an existing v14.0.3 project.
+[ ] Rotate any CPX secure-hash secret that has been exposed outside the provider dashboard or Supabase secrets.
+[ ] Set CPX_APP_ID=33831 and CPX_SECURE_HASH_SECRET in Supabase Edge Function secrets.
+[ ] Deploy the updated survey-feed Edge Function before testing Surveys.
+[ ] Confirm signed-out users see a sign-in state and no CPX widget is loaded.
+[ ] Confirm signed-in users see the embedded CPX full-content survey list.
+[ ] Confirm the signed "Open CPX in a new tab" fallback works.
+[ ] Confirm a missing CPX secret produces the friendly unavailable state and never opens an unsigned URL.
+[ ] Confirm BitLabs and Lootably do not appear on Surveys.
+[ ] Confirm the CPX logo loads from assets/providers/cpx-research-logo.png.
+[ ] Confirm reward notifications still scroll to and highlight the matching dashboard request.
+[ ] Confirm dashboard tab returns still refresh silently without hiding existing content.
+[ ] Only use skinquest_full_setup_v14_0_4.sql on a NEW empty Supabase project.

@@ -1,6 +1,6 @@
-/* SkinQuest v14.0.3 product upgrade layer.
+/* SkinQuest v14.0.4 product upgrade layer.
    Loaded after app.js. The full setup includes the v14 database layer;
-   v14.0.3 itself requires no schema changes.
+   v14.0.4 itself requires no schema changes.
    This layer extends the secure SkinQuest core without replacing reward authority.
 */
 

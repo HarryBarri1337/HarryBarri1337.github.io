@@ -1,4 +1,4 @@
-// SkinQuest v14.0.3 core - secure base; enhanced by skinquest-v14.js
+// SkinQuest v14.0.4 core - secure base; enhanced by skinquest-v14.js
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -6,6 +6,7 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const ADMIN_EMAILS = []; // v11.6: admin access must come from Supabase admin_users via is_admin().
 const CPX_APP_ID = 33831;
+const CPX_SCRIPT_URL = "https://cdn.cpx-research.com/assets/js/script_tag_v2.0.js";
 const SUPPORT_EMAIL = "support@skinquestcs.com"; // Public support contact. Form requests are saved to Supabase and can trigger server-side email notifications.
 const STEAM_AUTH_START_URL = `${SUPABASE_URL}/functions/v1/steam-auth-start`;
 const STEAM_AUTH_DISCONNECT_URL = `${SUPABASE_URL}/functions/v1/steam-disconnect`;
@@ -1086,6 +1087,7 @@ async function updateHomeAuthState() {
   const user = await getSessionUser();
 
   if (!user) {
+    resetCpxWidget();
     guest.classList.remove("hidden");
     authed.classList.add("hidden");
     return;
@@ -1118,54 +1120,260 @@ async function initOfferwall() {
   const cpxButton = qs("#openCpxWall");
   if (!cpxButton) return;
 
+  bindCpxOfferwallButton(cpxButton);
+
   const user = await getSessionUser();
 
   if (!user) {
     cpxButton.href = "#";
+    cpxButton.removeAttribute("target");
+    cpxButton.removeAttribute("rel");
+    cpxButton.setAttribute("aria-disabled", "false");
+    cpxButton.textContent = "Sign in to view surveys";
     cpxButton.classList.add("needs-login");
-    cpxButton.addEventListener("click", (event) => {
-      event.preventDefault();
-      openAuthModal("signup");
-    });
+    setCpxWidgetState(
+      "signed-out",
+      "Sign in to view surveys",
+      "CPX offers are connected to your SkinQuest account so verified rewards reach the correct balance."
+    );
     return;
   }
 
   cpxButton.classList.remove("needs-login");
-  let wallUrl = `https://offers.cpx-research.com/index.php?app_id=${CPX_APP_ID}&ext_user_id=${encodeURIComponent(user.id)}`;
+  if (
+    window.__skinquestCpxWidgetUserId === user.id
+    && window.__skinquestCpxScriptPromise
+    && isSafeOfferwallUrl(window.__skinquestCpxWallUrl, user.id)
+  ) {
+    cpxButton.href = window.__skinquestCpxWallUrl;
+    cpxButton.target = "_blank";
+    cpxButton.rel = "noopener";
+    cpxButton.setAttribute("aria-disabled", "false");
+    cpxButton.textContent = "Open CPX in a new tab";
+    try {
+      await window.__skinquestCpxScriptPromise;
+      return;
+    } catch {
+      resetCpxWidget();
+    }
+  }
+
+  cpxButton.href = "#";
+  cpxButton.removeAttribute("target");
+  cpxButton.removeAttribute("rel");
+  cpxButton.setAttribute("aria-disabled", "true");
+  cpxButton.textContent = "Preparing secure surveys…";
+  setCpxWidgetState(
+    "loading",
+    "Loading secure surveys",
+    "Creating a signed CPX session for your SkinQuest account."
+  );
+
   try {
     const { data, error } = await sb.functions.invoke("survey-feed");
-    if (!error && isSafeOfferwallUrl(data?.wall_url)) wallUrl = data.wall_url;
-    renderRecommendedSurveys(data?.surveys || []);
+    if (error) throw error;
+    if (!isSafeOfferwallUrl(data?.wall_url, user.id)) throw new Error("The secure CPX wall URL was invalid.");
+    if (!isValidCpxWidgetPayload(data?.cpx_widget, user.id)) throw new Error("The secure CPX widget configuration was invalid.");
+
+    cpxButton.href = data.wall_url;
+    cpxButton.target = "_blank";
+    cpxButton.rel = "noopener";
+    cpxButton.setAttribute("aria-disabled", "false");
+    cpxButton.textContent = "Open CPX in a new tab";
+    window.__skinquestCpxWallUrl = data.wall_url;
+
+    await loadCpxWidget(data.cpx_widget, user.id);
   } catch (error) {
-    console.warn("Secure survey feed unavailable; using the provider wall fallback.", error);
+    console.warn("Secure CPX surveys are unavailable.", error);
+    cpxButton.href = "#";
+    cpxButton.removeAttribute("target");
+    cpxButton.removeAttribute("rel");
+    cpxButton.setAttribute("aria-disabled", "true");
+    cpxButton.textContent = "CPX temporarily unavailable";
+    setCpxWidgetState(
+      "error",
+      "Surveys could not be loaded",
+      "Please try again. If the problem continues, the CPX connection may still need to be configured.",
+      true
+    );
   }
-  cpxButton.href = wallUrl;
-  cpxButton.target = "_blank";
-  cpxButton.rel = "noopener";
 }
 
-function isSafeOfferwallUrl(value) {
+function bindCpxOfferwallButton(button) {
+  if (button.dataset.cpxBound === "true") return;
+  button.dataset.cpxBound = "true";
+  button.addEventListener("click", (event) => {
+    if (button.classList.contains("needs-login")) {
+      event.preventDefault();
+      openAuthModal("signup");
+      return;
+    }
+    if (button.getAttribute("aria-disabled") === "true") event.preventDefault();
+  });
+
+  const retryButton = qs("#retryCpxWidget");
+  retryButton?.addEventListener("click", () => {
+    resetCpxWidget();
+    initOfferwall();
+  });
+}
+
+function isSafeOfferwallUrl(value, userId = "") {
   try {
     const url = new URL(value);
-    return url.protocol === "https:" && url.hostname.toLowerCase() === "offers.cpx-research.com";
+    return url.protocol === "https:"
+      && url.hostname.toLowerCase() === "offers.cpx-research.com"
+      && url.searchParams.get("app_id") === String(CPX_APP_ID)
+      && (!userId || url.searchParams.get("ext_user_id") === userId)
+      && /^[a-f0-9]{32}$/i.test(url.searchParams.get("secure_hash") || "");
   } catch { return false; }
 }
 
-function renderRecommendedSurveys(surveys) {
-  const container = qs("#recommendedSurveys");
+function isValidCpxWidgetPayload(widget, userId) {
+  return Boolean(widget)
+    && Number(widget.app_id) === CPX_APP_ID
+    && widget.ext_user_id === userId
+    && /^[a-f0-9]{32}$/i.test(String(widget.secure_hash || ""));
+}
+
+function setCpxWidgetState(state, title, detail, canRetry = false) {
+  const stage = qs("#cpxWidgetStage");
+  const stateBox = qs("#cpxWidgetState");
+  const stateTitle = qs("#cpxWidgetStateTitle");
+  const stateDetail = qs("#cpxWidgetStateDetail");
+  const loader = qs("#cpxWidgetLoader");
+  const retry = qs("#retryCpxWidget");
+  const status = qs("#cpxWidgetStatus");
+  if (!stage || !stateBox) return;
+
+  stage.dataset.state = state;
+  stage.setAttribute("aria-busy", state === "loading" ? "true" : "false");
+  stateBox.hidden = state === "ready";
+  if (stateTitle) stateTitle.textContent = title;
+  if (stateDetail) stateDetail.textContent = detail;
+  loader?.classList.toggle("hidden", state !== "loading");
+  retry?.classList.toggle("hidden", !canRetry);
+  if (status) {
+    status.textContent = {
+      loading: "Connecting…",
+      ready: "Live",
+      empty: "No matches",
+      error: "Unavailable",
+      "signed-out": "Sign in required"
+    }[state] || "CPX Research";
+  }
+}
+
+function buildCpxConfig(widget) {
+  return {
+    general_config: {
+      app_id: Number(widget.app_id),
+      ext_user_id: widget.ext_user_id,
+      email: "",
+      username: "",
+      secure_hash: widget.secure_hash,
+      subid_1: "",
+      subid_2: ""
+    },
+    style_config: {
+      text_color: "#eef3fb",
+      survey_box: {
+        topbar_background_color: "#e8b34d",
+        box_background_color: "#111827",
+        rounded_borders: true,
+        stars_filled: "#0b0f16"
+      }
+    },
+    script_config: [{
+      div_id: "cpxFullscreen",
+      theme_style: 1,
+      order_by: 2,
+      limit_surveys: 7
+    }],
+    debug: false,
+    useIFrame: true,
+    iFramePosition: 1,
+    functions: {
+      no_surveys_available: () => {
+        window.__skinquestCpxAvailabilityState = "empty";
+        setCpxWidgetState(
+          "empty",
+          "No surveys match right now",
+          "CPX availability changes throughout the day, so check back later."
+        );
+      },
+      count_new_surveys: (count) => {
+        const surveyCount = Math.max(0, Number(count) || 0);
+        const status = qs("#cpxWidgetStatus");
+        if (surveyCount > 0) {
+          window.__skinquestCpxAvailabilityState = "ready";
+          setCpxWidgetState("ready", "Surveys are ready", "Choose an available CPX survey below.");
+          if (status) status.textContent = `${surveyCount} available`;
+        }
+      },
+      get_all_surveys: (surveys) => {
+        const count = Array.isArray(surveys) ? surveys.length : 0;
+        const status = qs("#cpxWidgetStatus");
+        if (count > 0) {
+          window.__skinquestCpxAvailabilityState = "ready";
+          setCpxWidgetState("ready", "Surveys are ready", "Choose an available CPX survey below.");
+          if (status) status.textContent = `${count} available`;
+        }
+      },
+      get_transaction: () => {}
+    }
+  };
+}
+
+function resetCpxWidget() {
+  document.querySelector('script[data-skinquest-cpx="true"]')?.remove();
+  const container = qs("#cpxFullscreen");
+  if (container) container.replaceChildren();
+  window.__skinquestCpxScriptPromise = null;
+  window.__skinquestCpxWidgetUserId = null;
+  window.__skinquestCpxAvailabilityState = null;
+  window.__skinquestCpxWallUrl = null;
+  delete window.config;
+}
+
+async function loadCpxWidget(widget, userId) {
+  const container = qs("#cpxFullscreen");
   if (!container) return;
-  const safeSurveys = surveys.filter((survey) => isSafeOfferwallUrl(survey.url)).slice(0, 6);
-  if (!safeSurveys.length) {
-    container.innerHTML = '<p class="muted">Open CPX Research to see the surveys currently available for your country and device.</p>';
+
+  if (window.__skinquestCpxWidgetUserId === userId && window.__skinquestCpxScriptPromise) {
+    await window.__skinquestCpxScriptPromise;
+    if (window.__skinquestCpxAvailabilityState === "loading") {
+      window.__skinquestCpxAvailabilityState = "ready";
+      setCpxWidgetState("ready", "Surveys are ready", "Choose an available CPX survey below.");
+    }
     return;
   }
-  container.innerHTML = safeSurveys.map((survey) => `
-    <article class="survey-result-card">
-      <div><span class="provider-badge">${escapeHtml(survey.provider || "CPX")}</span><h3>${escapeHtml(survey.title || "Recommended survey")}</h3></div>
-      <p>${escapeHtml(survey.description || "Availability and reward are confirmed by the provider.")}</p>
-      <div class="survey-result-meta"><span>${Number(survey.coins || 0) > 0 ? formatCoins(survey.coins) : "Live provider rate"}</span><span>${Number(survey.minutes || 0) > 0 ? `${Number(survey.minutes)} min` : "Live availability"}</span></div>
-      <a class="button button-primary" href="${escapeHtml(survey.url)}" target="_blank" rel="noopener">Start survey</a>
-    </article>`).join("");
+
+  if (window.__skinquestCpxWidgetUserId && window.__skinquestCpxWidgetUserId !== userId) resetCpxWidget();
+  window.config = buildCpxConfig(widget);
+  window.__skinquestCpxWidgetUserId = userId;
+  window.__skinquestCpxAvailabilityState = "loading";
+
+  window.__skinquestCpxScriptPromise = new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = CPX_SCRIPT_URL;
+    script.async = true;
+    script.dataset.skinquestCpx = "true";
+    script.onload = resolve;
+    script.onerror = () => reject(new Error("The CPX widget library could not be loaded."));
+    document.body.appendChild(script);
+  });
+
+  try {
+    await window.__skinquestCpxScriptPromise;
+    if (window.__skinquestCpxAvailabilityState === "loading") {
+      window.__skinquestCpxAvailabilityState = "ready";
+      setCpxWidgetState("ready", "Surveys are ready", "Choose an available CPX survey below.");
+    }
+  } catch (error) {
+    resetCpxWidget();
+    throw error;
+  }
 }
 
 async function loadRewards() {
