@@ -1,4 +1,4 @@
-/* SkinQuest v14.0.2 additive UI layer. Load after styles.css. */
+/* SkinQuest v14.0.3 additive UI layer. Load after styles.css. */
 :root {
   --sq-v14-surface: rgba(13, 18, 27, .92);
   --sq-v14-surface-2: rgba(255, 255, 255, .045);
@@ -201,9 +201,8 @@
   color: var(--sq-v14-text);
   box-shadow: var(--sq-v14-shadow);
 }
-#sqNotificationDrawer.open { display: grid; grid-template-rows: auto minmax(0,1fr) auto; }
-.sq-drawer-head,
-.sq-drawer-actions {
+#sqNotificationDrawer.open { display: grid; grid-template-rows: auto minmax(0,1fr); }
+.sq-drawer-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -211,9 +210,39 @@
   padding: 13px 14px;
   border-bottom: 1px solid var(--sq-v14-border);
 }
-.sq-drawer-actions { border-top: 1px solid var(--sq-v14-border); border-bottom: 0; }
+.sq-drawer-head-actions { display: flex; align-items: center; gap: 8px; }
+.sq-drawer-head-actions .sq-icon-button { width: 36px; height: 36px; border-radius: 11px; }
+.sq-mark-all-read {
+  min-height: 34px;
+  padding: 7px 10px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--sq-v14-muted);
+  font: inherit;
+  font-size: .75rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+.sq-mark-all-read:hover { border-color: var(--sq-v14-border); background: rgba(255,255,255,.045); color: var(--sq-v14-text); }
+.sq-mark-all-read:disabled { opacity: .58; cursor: wait; }
 .sq-drawer-head h2 { margin: 0; font-size: 1rem; }
-.sq-notification-list { overflow: auto; padding: 7px; }
+.sq-notification-list {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 7px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(232,179,77,.55) transparent;
+}
+.sq-notification-list::-webkit-scrollbar { width: 7px; }
+.sq-notification-list::-webkit-scrollbar-track { background: transparent; }
+.sq-notification-list::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: rgba(232,179,77,.55);
+  background-clip: padding-box;
+}
+.sq-notification-list::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
 .sq-notification-row {
   width: 100%;
   display: grid;
@@ -232,7 +261,8 @@
 .sq-notification-dot { width: 7px; height: 7px; margin-top: 7px; border-radius: 50%; background: transparent; }
 .sq-notification-row.unread .sq-notification-dot { background: var(--sq-v14-blue); }
 .sq-notification-row strong { display: block; margin-bottom: 3px; }
-.sq-notification-row p { margin: 0; color: var(--sq-v14-muted); font-size: .88rem; line-height: 1.4; }
+.sq-notification-row p,
+.sq-notification-row small { display: block; margin: 0; color: var(--sq-v14-muted); font-size: .82rem; line-height: 1.4; }
 .sq-notification-row time { display: block; margin-top: 5px; color: var(--sq-v14-muted); font-size: .72rem; }
 
 /* Shared v14 panels */
@@ -276,11 +306,21 @@
 .sq-quest-head h3 { margin-top: 0; }
 
 /* Homepage
-   v14.0.2 intentionally keeps the public landing page on the core SkinQuest
+   v14.0.3 intentionally keeps the public landing page on the core SkinQuest
    design system. No dashboard-style live-stat block is injected here. */
 
 /* Dashboard */
 #sqGrowthHub { display: grid; gap: 14px; margin-top: 14px; }
+#redeemRequestsPanel,
+.redeem-row { scroll-margin-top: 110px; }
+#redeemRequestsPanel.notification-target,
+.redeem-row.notification-target {
+  animation: sqNotificationTarget 3.2s ease both;
+}
+@keyframes sqNotificationTarget {
+  0%, 100% { box-shadow: none; }
+  10%, 72% { box-shadow: inset 0 0 0 1px rgba(246,207,114,.85), 0 0 24px rgba(232,179,77,.16); background: rgba(232,179,77,.08); }
+}
 .sq-next-action-panel {
   border-color: color-mix(in srgb, var(--sq-v14-brand-2) 35%, transparent) !important;
   background: linear-gradient(145deg, rgba(232,179,77,.09), rgba(255,255,255,.018)) !important;
@@ -527,7 +567,7 @@
 }
 
 
-/* v14.0.2 dashboard cleanup */
+/* v14.0.3 dashboard cleanup */
 .sq-growth-stats-compact { grid-template-columns: repeat(3, minmax(0,1fr)); }
 .sq-achievement-grid-compact { grid-template-columns: repeat(3, minmax(0,1fr)); }
 .sq-promo-help { margin-top: 12px; }

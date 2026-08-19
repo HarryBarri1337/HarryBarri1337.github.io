@@ -1,4 +1,4 @@
-// SkinQuest v14.0.2 core - secure base; enhanced by skinquest-v14.js
+// SkinQuest v14.0.3 core - secure base; enhanced by skinquest-v14.js
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -68,10 +68,13 @@ let rewardItems = [];
 let adminRewardItems = [];
 let currentUser = null;
 let currentProfile = null;
+let currentTotalEarned = null;
 let currentIsAdmin = false;
 let currentAdminRole = null;
 let favoriteRewardIds = new Set();
 const MAX_FAVORITE_REWARDS = 6;
+let dashboardRefreshPromise = null;
+let lastDashboardScrollTarget = "";
 
 function qs(selector) {
   return document.querySelector(selector);
@@ -644,12 +647,12 @@ function initProgressRefreshWatcher() {
 
   const checkForProgress = async () => {
     if (checking || document.visibilityState === "hidden" || !currentUser?.id) return;
-    if (Date.now() - lastCheckAt < 10000) return;
+    if (Date.now() - lastCheckAt < 30000) return;
     checking = true;
     lastCheckAt = Date.now();
     try {
       await updateNavAuthState();
-      if (qs("#accountSection")) await refreshDashboard();
+      if (qs("#accountSection")) await refreshDashboard({ background: true });
     } finally {
       checking = false;
     }
@@ -1012,28 +1015,39 @@ async function updateNavAuthState() {
 
   const user = await getSessionUser();
   currentUser = user;
-  currentIsAdmin = await fetchAdminStatus(user);
-  updateAdminVisibility(user);
-
-  if (!actions) return;
 
   if (!user) {
+    currentProfile = null;
+    currentTotalEarned = null;
+    currentIsAdmin = false;
+    currentAdminRole = null;
+    updateAdminVisibility(null);
+    if (!actions) return;
     setCachedNavAuthState(null);
     actions.classList.remove("auth-loading", "nav-restored");
     renderSignedOutNav(actions);
     return;
   }
 
-  let coins = 0;
-  let navLevel = null;
-  try {
-    const profile = await ensureProfile(user);
-    currentProfile = profile;
-    coins = Number(profile.points_balance || 0);
-    const totalEarned = await getTotalEarned(user.id);
-    navLevel = getLevelProgress(totalEarned);
-    trackProgressAndShowGains(user.id, { coins, totalEarned });
-  } catch {}
+  let profile = null;
+  let totalEarned = 0;
+  const [adminStatus, loadedProfile, loadedTotalEarned] = await Promise.all([
+    fetchAdminStatus(user).catch(() => false),
+    ensureProfile(user).catch(() => null),
+    getTotalEarned(user.id).catch(() => 0)
+  ]);
+  currentIsAdmin = adminStatus;
+  profile = loadedProfile;
+  totalEarned = Number(loadedTotalEarned || 0);
+
+  currentProfile = profile;
+  currentTotalEarned = totalEarned;
+  updateAdminVisibility(user);
+  if (!actions) return;
+
+  const coins = Number(profile?.points_balance || 0);
+  const navLevel = getLevelProgress(totalEarned);
+  trackProgressAndShowGains(user.id, { coins, totalEarned });
 
   const email = displayAccountEmail(user, currentProfile);
   const adminLabel = isOwner(user) ? "Owner panel" : "Admin panel";
@@ -1102,61 +1116,38 @@ async function updateHomeAuthState() {
 
 async function initOfferwall() {
   const cpxButton = qs("#openCpxWall");
-  const bitlabsButton = qs("#openBitlabsWall");
-  if (!cpxButton && !bitlabsButton) return;
+  if (!cpxButton) return;
 
   const user = await getSessionUser();
 
   if (!user) {
-    [cpxButton, bitlabsButton].filter(Boolean).forEach((button) => {
-      button.href = "#";
-      button.classList.add("needs-login");
-      button.addEventListener("click", (event) => {
-        event.preventDefault();
-        openAuthModal("signup");
-      });
+    cpxButton.href = "#";
+    cpxButton.classList.add("needs-login");
+    cpxButton.addEventListener("click", (event) => {
+      event.preventDefault();
+      openAuthModal("signup");
     });
     return;
   }
 
-  cpxButton?.classList.remove("needs-login");
-  bitlabsButton?.classList.remove("needs-login");
+  cpxButton.classList.remove("needs-login");
   let wallUrl = `https://offers.cpx-research.com/index.php?app_id=${CPX_APP_ID}&ext_user_id=${encodeURIComponent(user.id)}`;
-  let bitlabsWallUrl = "";
   try {
     const { data, error } = await sb.functions.invoke("survey-feed");
     if (!error && isSafeOfferwallUrl(data?.wall_url)) wallUrl = data.wall_url;
-    if (!error && isSafeOfferwallUrl(data?.bitlabs_wall_url)) bitlabsWallUrl = data.bitlabs_wall_url;
     renderRecommendedSurveys(data?.surveys || []);
   } catch (error) {
     console.warn("Secure survey feed unavailable; using the provider wall fallback.", error);
   }
-  if (cpxButton) {
-    cpxButton.href = wallUrl;
-    cpxButton.target = "_blank";
-    cpxButton.rel = "noopener";
-  }
-  if (bitlabsButton) {
-    if (bitlabsWallUrl) {
-      bitlabsButton.href = bitlabsWallUrl;
-      bitlabsButton.target = "_blank";
-      bitlabsButton.rel = "noopener";
-      bitlabsButton.removeAttribute("aria-disabled");
-    } else {
-      bitlabsButton.href = "#";
-      bitlabsButton.setAttribute("aria-disabled", "true");
-      bitlabsButton.addEventListener("click", (event) => {
-        event.preventDefault();
-        showMessage("BitLabs is temporarily unavailable. Please use CPX for now.", "error");
-      });
-    }
-  }
+  cpxButton.href = wallUrl;
+  cpxButton.target = "_blank";
+  cpxButton.rel = "noopener";
 }
 
 function isSafeOfferwallUrl(value) {
   try {
     const url = new URL(value);
-    return url.protocol === "https:" && ["offers.cpx-research.com", "web.bitlabs.ai", "api.bitlabs.ai"].includes(url.hostname.toLowerCase());
+    return url.protocol === "https:" && url.hostname.toLowerCase() === "offers.cpx-research.com";
   } catch { return false; }
 }
 
@@ -1165,7 +1156,7 @@ function renderRecommendedSurveys(surveys) {
   if (!container) return;
   const safeSurveys = surveys.filter((survey) => isSafeOfferwallUrl(survey.url)).slice(0, 6);
   if (!safeSurveys.length) {
-    container.innerHTML = '<p class="muted">Open CPX or BitLabs to see the surveys currently available for your country and device.</p>';
+    container.innerHTML = '<p class="muted">Open CPX Research to see the surveys currently available for your country and device.</p>';
     return;
   }
   container.innerHTML = safeSurveys.map((survey) => `
@@ -2519,40 +2510,11 @@ function initSupportWidget() {
 async function initDashboard() {
   qs("#logoutButton")?.addEventListener("click", confirmAndSignOut);
 
-  await refreshDashboard();
+  await refreshDashboard({ background: false });
 }
 
-async function refreshDashboard() {
-  const authSection = qs("#authSection");
-  const accountSection = qs("#accountSection");
-  const loadingSection = qs("#dashboardLoadingSection");
-  if (!authSection || !accountSection) return;
-
-  loadingSection?.classList.remove("hidden");
-  authSection.classList.add("hidden");
-  accountSection.classList.add("hidden");
-
-  const user = await getSessionUser();
-
-  if (!user) {
-    loadingSection?.classList.add("hidden");
-    authSection.classList.remove("hidden");
-    accountSection.classList.add("hidden");
-    return;
-  }
-
-  let profile = await ensureProfile(user);
-  try {
-    const bonus = await claimLevelRewards();
-    if (Number(bonus?.bonus_awarded || 0) > 0) {
-      profile = await ensureProfile(user);
-    }
-  } catch (error) {
-    console.warn("Level reward check failed:", error);
-  }
-  const totalEarned = await getTotalEarned(user.id);
+function renderDashboardSummary(user, profile, totalEarned) {
   const progress = getLevelProgress(totalEarned);
-
   const setText = (selector, value) => {
     const el = qs(selector);
     if (el) el.textContent = value;
@@ -2571,35 +2533,113 @@ async function refreshDashboard() {
 
   const xpBar = qs("#xpBarFill");
   if (xpBar) xpBar.style.width = `${progress.progress}%`;
-
   updateRedeemBlocker(profile);
-  await renderGoalRewards(user, profile);
+}
 
-  const { data: redemptions, error } = await sb
-    .from("redemption_requests")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
+async function refreshDashboard({ background = false } = {}) {
+  const authSection = qs("#authSection");
+  const accountSection = qs("#accountSection");
+  const loadingSection = qs("#dashboardLoadingSection");
+  if (!authSection || !accountSection) return;
+  if (dashboardRefreshPromise) return dashboardRefreshPromise;
 
-  if (!error) {
-    const userRedemptions = redemptions || [];
-    setText("#pendingDisplay", userRedemptions.filter((item) => ["pending", "reviewing", "trade_sent"].includes(item.status)).length);
-    updateGetStartedPanel(profile, totalEarned, userRedemptions);
-    renderRedeemHistory(userRedemptions);
-  } else {
-    setText("#pendingDisplay", "—");
-    updateGetStartedPanel(profile, totalEarned, []);
+  const hasRenderedDashboard = !accountSection.classList.contains("hidden");
+  if (!background && !hasRenderedDashboard) {
+    loadingSection?.classList.remove("hidden");
+    authSection.classList.add("hidden");
+    accountSection.classList.add("hidden");
   }
 
-  await renderCoinHistory(user.id);
+  dashboardRefreshPromise = (async () => {
+    const user = currentUser || await getSessionUser();
 
-  loadingSection?.classList.add("hidden");
-  authSection.classList.add("hidden");
-  accountSection.classList.remove("hidden");
+    if (!user) {
+      loadingSection?.classList.add("hidden");
+      authSection.classList.remove("hidden");
+      accountSection.classList.add("hidden");
+      return;
+    }
 
-  if (shouldShowSteamEmailPrompt(user)) {
-    setTimeout(() => showSteamEmailPrompt(user), 260);
-  }
+    const hasCurrentProfile = currentProfile?.id === user.id;
+    const hasCurrentTotal = Number.isFinite(currentTotalEarned);
+    let [profile, totalEarned] = await Promise.all([
+      hasCurrentProfile ? Promise.resolve(currentProfile) : ensureProfile(user),
+      hasCurrentTotal ? Promise.resolve(currentTotalEarned) : getTotalEarned(user.id)
+    ]);
+    totalEarned = Number(totalEarned || 0);
+    currentUser = user;
+    currentProfile = profile;
+    currentTotalEarned = totalEarned;
+
+    renderDashboardSummary(user, profile, totalEarned);
+    loadingSection?.classList.add("hidden");
+    authSection.classList.add("hidden");
+    accountSection.classList.remove("hidden");
+
+    const redemptionsRequest = sb
+      .from("redemption_requests")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+
+    const [goalResult, redemptionsResult, historyResult, bonusResult] = await Promise.allSettled([
+      renderGoalRewards(user, profile),
+      redemptionsRequest,
+      renderCoinHistory(user.id),
+      claimLevelRewards()
+    ]);
+
+    if (redemptionsResult.status === "fulfilled" && !redemptionsResult.value.error) {
+      const userRedemptions = redemptionsResult.value.data || [];
+      const pending = userRedemptions.filter((item) => ["pending", "reviewing", "trade_sent"].includes(item.status)).length;
+      const pendingDisplay = qs("#pendingDisplay");
+      if (pendingDisplay) pendingDisplay.textContent = pending;
+      renderRedeemHistory(userRedemptions);
+    } else {
+      const pendingDisplay = qs("#pendingDisplay");
+      if (pendingDisplay) pendingDisplay.textContent = "—";
+    }
+
+    if (goalResult.status === "rejected") console.warn("Goal rewards failed:", goalResult.reason);
+    if (historyResult.status === "rejected") console.warn("Coin history failed:", historyResult.reason);
+
+    if (bonusResult.status === "fulfilled" && Number(bonusResult.value?.bonus_awarded || 0) > 0) {
+      [profile, totalEarned] = await Promise.all([
+        ensureProfile(user),
+        getTotalEarned(user.id)
+      ]);
+      totalEarned = Number(totalEarned || 0);
+      currentProfile = profile;
+      currentTotalEarned = totalEarned;
+      renderDashboardSummary(user, profile, totalEarned);
+      await Promise.all([
+        renderGoalRewards(user, profile),
+        renderCoinHistory(user.id)
+      ]);
+    } else if (bonusResult.status === "rejected") {
+      console.warn("Level reward check failed:", bonusResult.reason);
+    }
+
+    if (shouldShowSteamEmailPrompt(user) && !background) {
+      setTimeout(() => showSteamEmailPrompt(user), 260);
+    }
+  })().catch((error) => {
+    console.error("Dashboard refresh failed:", error);
+    loadingSection?.classList.add("hidden");
+    if (!hasRenderedDashboard) {
+      authSection.classList.add("hidden");
+      accountSection.classList.remove("hidden");
+      const history = qs("#redeemHistory");
+      if (history) {
+        history.className = "empty-state";
+        history.textContent = "Could not load the dashboard right now. Please refresh and try again.";
+      }
+    }
+  }).finally(() => {
+    dashboardRefreshPromise = null;
+  });
+
+  return dashboardRefreshPromise;
 }
 
 async function renderGoalRewards(user, profile) {
@@ -2666,49 +2706,6 @@ async function renderGoalRewards(user, profile) {
   });
 }
 
-function updateGetStartedPanel(profile, totalEarned, redemptions = []) {
-  const panel = qs("#getStartedPanel");
-  if (!panel) return;
-
-  const hasTrade = !!profile?.steam_trade_url && isValidSteamTradeUrl(profile.steam_trade_url);
-  const hasEarned = Number(totalEarned || 0) > 0;
-  const hasRedeemed = Array.isArray(redemptions) && redemptions.length > 0;
-
-  if (hasTrade && hasEarned && hasRedeemed) {
-    panel.classList.add("hidden");
-    return;
-  }
-
-  panel.classList.remove("hidden");
-  panel.innerHTML = `
-    <div class="section-headline">
-      <div>
-        <span class="pill">Get started</span>
-        <h2>Set up your reward flow</h2>
-        <p class="muted">Complete these basics so your first redeem request is smooth.</p>
-      </div>
-      <a class="button button-primary" href="${hasTrade ? "/surveys" : "/settings#tradeForm"}">${hasTrade ? "Open surveys" : "Add trade URL"}</a>
-    </div>
-    <div class="getting-started-steps">
-      <a class="setup-step ${hasTrade ? "complete" : "active"}" href="/settings#tradeForm">
-        <strong>${hasTrade ? "✓" : "1"}</strong>
-        <span>Save Steam trade URL</span>
-        <small>${hasTrade ? "Ready for rewards" : "Required before redeeming"}</small>
-      </a>
-      <a class="setup-step ${hasEarned ? "complete" : hasTrade ? "active" : ""}" href="/surveys">
-        <strong>${hasEarned ? "✓" : "2"}</strong>
-        <span>Complete surveys</span>
-        <small>${hasEarned ? "Coins confirmed" : "Open verified survey tasks"}</small>
-      </a>
-      <a class="setup-step ${hasRedeemed ? "complete" : hasEarned ? "active" : ""}" href="/rewards">
-        <strong>${hasRedeemed ? "✓" : "3"}</strong>
-        <span>Redeem a reward</span>
-        <small>${hasRedeemed ? "Request created" : "Pick a fixed reward"}</small>
-      </a>
-    </div>
-  `;
-}
-
 function renderRedeemHistory(redemptions) {
   const redeemHistory = qs("#redeemHistory");
   if (!redeemHistory) return;
@@ -2720,11 +2717,12 @@ function renderRedeemHistory(redemptions) {
       <span>Once you redeem a reward, your request status appears here.</span>
       <a class="button button-primary" href="/rewards">Browse rewards</a>
     `;
+    scrollToRequestedRedemption();
     return;
   }
 
   const rows = redemptions.map((item, index) => `
-    <div class="redeem-row ${index >= 5 ? "redeem-extra hidden" : ""}">
+    <div class="redeem-row ${index >= 5 ? "redeem-extra hidden" : ""}" id="redeem-request-${escapeHtml(item.id)}" data-redeem-request-id="${escapeHtml(item.id)}">
       <div>
         <strong>${escapeHtml(item.reward_name)}</strong>
         <p class="muted">${formatDate(item.created_at)} · ${formatCoins(getRequestCost(item))}</p>
@@ -2743,9 +2741,31 @@ function renderRedeemHistory(redemptions) {
 
   redeemHistory.className = "redeem-list";
   redeemHistory.innerHTML = `${rows}${showMore}`;
+  scrollToRequestedRedemption();
   redeemHistory.querySelector("[data-show-more-redeems]")?.addEventListener("click", (event) => {
     redeemHistory.querySelectorAll(".redeem-extra").forEach((row) => row.classList.remove("hidden"));
     event.currentTarget.remove();
+  });
+}
+
+function scrollToRequestedRedemption() {
+  const params = new URLSearchParams(location.search);
+  const requestId = params.get("request") || (location.hash.startsWith("#redeem-request-") ? location.hash.slice(16) : "");
+  const scrollKey = `${location.pathname}${location.search}${location.hash}`;
+  if (scrollKey === lastDashboardScrollTarget) return;
+
+  let target = requestId
+    ? qsa("[data-redeem-request-id]").find((row) => row.dataset.redeemRequestId === requestId)
+    : null;
+  if (!target && location.hash === "#redeem-requests") target = qs("#redeemRequestsPanel");
+  if (!target) return;
+
+  lastDashboardScrollTarget = scrollKey;
+  target.classList.remove("hidden");
+  requestAnimationFrame(() => {
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+    target.classList.add("notification-target");
+    window.setTimeout(() => target.classList.remove("notification-target"), 3600);
   });
 }
 

@@ -18,7 +18,7 @@
       }
     }());
   </script>
-  <link rel="stylesheet" href="styles.css?v=1402" />
+  <link rel="stylesheet" href="styles.css?v=1403" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#0b0f16" />
   <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png" />
@@ -30,7 +30,7 @@
   <meta property="og:site_name" content="SkinQuest" />
   <meta property="og:description" content="SkinQuest version history and recent platform updates." />
   <meta property="og:image" content="https://skinquestcs.com/assets/interface/skinquestlogo.png" />
-  <link rel="stylesheet" href="skinquest-v14.css?v=1402" />
+  <link rel="stylesheet" href="skinquest-v14.css?v=1403" />
 </head>
 <body>
 <div id="pageLoader" class="page-loader">
@@ -66,6 +66,17 @@
   <section class="panel changelog-list">
     <article class="changelog-entry current">
       <span class="pill">Current</span>
+      <h2>v14.0.3 - Notifications, dashboard speed, and CPX cleanup</h2>
+      <ul>
+        <li>Cleaned up the notification drawer, including the Mark all read action and scrollbar.</li>
+        <li>Reward notifications now open and highlight the exact matching dashboard request.</li>
+        <li>Made dashboard data load in parallel and refresh silently when returning to the tab.</li>
+        <li>Removed BitLabs and Lootably from Surveys and added the official CPX Research logo.</li>
+        <li>No database changes in this release.</li>
+      </ul>
+    </article>
+
+    <article class="changelog-entry">
       <h2>v14.0.2 - Interface polish and layout cleanup</h2>
       <ul>
         <li>Fixed the logged-in desktop navbar so How it works stays on one line.</li>
@@ -308,7 +319,7 @@
     <a href="/install">Install app</a>
     <a href="mailto:support@skinquestcs.com">Support</a>
   </div>
-  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v14.0.2</a></p>
+  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v14.0.3</a></p>
 </footer>
 <div class="modal-backdrop hidden" id="authModal">
   <div class="auth-modal" role="dialog" aria-modal="true">
@@ -350,7 +361,7 @@
   </div>
 </div>
 <script src="assets/vendor/supabase-js-2.45.4.js"></script>
-<script src="app.js?v=1402"></script>
-<script src="skinquest-v14.js?v=1402"></script>
+<script src="app.js?v=1403"></script>
+<script src="skinquest-v14.js?v=1403"></script>
 </body>
 </html>

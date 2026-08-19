@@ -1,5 +1,6 @@
-/* SkinQuest v14.0.2 product upgrade layer.
-   Loaded after app.js. Database additions are included in the current v14.0.2 SQL files.
+/* SkinQuest v14.0.3 product upgrade layer.
+   Loaded after app.js. The full setup includes the v14 database layer;
+   v14.0.3 itself requires no schema changes.
    This layer extends the secure SkinQuest core without replacing reward authority.
 */
 
@@ -380,10 +381,10 @@
       notificationDrawer = create("aside", "sq-notification-drawer", `
         <div class="sq-drawer-head">
           <div><span class="pill">Activity</span><h2>Notifications</h2></div>
-          <button type="button" class="sq-icon-button" data-sq-close-notifications aria-label="Close notifications">×</button>
-        </div>
-        <div class="sq-drawer-actions">
-          <button type="button" class="mini-button" data-sq-mark-all-read>Mark all read</button>
+          <div class="sq-drawer-head-actions">
+            <button type="button" class="sq-mark-all-read hidden" data-sq-mark-all-read>Mark all read</button>
+            <button type="button" class="sq-icon-button" data-sq-close-notifications aria-label="Close notifications">×</button>
+          </div>
         </div>
         <div class="sq-notification-list" data-sq-notification-list><div class="empty-state">Loading…</div></div>
       `);
@@ -392,12 +393,19 @@
       document.body.appendChild(notificationDrawer);
 
       notificationDrawer.querySelector("[data-sq-close-notifications]")?.addEventListener("click", () => toggleNotificationDrawer(false));
-      notificationDrawer.querySelector("[data-sq-mark-all-read]")?.addEventListener("click", async () => {
+      notificationDrawer.querySelector("[data-sq-mark-all-read]")?.addEventListener("click", async (event) => {
+        const button = event.currentTarget;
+        const previousText = button.textContent;
+        button.disabled = true;
+        button.textContent = "Marking…";
         try {
           await rpc("sq_mark_all_notifications_read");
           await Promise.all([loadNotifications(), refreshNotificationCount()]);
         } catch (error) {
           notify(error.message || "Could not update notifications.", "error");
+        } finally {
+          button.disabled = false;
+          button.textContent = previousText;
         }
       });
     }
@@ -464,9 +472,11 @@
 
   async function loadNotifications() {
     const list = $("[data-sq-notification-list]");
+    const markAllButton = $("[data-sq-mark-all-read]", notificationDrawer || document);
     if (!list) return;
     const user = await currentUser();
     if (!user) {
+      markAllButton?.classList.add("hidden");
       list.innerHTML = `<div class="empty-state">Sign in to see notifications.</div>`;
       return;
     }
@@ -474,45 +484,58 @@
     const c = client();
     const { data, error } = await c
       .from("sq_notifications")
-      .select("id, notification_type, title, body, href, read_at, created_at")
+      .select("id, notification_type, title, body, href, metadata, read_at, created_at")
       .order("created_at", { ascending: false })
       .limit(30);
 
     if (error) {
+      markAllButton?.classList.add("hidden");
       list.innerHTML = `<div class="empty-state">Notifications are unavailable right now.</div>`;
       return;
     }
     if (!data?.length) {
+      markAllButton?.classList.add("hidden");
       list.innerHTML = `<div class="empty-state">Nothing new yet.</div>`;
       return;
     }
 
-    list.innerHTML = data.map((item) => `
-      <button class="sq-notification-row ${item.read_at ? "" : "unread"}" type="button" data-sq-notification-id="${item.id}" data-href="${safeText(item.href || "")}">
-        <span class="sq-notification-dot"></span>
-        <span>
-          <strong>${safeText(item.title)}</strong>
-          ${item.body ? `<small>${safeText(item.body)}</small>` : ""}
-          <time>${safeText(formatDate(item.created_at))}</time>
-        </span>
-      </button>
-    `).join("");
+    markAllButton?.classList.toggle("hidden", !data.some((item) => !item.read_at));
+    list.innerHTML = data.map((item) => {
+      const requestId = String(item.metadata?.request_id ?? "").trim();
+      const rewardTarget = /^\d+$/.test(requestId)
+        ? `/dashboard?request=${encodeURIComponent(requestId)}#redeem-request-${encodeURIComponent(requestId)}`
+        : "/dashboard#redeem-requests";
+      const href = item.notification_type === "reward" ? rewardTarget : (item.href || "");
+      return `
+        <button class="sq-notification-row ${item.read_at ? "" : "unread"}" type="button" data-sq-notification-id="${item.id}" data-href="${safeText(href)}">
+          <span class="sq-notification-dot"></span>
+          <span>
+            <strong>${safeText(item.title)}</strong>
+            ${item.body ? `<small>${safeText(item.body)}</small>` : ""}
+            <time>${safeText(formatDate(item.created_at))}</time>
+          </span>
+        </button>`;
+    }).join("");
 
     $$('[data-sq-notification-id]', list).forEach((row) => {
       row.addEventListener("click", async () => {
         const id = Number(row.dataset.sqNotificationId);
         try { await rpc("sq_mark_notification_read", { p_notification_id: id }); } catch {}
         row.classList.remove("unread");
+        markAllButton?.classList.toggle("hidden", !list.querySelector(".sq-notification-row.unread"));
         refreshNotificationCount();
         const href = row.dataset.href;
-        if (href) location.href = href;
+        if (href) {
+          toggleNotificationDrawer(false);
+          location.href = href;
+        }
       });
     });
   }
 
   // ---------------------------------------------------------------------------
   // Homepage: keep the landing page focused and visually clean.
-  // v14.0.2 deliberately avoids injecting dashboard-style stats or status cards
+  // v14.0.3 deliberately avoids injecting dashboard-style stats or status cards
   // below the hero. Those features live on the dashboard/admin pages instead.
   // ---------------------------------------------------------------------------
   async function enhanceHomepage() {

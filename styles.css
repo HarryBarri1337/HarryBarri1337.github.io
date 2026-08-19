@@ -1,4 +1,4 @@
-/* SkinQuest v14.0.2 core styles - v13.1.0 base + v14 feature layer */
+/* SkinQuest v14.0.3 core styles - v13.1.0 base + v14 feature layer */
 
 :root {
   --bg: #0b0f16;
@@ -732,6 +732,22 @@ label { display: grid; gap: 7px; color: #d8e1ee; font-weight: 800; }
 
 /* Earn providers */
 .provider-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.single-provider-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+.single-provider-grid .provider-main-card {
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 32px;
+  align-items: center;
+}
+.single-provider-grid .provider-head,
+.single-provider-grid .provider-card ul { grid-column: 1; }
+.single-provider-grid .provider-action {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  min-width: 220px;
+  margin-top: 0;
+}
 .provider-card.featured { border-color: rgba(232,179,77,.34); }
 .provider-logo {
   width: 44px;
@@ -741,6 +757,22 @@ label { display: grid; gap: 7px; color: #d8e1ee; font-weight: 800; }
   border-radius: 13px;
   background: rgba(255,255,255,0.06);
   font-weight: 900;
+}
+.provider-logo-mark {
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 14px;
+  background: rgba(255,255,255,.055);
+}
+.provider-logo-mark img {
+  display: block;
+  width: auto;
+  max-width: none;
+  height: 48px;
+  filter: invert(1) brightness(1.08);
 }
 .provider-status.live { color: var(--green); }
 .provider-status.soon { color: var(--muted); }
@@ -1221,6 +1253,11 @@ label { display: grid; gap: 7px; color: #d8e1ee; font-weight: 800; }
   .how-step-grid,
   .faq-grid { grid-template-columns: 1fr; }
   .history-show-more { width: 100%; }
+  .single-provider-grid .provider-main-card { grid-template-columns: minmax(0, 1fr); }
+  .single-provider-grid .provider-head,
+  .single-provider-grid .provider-card ul,
+  .single-provider-grid .provider-action { grid-column: 1; grid-row: auto; }
+  .single-provider-grid .provider-action { width: 100%; min-width: 0; margin-top: 4px; }
 }
 
 /* Visual system: full-page background and cleaner app surfaces */
@@ -4281,7 +4318,7 @@ body > footer {
 }
 
 
-/* v14.0.2 UI polish */
+/* v14.0.3 UI polish */
 .site-nav { flex-wrap: nowrap; min-width: 0; }
 .site-nav a { white-space: nowrap; }
 

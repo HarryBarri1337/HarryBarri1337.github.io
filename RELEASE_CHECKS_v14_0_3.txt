@@ -1,0 +1,8 @@
+SkinQuest v14.0.3 release checks
+
+[ ] Replace the site files with this version.
+[ ] Do NOT run any upgrade SQL when updating an existing v14.0.2 project.
+[ ] Confirm reward notifications scroll to and highlight the matching request.
+[ ] Confirm returning to the dashboard tab leaves the existing dashboard visible while data refreshes.
+[ ] Confirm Surveys shows only CPX Research with the real CPX logo.
+[ ] Only use skinquest_full_setup_v14_0_3.sql on a NEW empty Supabase project.

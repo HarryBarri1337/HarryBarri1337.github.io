@@ -1,5 +1,0 @@
-SkinQuest v14.0.2 release checks
-
-[ ] Replace the site files with this version.
-[ ] Do NOT run any upgrade SQL if the previous v14 upgrade was already run.
-[ ] Only use skinquest_full_setup_v14_0_2.sql on a NEW empty Supabase project.
