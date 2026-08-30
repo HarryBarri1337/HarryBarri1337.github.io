@@ -18,7 +18,7 @@
       }
     }());
   </script>
-  <link rel="stylesheet" href="styles.css?v=1413" />
+  <link rel="stylesheet" href="styles.css?v=1420" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#0b0f16" />
   <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png" />
@@ -30,7 +30,7 @@
   <meta property="og:site_name" content="SkinQuest" />
   <meta property="og:description" content="SkinQuest version history and recent platform updates." />
   <meta property="og:image" content="https://skinquestcs.com/assets/interface/skinquestlogo.png" />
-  <link rel="stylesheet" href="skinquest-v14.css?v=1413" />
+  <link rel="stylesheet" href="skinquest-v14.css?v=1420" />
 </head>
 <body>
 <div id="pageLoader" class="page-loader">
@@ -66,6 +66,26 @@
   <section class="panel changelog-list">
     <article class="changelog-entry current">
       <span class="pill">Current</span>
+      <h2>v14.2.0 - Password reset cooldown and safer login modal</h2>
+      <ul>
+        <li>Forgot password now allows only one reset email per email address every 60 seconds through a server-side rate limiter.</li>
+        <li>The reset button shows a live cooldown instead of allowing several emails to be queued immediately.</li>
+        <li>Selecting text in the sign-in form can now be dragged outside the dialog without accidentally closing the login window when the mouse is released.</li>
+        <li>Retains the v14.1.4 notification privacy and drawer fixes.</li>
+      </ul>
+    </article>
+
+    <article class="changelog-entry">
+      <h2>v14.1.4 - Private notification drawer fix</h2>
+      <ul>
+        <li>Admins now only see notifications belonging to their own account in the personal notification drawer.</li>
+        <li>Notification queries explicitly filter by the signed-in user instead of relying on admin-capable RLS.</li>
+        <li>Mark all read now operates on the same notifications that are displayed.</li>
+        <li>The notification drawer close button now works even if the header auth controls were re-rendered.</li>
+      </ul>
+    </article>
+
+    <article class="changelog-entry">
       <h2>v14.1.3 - Verified Steam contact email and safer trade links</h2>
       <ul>
         <li>Steam sign-in accounts without a real contact email now get a required email popup on the dashboard.</li>
@@ -374,7 +394,7 @@
     <a href="/install">Install app</a>
     <a href="mailto:support@skinquestcs.com">Support</a>
   </div>
-  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v14.1.3</a></p>
+  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v14.2.0</a></p>
 </footer>
 <div class="modal-backdrop hidden" id="authModal">
   <div class="auth-modal" role="dialog" aria-modal="true">
@@ -416,7 +436,7 @@
   </div>
 </div>
 <script src="assets/vendor/supabase-js-2.45.4.js"></script>
-<script src="app.js?v=1413"></script>
-<script src="skinquest-v14.js?v=1413"></script>
+<script src="app.js?v=1420"></script>
+<script src="skinquest-v14.js?v=1420"></script>
 </body>
 </html>

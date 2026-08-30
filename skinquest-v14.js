@@ -1,13 +1,13 @@
-/* SkinQuest v14.1.3 product upgrade layer.
+/* SkinQuest v14.2.0 product upgrade layer.
    Loaded after app.js. The full setup includes the v14 database layer;
-   v14.1.3 adds contact-email onboarding and trade-link checks in the core/database layer.
+   v14.2.0 adds one-reset-email-per-minute protection and fixes accidental auth-modal closing during text selection; it retains the notification, contact-email, and trade-link safeguards.
    This layer extends the secure SkinQuest core without replacing reward authority.
 */
 
 (() => {
   "use strict";
 
-  const VERSION = "14.1.3";
+  const VERSION = "14.2.0";
   const GA_ID = "G-DFRR03C4BP";
   const ATTRIBUTION_KEY = "skinquest.firstTouch.v14";
   const CONSENT_KEY = "skinquest.cookieConsent.v1";
@@ -451,6 +451,7 @@
       const { count, error } = await c
         .from("sq_notifications")
         .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
         .is("read_at", null);
       if (error) throw error;
       const n = Number(count || 0);
@@ -462,11 +463,13 @@
   }
 
   function toggleNotificationDrawer(open = null) {
-    if (!notificationDrawer || !notificationButton) return;
+    if (!notificationDrawer) return;
+    const liveButton = $("#sqNotificationButton") || notificationButton;
+    if (liveButton) notificationButton = liveButton;
     const willOpen = open ?? !notificationDrawer.classList.contains("open");
     notificationDrawer.classList.toggle("open", willOpen);
     notificationDrawer.setAttribute("aria-hidden", String(!willOpen));
-    notificationButton.setAttribute("aria-expanded", String(willOpen));
+    liveButton?.setAttribute("aria-expanded", String(willOpen));
     if (willOpen) loadNotifications();
   }
 
@@ -485,6 +488,7 @@
     const { data, error } = await c
       .from("sq_notifications")
       .select("id, notification_type, title, body, href, metadata, read_at, created_at")
+      .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(30);
 

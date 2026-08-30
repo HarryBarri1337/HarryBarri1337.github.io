@@ -1,5 +1,5 @@
--- SkinQuest full Supabase setup v14.1.3
--- Adds verified contact email onboarding for Steam sign-ins and stronger Steam trade-link ownership checks.
+-- SkinQuest full Supabase setup v14.2.0
+-- Includes verified Steam contact-email onboarding, safer trade links, private notifications, and a server-side one-minute password-reset email limiter.
 -- This full setup remains complete for brand-new Supabase projects.
 -- Run this in Supabase SQL Editor only when setting up a fresh project.
 -- Stable full setup including BitLabs accounting and the refund XP repair.
@@ -216,6 +216,11 @@ create table if not exists public.support_rate_limits (
   window_start timestamptz not null,
   request_count integer not null default 0,
   primary key (key_hash, window_start)
+);
+
+create table if not exists public.password_reset_rate_limits (
+  key_hash text primary key,
+  last_sent_at timestamptz not null default now()
 );
 alter table public.support_requests add column if not exists admin_note text;
 alter table public.support_requests add column if not exists updated_at timestamptz not null default now();
@@ -1166,6 +1171,53 @@ revoke update (steam_trade_url) on public.profiles from authenticated;
 alter table public.support_rate_limits enable row level security;
 revoke all on public.support_rate_limits from public, anon, authenticated;
 
+-- Forgot-password requests are routed through password-reset-request. The browser
+-- cannot access the limiter table directly.
+alter table public.password_reset_rate_limits enable row level security;
+revoke all on public.password_reset_rate_limits from public, anon, authenticated;
+
+create or replace function public.claim_password_reset_rate_limit(p_key_hash text)
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_now timestamptz := clock_timestamp();
+  v_last timestamptz;
+  v_retry integer;
+begin
+  if p_key_hash is null or length(trim(p_key_hash)) < 16 then
+    raise exception 'Invalid rate-limit key.';
+  end if;
+
+  perform pg_advisory_xact_lock(hashtextextended(p_key_hash, 0));
+
+  select last_sent_at
+    into v_last
+    from public.password_reset_rate_limits
+   where key_hash = p_key_hash;
+
+  if v_last is not null and v_last > v_now - interval '60 seconds' then
+    v_retry := greatest(
+      1,
+      ceil(extract(epoch from ((v_last + interval '60 seconds') - v_now)))::integer
+    );
+    return v_retry;
+  end if;
+
+  insert into public.password_reset_rate_limits(key_hash, last_sent_at)
+  values (p_key_hash, v_now)
+  on conflict (key_hash) do update
+    set last_sent_at = excluded.last_sent_at;
+
+  return 0;
+end;
+$$;
+
+revoke all on function public.claim_password_reset_rate_limit(text) from public, anon, authenticated;
+grant execute on function public.claim_password_reset_rate_limit(text) to service_role;
+
 -- Disable an accidental test price and repair the public item spelling.
 update public.reward_items set active = false where lower(name) = 'galil ar | blue titanium' and coalesce(nullif(points_coins, 0), points_cost, 0) <= 1;
 update public.reward_items set name = replace(name, 'Dreams & Nightmare Case', 'Dreams & Nightmares Case') where name like '%Dreams & Nightmare Case%';
@@ -1199,7 +1251,7 @@ notify pgrst, 'reload schema';
 -- ============================================================================
 -- SkinQuest v14 product layer (included in full fresh-project setup)
 -- Existing v14.0.2 projects already contain this database layer.
--- v14.1.3 adds verified contact email storage and stronger trade-link checks.
+-- v14.2.0 includes verified contact email storage, stronger trade-link checks, private notification access, and password-reset throttling.
 -- ============================================================================
 
 
@@ -1214,7 +1266,7 @@ begin
      or to_regclass('public.redemption_requests') is null
      or to_regclass('public.coin_adjustments') is null
      or to_regclass('public.favorite_rewards') is null then
-    raise exception 'SkinQuest v14 upgrade requires the existing v13.1.0 database schema. Use skinquest_full_setup_v14_1_3.sql only for a NEW empty Supabase project.';
+    raise exception 'SkinQuest v14 upgrade requires the existing v13.1.0 database schema. Use skinquest_full_setup_v14_2_0.sql only for a NEW empty Supabase project.';
   end if;
 end $$;
 
@@ -1554,7 +1606,7 @@ using (auth.uid() = user_id or public.sq_is_admin());
 
 create policy "sq own notifications read"
 on public.sq_notifications for select
-using (auth.uid() = user_id or public.sq_is_admin());
+using (auth.uid() = user_id);
 
 create policy "sq own notifications update"
 on public.sq_notifications for update

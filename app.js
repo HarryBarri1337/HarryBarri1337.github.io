@@ -1,4 +1,4 @@
-// SkinQuest v14.1.3 core - secure base; enhanced by skinquest-v14.js
+// SkinQuest v14.2.0 core - secure base; enhanced by skinquest-v14.js
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -12,6 +12,7 @@ const STEAM_AUTH_START_URL = `${SUPABASE_URL}/functions/v1/steam-auth-start`;
 const STEAM_AUTH_DISCONNECT_URL = `${SUPABASE_URL}/functions/v1/steam-disconnect`;
 const CONTACT_EMAIL_START_URL = `${SUPABASE_URL}/functions/v1/contact-email-start`;
 const CONTACT_EMAIL_VERIFY_URL = `${SUPABASE_URL}/functions/v1/contact-email-verify`;
+const PASSWORD_RESET_REQUEST_URL = `${SUPABASE_URL}/functions/v1/password-reset-request`;
 let lastAuthTrigger = null;
 let deferredInstallPrompt = null;
 
@@ -879,6 +880,17 @@ function initAuthModal() {
     loginForm.querySelector('button[type="submit"]')?.insertAdjacentHTML("afterend", '<button class="auth-text-button" type="button" data-auth-forgot>Forgot password?</button>');
   }
 
+  // Only treat a genuine backdrop press as a request to close the auth modal.
+  // This prevents selecting text in an input, dragging outside the dialog, and
+  // releasing the mouse from accidentally closing the whole sign-in window.
+  let authBackdropPressStarted = false;
+  modal.addEventListener("pointerdown", (event) => {
+    authBackdropPressStarted = event.target === modal;
+  });
+  modal.addEventListener("pointercancel", () => {
+    authBackdropPressStarted = false;
+  });
+
   modal.addEventListener("keydown", (event) => {
     if (event.key === "Escape") return closeAuthModal();
     if (event.key !== "Tab") return;
@@ -906,7 +918,9 @@ function initAuthModal() {
     }
 
     if (event.target === modal) {
-      closeAuthModal();
+      const shouldClose = authBackdropPressStarted;
+      authBackdropPressStarted = false;
+      if (shouldClose) closeAuthModal();
       return;
     }
 
@@ -917,13 +931,68 @@ function initAuthModal() {
       return;
     }
 
-    if (event.target.closest("[data-auth-forgot]")) {
+    const forgotButton = event.target.closest("[data-auth-forgot]");
+    if (forgotButton) {
       event.preventDefault();
+      if (forgotButton.disabled) return;
+
       const email = qs("#modalLoginEmail")?.value.trim();
       if (!email || !isValidEmailAddress(email)) return showMessage("Enter your email address first.", "error");
-      const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: `${getPageUrl("/auth-confirm")}?mode=recovery` });
-      if (error) return showMessage(error.message, "error");
-      showMessage("Password reset link sent. Check your inbox.", "success");
+
+      const startCooldown = (seconds = 60) => {
+        let remaining = Math.max(1, Math.ceil(Number(seconds) || 60));
+        const render = () => {
+          forgotButton.disabled = true;
+          forgotButton.textContent = `Try again in ${remaining}s`;
+        };
+        render();
+        const timer = window.setInterval(() => {
+          remaining -= 1;
+          if (remaining <= 0) {
+            window.clearInterval(timer);
+            forgotButton.disabled = false;
+            forgotButton.textContent = "Forgot password?";
+            return;
+          }
+          render();
+        }, 1000);
+      };
+
+      const originalText = forgotButton.textContent || "Forgot password?";
+      forgotButton.disabled = true;
+      forgotButton.textContent = "Sending...";
+
+      try {
+        const response = await fetch(PASSWORD_RESET_REQUEST_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": SUPABASE_ANON_KEY,
+            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
+          },
+          body: JSON.stringify({
+            email,
+            redirect_to: `${getPageUrl("/auth-confirm")}?mode=recovery`
+          })
+        });
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          if (response.status === 429) startCooldown(data.retry_after || 60);
+          else {
+            forgotButton.disabled = false;
+            forgotButton.textContent = originalText;
+          }
+          return showMessage(data.error || "Could not send the reset email. Try again shortly.", "error");
+        }
+
+        startCooldown(data.retry_after || 60);
+        showMessage("If that email has a SkinQuest account, a reset link has been sent.", "success");
+      } catch (error) {
+        forgotButton.disabled = false;
+        forgotButton.textContent = originalText;
+        showMessage("Could not send the reset email. Check your connection and try again.", "error");
+      }
     }
   });
 
