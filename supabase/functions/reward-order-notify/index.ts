@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
     if (error || !order) return json({ error: "Order not found." }, 404);
     const { data: profile } = await admin
       .from("profiles")
-      .select("steam_id,username")
+      .select("steam_id,username,contact_email,contact_email_verified_at")
       .eq("id", user.id)
       .maybeSingle();
 
@@ -76,23 +76,27 @@ Deno.serve(async (req) => {
     const created = new Date(order.created_at).toLocaleString("sv-SE", {
       timeZone: "Europe/Stockholm",
     });
-    const adminHtml = `<h1>New SkinQuest reward order</h1><table><tr><th>User</th><td>${esc(user.email)} (${esc(user.id)})</td></tr><tr><th>Steam ID</th><td>${esc(profile?.steam_id || "Not connected")}</td></tr><tr><th>Reward</th><td>${esc(order.reward_name)}</td></tr><tr><th>Coin price</th><td>${esc(order.points_coins || order.points_cost)}</td></tr><tr><th>Order ID</th><td>${esc(order.id)}</td></tr><tr><th>Time</th><td>${esc(created)}</td></tr><tr><th>Trade URL</th><td><a href="${esc(order.steam_trade_url)}">Open Steam trade URL</a></td></tr></table><p><a href="https://skinquestcs.com/admin?order=${esc(order.id)}">Open order in admin</a></p>`;
+    const authEmail = String(user.email || "").trim().toLowerCase();
+    const contactEmail = profile?.contact_email_verified_at ? String(profile?.contact_email || "").trim().toLowerCase() : "";
+    const userEmail = contactEmail || (authEmail && !authEmail.endsWith("@steam.skinquestcs.com") ? authEmail : "");
+    const adminHtml = `<h1>New SkinQuest reward order</h1><table><tr><th>User</th><td>${esc(userEmail || user.email || "No contact email")} (${esc(user.id)})</td></tr><tr><th>Steam ID</th><td>${esc(profile?.steam_id || "Not connected")}</td></tr><tr><th>Reward</th><td>${esc(order.reward_name)}</td></tr><tr><th>Coin price</th><td>${esc(order.points_coins || order.points_cost)}</td></tr><tr><th>Order ID</th><td>${esc(order.id)}</td></tr><tr><th>Time</th><td>${esc(created)}</td></tr><tr><th>Trade URL</th><td><a href="${esc(order.steam_trade_url)}">Open Steam trade URL</a></td></tr></table><p><a href="https://skinquestcs.com/admin?order=${esc(order.id)}">Open order in admin</a></p>`;
     const userHtml = `<h1>We received your reward request</h1><p>Your request for <strong>${esc(order.reward_name)}</strong> is saved as order #${esc(order.id)}.</p><p>${esc(order.points_coins || order.points_cost)} coins were deducted and the item was reserved for manual review.</p><p><a href="https://skinquestcs.com/dashboard">View request status</a></p>`;
 
-    const results = await Promise.allSettled([
+    const emailJobs = [
       send(
         adminEmail,
         `New reward order #${order.id}: ${order.reward_name}`,
         adminHtml,
       ),
-      send(user.email!, `SkinQuest order #${order.id} received`, userHtml),
-    ]);
+    ];
+    if (userEmail) emailJobs.push(send(userEmail, `SkinQuest order #${order.id} received`, userHtml));
+    const results = await Promise.allSettled(emailJobs);
     if (results[0].status === "fulfilled")
       await admin
         .from("redemption_requests")
         .update({ admin_notified_at: new Date().toISOString() })
         .eq("id", order.id);
-    if (results[1].status === "fulfilled")
+    if (userEmail && results[1]?.status === "fulfilled")
       await admin
         .from("redemption_requests")
         .update({ user_notified_at: new Date().toISOString() })

@@ -1,4 +1,4 @@
-// SkinQuest v14.1.2 core - secure base; enhanced by skinquest-v14.js
+// SkinQuest v14.1.3 core - secure base; enhanced by skinquest-v14.js
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -10,6 +10,8 @@ const CPX_SCRIPT_URL = "https://cdn.cpx-research.com/assets/js/script_tag_v2.0.j
 const SUPPORT_EMAIL = "support@skinquestcs.com"; // Public support contact. Form requests are saved to Supabase and can trigger server-side email notifications.
 const STEAM_AUTH_START_URL = `${SUPABASE_URL}/functions/v1/steam-auth-start`;
 const STEAM_AUTH_DISCONNECT_URL = `${SUPABASE_URL}/functions/v1/steam-disconnect`;
+const CONTACT_EMAIL_START_URL = `${SUPABASE_URL}/functions/v1/contact-email-start`;
+const CONTACT_EMAIL_VERIFY_URL = `${SUPABASE_URL}/functions/v1/contact-email-verify`;
 let lastAuthTrigger = null;
 let deferredInstallPrompt = null;
 
@@ -125,7 +127,25 @@ function isSteamOnlyEmail(email) {
   return String(email || "").toLowerCase().endsWith("@steam.skinquestcs.com");
 }
 
+function getActiveContactEmail(user, profile = null) {
+  const verifiedContact = String(profile?.contact_email || "").trim().toLowerCase();
+  if (verifiedContact && profile?.contact_email_verified_at && isValidEmailAddress(verifiedContact) && !isSteamOnlyEmail(verifiedContact)) {
+    return verifiedContact;
+  }
+  const authEmail = String(user?.email || "").trim().toLowerCase();
+  if (authEmail && isValidEmailAddress(authEmail) && !isSteamOnlyEmail(authEmail)) {
+    return authEmail;
+  }
+  return "";
+}
+
+function hasActiveContactEmail(user, profile = null) {
+  return !!getActiveContactEmail(user, profile);
+}
+
 function displayAccountEmail(user, profile = null) {
+  const contactEmail = getActiveContactEmail(user, profile);
+  if (contactEmail) return contactEmail;
   if (isSteamOnlyEmail(user?.email)) {
     return profile?.steam_name || profile?.username || "Steam account";
   }
@@ -283,83 +303,147 @@ function withTimeout(promise, timeoutMs, timeoutMessage) {
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId));
 }
 
-function getSteamEmailPromptSnoozeKey(userId) {
-  return `skinquest_steam_email_prompt_snooze_${userId}`;
+async function invokeContactEmailFunction(endpoint, body) {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session?.access_token) throw new Error("You need to sign in again.");
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${session.access_token}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(body || {})
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data?.ok) throw new Error(data?.error || "Could not update your email.");
+  return data;
 }
 
-function shouldShowSteamEmailPrompt(user) {
-  if (!user?.id || !isSteamOnlyEmail(user.email)) return false;
-  const snoozedUntil = Number(localStorage.getItem(getSteamEmailPromptSnoozeKey(user.id)) || 0);
-  return Date.now() > snoozedUntil;
+function shouldShowSteamEmailPrompt(user, profile = null) {
+  return !!user?.id && !hasActiveContactEmail(user, profile);
 }
 
-async function showSteamEmailPrompt(user) {
-  if (!user?.id || !isSteamOnlyEmail(user.email)) return;
+async function showSteamEmailPrompt(user, profile = null) {
+  if (!user?.id || hasActiveContactEmail(user, profile)) return;
   if (document.querySelector(".email-prompt-backdrop")) return;
 
   const backdrop = document.createElement("div");
-  backdrop.className = "confirm-backdrop email-prompt-backdrop";
+  backdrop.className = "confirm-backdrop email-prompt-backdrop email-prompt-required";
   backdrop.innerHTML = `
     <div class="confirm-modal email-prompt-modal" role="dialog" aria-modal="true" aria-labelledby="steamEmailPromptTitle">
       <div class="confirm-icon">@</div>
       <div class="confirm-copy">
         <h2 id="steamEmailPromptTitle">Add your email</h2>
-        <p>Steam does not share your real email. Add one so SkinQuest can send reward updates and account notifications.</p>
+        <p>Steam does not share your email with SkinQuest. Add and verify a real email so we can contact you about rewards, trade problems, and support requests.</p>
       </div>
       <form class="email-prompt-form" id="steamEmailPromptForm">
-        <label class="input-label">Email address
-          <input id="steamEmailPromptInput" type="email" placeholder="you@example.com" autocomplete="email" required />
-        </label>
-        <p class="fine-print">We will send the normal Supabase confirmation email. Your address is active after you confirm it.</p>
-        <div class="confirm-actions">
-          <button class="button button-ghost" type="button" data-email-prompt-later>Later</button>
-          <button class="button button-primary" type="submit" data-email-prompt-save>Send confirmation</button>
+        <div data-email-step="email">
+          <label class="input-label">Email address
+            <input id="steamEmailPromptInput" type="email" placeholder="you@example.com" autocomplete="email" required />
+          </label>
+          <p class="fine-print">We will send a 6-digit verification code. You must verify an email before using the dashboard normally.</p>
+          <div class="confirm-actions">
+            <button class="button button-ghost" type="button" data-email-prompt-signout>Sign out</button>
+            <button class="button button-primary" type="submit" data-email-prompt-save>Send code</button>
+          </div>
+        </div>
+        <div class="hidden" data-email-step="code">
+          <label class="input-label">Verification code
+            <input id="steamEmailCodeInput" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="123456" />
+          </label>
+          <p class="fine-print" data-email-code-copy>Enter the 6-digit code we sent to your email.</p>
+          <div class="confirm-actions">
+            <button class="button button-ghost" type="button" data-email-prompt-change>Change email</button>
+            <button class="button button-primary" type="button" data-email-prompt-verify>Verify email</button>
+          </div>
         </div>
       </form>
     </div>
   `;
 
-  const close = (snooze = true) => {
-    if (snooze) {
-      localStorage.setItem(getSteamEmailPromptSnoozeKey(user.id), String(Date.now() + 12 * 60 * 60 * 1000));
-    }
-    backdrop.classList.remove("show");
-    backdrop.classList.add("leaving");
-    setTimeout(() => backdrop.remove(), 220);
+  const emailStep = backdrop.querySelector('[data-email-step="email"]');
+  const codeStep = backdrop.querySelector('[data-email-step="code"]');
+  const emailInput = backdrop.querySelector("#steamEmailPromptInput");
+  const codeInput = backdrop.querySelector("#steamEmailCodeInput");
+  const codeCopy = backdrop.querySelector("[data-email-code-copy]");
+  let pendingEmail = "";
+
+  const setStep = (step) => {
+    const codeMode = step === "code";
+    emailStep?.classList.toggle("hidden", codeMode);
+    codeStep?.classList.toggle("hidden", !codeMode);
+    setTimeout(() => (codeMode ? codeInput : emailInput)?.focus(), 80);
   };
 
-  backdrop.addEventListener("click", (event) => {
-    if (event.target === backdrop) close(true);
+  backdrop.querySelector("[data-email-prompt-signout]")?.addEventListener("click", confirmAndSignOut);
+  backdrop.querySelector("[data-email-prompt-change]")?.addEventListener("click", () => {
+    codeInput.value = "";
+    setStep("email");
   });
-  backdrop.querySelector("[data-email-prompt-later]")?.addEventListener("click", () => close(true));
+
   backdrop.querySelector("#steamEmailPromptForm")?.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const input = backdrop.querySelector("#steamEmailPromptInput");
     const saveButton = backdrop.querySelector("[data-email-prompt-save]");
-    const email = input?.value.trim().toLowerCase();
-    if (!email || !isValidEmailAddress(email)) {
-      showMessage("Enter a valid email address.", "error");
-      input?.focus();
+    const email = emailInput?.value.trim().toLowerCase();
+    if (!email || !isValidEmailAddress(email) || isSteamOnlyEmail(email)) {
+      showMessage("Enter a real email address you can access.", "error");
+      emailInput?.focus();
       return;
     }
     const reset = setButtonBusy(saveButton, "Sending...");
-    const { error } = await sb.auth.updateUser(
-      { email },
-      { emailRedirectTo: getPageUrl("/auth-confirm") }
-    );
-    reset();
-    if (error) {
-      showMessage(error.message || "Could not send confirmation email.", "error");
+    try {
+      await invokeContactEmailFunction(CONTACT_EMAIL_START_URL, { email });
+      pendingEmail = email;
+      if (codeCopy) codeCopy.textContent = `Enter the 6-digit code sent to ${email}.`;
+      showMessage("Verification code sent.", "success");
+      setStep("code");
+    } catch (error) {
+      showMessage(error?.message || "Could not send the verification code.", "error");
+    } finally {
+      reset();
+    }
+  });
+
+  backdrop.querySelector("[data-email-prompt-verify]")?.addEventListener("click", async () => {
+    const verifyButton = backdrop.querySelector("[data-email-prompt-verify]");
+    const code = String(codeInput?.value || "").replace(/\D/g, "").slice(0, 6);
+    if (!pendingEmail || code.length !== 6) {
+      showMessage("Enter the 6-digit verification code.", "error");
+      codeInput?.focus();
       return;
     }
-    localStorage.removeItem(getSteamEmailPromptSnoozeKey(user.id));
-    showMessage("Confirmation email sent. Open it to finish adding your email.", "success");
-    close(false);
+    const reset = setButtonBusy(verifyButton, "Verifying...");
+    try {
+      const result = await invokeContactEmailFunction(CONTACT_EMAIL_VERIFY_URL, { code });
+      currentProfile = { ...(currentProfile || profile || {}), contact_email: result.email || pendingEmail, contact_email_verified_at: result.verified_at || new Date().toISOString() };
+      showMessage("Email verified. You can now receive SkinQuest updates.", "success");
+      backdrop.classList.remove("show");
+      backdrop.classList.add("leaving");
+      setTimeout(() => backdrop.remove(), 220);
+      if (qs("#accountSection")) {
+        const accountEmail = qs("#accountEmail");
+        if (accountEmail) accountEmail.textContent = getActiveContactEmail(user, currentProfile) || "Account";
+      }
+    } catch (error) {
+      showMessage(error?.message || "That code could not be verified.", "error");
+    } finally {
+      reset();
+    }
+  });
+
+  codeInput?.addEventListener("input", () => {
+    codeInput.value = codeInput.value.replace(/\D/g, "").slice(0, 6);
+  });
+  codeInput?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      backdrop.querySelector("[data-email-prompt-verify]")?.click();
+    }
   });
 
   document.body.appendChild(backdrop);
   requestAnimationFrame(() => backdrop.classList.add("show"));
-  setTimeout(() => backdrop.querySelector("#steamEmailPromptInput")?.focus(), 120);
+  setTimeout(() => emailInput?.focus(), 120);
 }
 
 async function confirmAndSignOut() {
@@ -1594,7 +1678,19 @@ async function updateRewardAccountNotice() {
 
   try {
     const profile = await ensureProfile(user);
-    if (!profile?.steam_trade_url || !isValidSteamTradeUrl(profile.steam_trade_url)) {
+    if (!hasActiveContactEmail(user, profile)) {
+      notice.className = "reward-account-notice warning";
+      notice.innerHTML = `
+        <div>
+          <strong>Verify your email before redeeming.</strong>
+          <span>We need a real contact email in case a reward or Steam trade needs attention.</span>
+        </div>
+        <button class="button button-primary" type="button" data-reward-email-setup>Add email</button>
+      `;
+      notice.querySelector("[data-reward-email-setup]")?.addEventListener("click", () => showSteamEmailPrompt(user, profile));
+      return;
+    }
+    if (!profile?.steam_trade_url || !isValidSteamTradeUrl(profile.steam_trade_url) || (profile?.steam_id && !tradeUrlMatchesConnectedSteam(profile.steam_trade_url, profile.steam_id))) {
       notice.className = "reward-account-notice warning";
       notice.innerHTML = `
         <div>
@@ -1648,13 +1744,16 @@ function getRewardActionState(item, profile) {
   const balance = Number(profile?.points_balance || 0);
   const hasUser = !!currentUser?.id;
   const tradeUrl = profile?.steam_trade_url || "";
-  const hasTrade = !!tradeUrl && isValidSteamTradeUrl(tradeUrl);
+  const hasTrade = !!tradeUrl && isValidSteamTradeUrl(tradeUrl) && (!profile?.steam_id || tradeUrlMatchesConnectedSteam(tradeUrl, profile.steam_id));
 
   if (rewardIsOutOfStock(item)) {
     return { disabled: true, label: "Out of stock", note: "This reward is currently unavailable.", action: "out" };
   }
   if (!hasUser) {
     return { disabled: false, label: "Sign in to redeem", note: "Create an account before redeeming.", action: "login" };
+  }
+  if (!hasActiveContactEmail(currentUser, profile)) {
+    return { disabled: false, label: "Add email", note: "Verify a contact email before redeeming.", action: "email" };
   }
   if (!hasTrade) {
     return { disabled: false, label: "Add trade URL", note: "Save your Steam trade URL once to unlock redeeming.", action: "trade" };
@@ -1893,6 +1992,7 @@ function renderRewards() {
         event.stopPropagation();
         const action = button.dataset.rewardAction || "redeem";
         if (action === "login") return openAuthModal("signup");
+        if (action === "email") return showSteamEmailPrompt(currentUser, currentProfile);
         if (action === "trade") return location.href = "/settings#tradeForm";
         if (action === "earn") return location.href = "/surveys";
         if (action === "out") return;
@@ -1980,6 +2080,11 @@ async function requestRedeem(rewardId, sourceButton = null) {
   const reward = rewardItems.find((item) => Number(item.id) === Number(rewardId));
   if (!reward) return;
 
+  if (!hasActiveContactEmail(user, profile)) {
+    await showSteamEmailPrompt(user, profile);
+    return;
+  }
+
   if (!profile.steam_trade_url) {
     const goDashboard = await showConfirm(
       "Before you can redeem, add your Steam trade URL in Settings. Without it, SkinQuest does not know where to send the skin.",
@@ -1989,9 +2094,9 @@ async function requestRedeem(rewardId, sourceButton = null) {
     return;
   }
 
-  if (!isValidSteamTradeUrl(profile.steam_trade_url)) {
+  if (!isValidSteamTradeUrl(profile.steam_trade_url) || (profile?.steam_id && !tradeUrlMatchesConnectedSteam(profile.steam_trade_url, profile.steam_id))) {
     const goDashboard = await showConfirm(
-      "Your saved Steam trade URL looks incomplete. It must be the full Steam trade offer link with both partner and token.",
+      "Your saved Steam trade URL is invalid or belongs to a different Steam account. Save the trade URL from the Steam account connected to SkinQuest.",
       { title: "Fix your Steam trade link", confirmText: "Fix trade link", cancelText: "Stay on rewards", icon: "!" }
     );
     if (goDashboard) location.href = "/settings#tradeForm";
@@ -2052,6 +2157,11 @@ async function requestRedeem(rewardId, sourceButton = null) {
   } catch (error) {
     console.error("Reward redemption failed", error);
     const errorText = String(error.message || "");
+    if (errorText.toLowerCase().includes("contact email") || errorText.toLowerCase().includes("verified email")) {
+      showMessage("Verify a contact email before redeeming rewards.", "error");
+      await showSteamEmailPrompt(user, profile);
+      return;
+    }
     if (errorText.toLowerCase().includes("trade url") || errorText.toLowerCase().includes("trade link")) {
       const goDashboard = await showConfirm(
         "Your reward request was not created because your Steam trade URL is missing or was not saved correctly. Add it in Settings, save it, then try redeeming again.",
@@ -2084,6 +2194,29 @@ function isValidSteamTradeUrl(url) {
   } catch {
     return false;
   }
+}
+
+function getSteamTradePartner(url) {
+  if (!isValidSteamTradeUrl(url)) return "";
+  try { return new URL(url).searchParams.get("partner") || ""; } catch { return ""; }
+}
+
+function steamId64ToAccountId(steamId) {
+  try {
+    const value = BigInt(String(steamId || "").trim());
+    const base = 76561197960265728n;
+    if (value < base) return "";
+    return String(value - base);
+  } catch {
+    return "";
+  }
+}
+
+function tradeUrlMatchesConnectedSteam(url, steamId) {
+  if (!steamId) return true;
+  const expectedPartner = steamId64ToAccountId(steamId);
+  const actualPartner = getSteamTradePartner(url);
+  return !!expectedPartner && actualPartner === expectedPartner;
 }
 
 function isValidSteamTradeOfferUrl(url) {
@@ -2158,6 +2291,15 @@ async function handleTradeUrlSubmit(event) {
       throw new Error("You need to sign in before saving a Steam trade URL.");
     }
 
+    const profile = await withTimeout(
+      ensureProfile(user),
+      10000,
+      "Account check timed out. Refresh the page and try again."
+    );
+    if (steamTradeUrl && profile?.steam_id && !tradeUrlMatchesConnectedSteam(steamTradeUrl, profile.steam_id)) {
+      throw new Error("That trade URL belongs to a different Steam account. Use the trade URL from the Steam account connected to SkinQuest.");
+    }
+
     const savedProfile = await withTimeout(
       saveSteamTradeUrlForUser(user, steamTradeUrl),
       15000,
@@ -2229,7 +2371,7 @@ async function trySaveNotificationPreferences(user, prefs) {
 function updateRedeemBlocker(profile) {
   const panel = qs("#redeemBlockerPanel");
   if (!panel) return;
-  const hasTrade = !!profile?.steam_trade_url && isValidSteamTradeUrl(profile.steam_trade_url);
+  const hasTrade = !!profile?.steam_trade_url && isValidSteamTradeUrl(profile.steam_trade_url) && (!profile?.steam_id || tradeUrlMatchesConnectedSteam(profile.steam_trade_url, profile.steam_id));
   panel.classList.toggle("hidden", hasTrade);
 }
 
@@ -2570,9 +2712,11 @@ async function refreshSettingsPage() {
   const idEl = qs("#settingsUserId");
   if (idEl) idEl.textContent = `User ID: ${shortId}`;
 
-  const tradeReady = !!profile?.steam_trade_url && isValidSteamTradeUrl(profile.steam_trade_url);
+  const emailReady = hasActiveContactEmail(user, profile);
+  const tradeReady = !!profile?.steam_trade_url && isValidSteamTradeUrl(profile.steam_trade_url) && (!profile?.steam_id || tradeUrlMatchesConnectedSteam(profile.steam_trade_url, profile.steam_id));
+  const redeemReady = emailReady && tradeReady;
   const tradeStatusEl = qs("#settingsTradeStatus");
-  if (tradeStatusEl) tradeStatusEl.textContent = tradeReady ? "Saved and valid" : "Missing";
+  if (tradeStatusEl) tradeStatusEl.textContent = tradeReady ? "Saved and valid" : (profile?.steam_trade_url ? "Needs fixing" : "Missing");
   updateSteamLinkedService(profile);
   const setReadyItem = (itemSelector, textSelector, state, text) => {
     const item = qs(itemSelector);
@@ -2584,9 +2728,9 @@ async function refreshSettingsPage() {
       item.classList.toggle("is-muted", state === "muted");
     }
   };
-  setReadyItem("#readinessEmailItem", "#readinessEmailText", "ready", "Connected and signed in");
-  setReadyItem("#readinessTradeItem", "#readinessTradeText", tradeReady ? "ready" : "warning", tradeReady ? "Saved and valid" : "Missing or incomplete");
-  setReadyItem("#readinessRedeemItem", "#readinessRedeemText", tradeReady ? "ready" : "warning", tradeReady ? "Ready to redeem rewards" : "Add trade URL before redeeming");
+  setReadyItem("#readinessEmailItem", "#readinessEmailText", emailReady ? "ready" : "warning", emailReady ? "Verified contact email" : "Add and verify an email");
+  setReadyItem("#readinessTradeItem", "#readinessTradeText", tradeReady ? "ready" : "warning", tradeReady ? "Saved and matched to Steam" : "Missing, incomplete, or wrong account");
+  setReadyItem("#readinessRedeemItem", "#readinessRedeemText", redeemReady ? "ready" : "warning", redeemReady ? "Ready to redeem rewards" : (!emailReady ? "Verify email before redeeming" : "Fix trade URL before redeeming"));
 
   hydrateRewardShopSettingsControls();
 
@@ -2676,7 +2820,11 @@ function initSupportWidget() {
     const willOpen = !panel.classList.contains("open");
     if (willOpen && emailInput && !emailInput.value) {
       const user = await getSessionUser();
-      if (user?.email) emailInput.value = user.email;
+      if (user) {
+        const profile = currentProfile?.id === user.id ? currentProfile : await ensureProfile(user).catch(() => null);
+        const contactEmail = getActiveContactEmail(user, profile);
+        if (contactEmail) emailInput.value = contactEmail;
+      }
     }
     setOpen(willOpen);
   });
@@ -2804,6 +2952,10 @@ async function refreshDashboard({ background = false } = {}) {
     authSection.classList.add("hidden");
     accountSection.classList.remove("hidden");
 
+    if (shouldShowSteamEmailPrompt(user, profile) && !background) {
+      setTimeout(() => showSteamEmailPrompt(user, profile), 120);
+    }
+
     const redemptionsRequest = sb
       .from("redemption_requests")
       .select("*")
@@ -2848,9 +3000,6 @@ async function refreshDashboard({ background = false } = {}) {
       console.warn("Level reward check failed:", bonusResult.reason);
     }
 
-    if (shouldShowSteamEmailPrompt(user) && !background) {
-      setTimeout(() => showSteamEmailPrompt(user), 260);
-    }
   })().catch((error) => {
     console.error("Dashboard refresh failed:", error);
     loadingSection?.classList.add("hidden");

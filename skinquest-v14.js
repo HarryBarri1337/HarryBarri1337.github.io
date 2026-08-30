@@ -1,13 +1,13 @@
-/* SkinQuest v14.1.2 product upgrade layer.
+/* SkinQuest v14.1.3 product upgrade layer.
    Loaded after app.js. The full setup includes the v14 database layer;
-   v14.1.2 itself requires no schema changes.
+   v14.1.3 adds contact-email onboarding and trade-link checks in the core/database layer.
    This layer extends the secure SkinQuest core without replacing reward authority.
 */
 
 (() => {
   "use strict";
 
-  const VERSION = "14.1.2";
+  const VERSION = "14.1.3";
   const GA_ID = "G-DFRR03C4BP";
   const ATTRIBUTION_KEY = "skinquest.firstTouch.v14";
   const CONSENT_KEY = "skinquest.cookieConsent.v1";

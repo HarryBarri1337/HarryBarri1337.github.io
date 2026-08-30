@@ -1,0 +1,24 @@
+SkinQuest v14.1.3 release checks
+
+[ ] Run skinquest_upgrade_existing_to_v14_1_3.sql once on an existing v14.1.2 database.
+[ ] Deploy contact-email-start.
+[ ] Deploy contact-email-verify.
+[ ] Redeploy reward-order-notify.
+[ ] Confirm RESEND_API_KEY and EMAIL_FROM are configured.
+[ ] Recommended: configure CONTACT_EMAIL_SECRET.
+[ ] Sign in with a Steam-only account and open /dashboard.
+[ ] Confirm the Add your email popup cannot be dismissed with the backdrop or Escape.
+[ ] Confirm Sign out remains available from the popup.
+[ ] Confirm a valid email receives a 6-digit code.
+[ ] Confirm a wrong code is rejected and attempts are limited.
+[ ] Confirm the verified email is saved to profiles.contact_email with contact_email_verified_at.
+[ ] Confirm the popup no longer appears after verification.
+[ ] Confirm support auto-fills the verified contact email instead of steam_<id>@steam.skinquestcs.com.
+[ ] Confirm a Steam-only account without verified email cannot redeem a reward.
+[ ] Confirm reward-order-notify sends the customer email to the verified contact email.
+[ ] Confirm a trade URL from another Steam account is rejected when a Steam account is connected.
+[ ] Confirm the connected account's own trade URL still saves normally.
+[ ] Confirm valid existing reward redemptions still work after email/trade checks pass.
+[ ] Confirm normal email/password accounts are not forced through the Steam contact-email popup.
+[ ] Hard-refresh after deployment so v1413 assets replace cached v1412 files.
+[ ] Only use skinquest_full_setup_v14_1_3.sql on a NEW empty Supabase project.

@@ -1,5 +1,5 @@
--- SkinQuest full Supabase setup v14.1.2
--- No database changes were added in v14.1.2.
+-- SkinQuest full Supabase setup v14.1.3
+-- Adds verified contact email onboarding for Steam sign-ins and stronger Steam trade-link ownership checks.
 -- This full setup remains complete for brand-new Supabase projects.
 -- Run this in Supabase SQL Editor only when setting up a fresh project.
 -- Stable full setup including BitLabs accounting and the refund XP repair.
@@ -20,6 +20,8 @@ create table if not exists public.profiles (
   steam_name text,
   steam_avatar_url text,
   steam_connected_at timestamptz,
+  contact_email text,
+  contact_email_verified_at timestamptz,
   account_status text not null default 'active',
   notification_reward_updates boolean not null default true,
   notification_offer_issues boolean not null default true,
@@ -36,12 +38,27 @@ alter table public.profiles add column if not exists steam_id text;
 alter table public.profiles add column if not exists steam_name text;
 alter table public.profiles add column if not exists steam_avatar_url text;
 alter table public.profiles add column if not exists steam_connected_at timestamptz;
+alter table public.profiles add column if not exists contact_email text;
+alter table public.profiles add column if not exists contact_email_verified_at timestamptz;
 alter table public.profiles add column if not exists account_status text not null default 'active';
 alter table public.profiles add column if not exists notification_reward_updates boolean not null default true;
 alter table public.profiles add column if not exists notification_offer_issues boolean not null default true;
 alter table public.profiles add column if not exists notification_product_updates boolean not null default false;
 alter table public.profiles add column if not exists created_at timestamptz not null default now();
 alter table public.profiles add column if not exists updated_at timestamptz not null default now();
+
+create table if not exists public.contact_email_verifications (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  email text not null,
+  code_hash text not null,
+  expires_at timestamptz not null,
+  sent_at timestamptz not null default now(),
+  attempts integer not null default 0
+);
+
+create unique index if not exists profiles_contact_email_unique_idx
+on public.profiles (lower(contact_email))
+where contact_email is not null and contact_email_verified_at is not null;
 
 create table if not exists public.admin_users (
   user_id uuid primary key references auth.users(id) on delete cascade,
@@ -376,12 +393,14 @@ declare
   v_user_id uuid := auth.uid();
   v_profile public.profiles%rowtype;
   v_trade_url text := nullif(trim(coalesce(p_trade_url, '')), '');
+  v_partner text;
 begin
   if v_user_id is null then
     raise exception 'You must be logged in.';
   end if;
 
   perform public.ensure_skinquest_profile();
+  select * into v_profile from public.profiles where id = v_user_id;
 
   if v_trade_url is not null and (
     v_trade_url !~* '^https://(www\.)?steamcommunity\.com/tradeoffer/new/?\?' or
@@ -391,15 +410,17 @@ begin
     raise exception 'Invalid Steam trade URL.';
   end if;
 
+  if v_trade_url is not null and v_profile.steam_id ~ '^[0-9]+$' then
+    v_partner := substring(v_trade_url from '[?&]partner=([0-9]+)');
+    if v_partner is null or v_partner::numeric <> (v_profile.steam_id::numeric - 76561197960265728::numeric) then
+      raise exception 'Steam trade URL belongs to a different connected Steam account.';
+    end if;
+  end if;
+
   update public.profiles
-  set steam_trade_url = v_trade_url,
-      updated_at = now()
+  set steam_trade_url = v_trade_url, updated_at = now()
   where id = v_user_id
   returning * into v_profile;
-
-  if v_profile.id is null then
-    raise exception 'Could not find or create your profile.';
-  end if;
 
   return v_profile;
 end;
@@ -504,7 +525,7 @@ create or replace function public.redeem_reward(p_reward_id bigint)
 returns jsonb
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, auth
 as $$
 declare
   v_user_id uuid := auth.uid();
@@ -514,6 +535,8 @@ declare
   v_available integer;
   v_request_id bigint;
   v_user_redemptions integer;
+  v_auth_email text;
+  v_partner text;
 begin
   if v_user_id is null then
     raise exception 'You must be logged in.';
@@ -530,8 +553,27 @@ begin
     raise exception 'Account is not active.';
   end if;
 
+  select lower(coalesce(email, '')) into v_auth_email from auth.users where id = v_user_id;
+  if (v_auth_email = '' or v_auth_email like '%@steam.skinquestcs.com') and
+     (nullif(trim(coalesce(v_profile.contact_email, '')), '') is null or v_profile.contact_email_verified_at is null) then
+    raise exception 'Verified contact email required.';
+  end if;
+
   if nullif(trim(coalesce(v_profile.steam_trade_url, '')), '') is null then
     raise exception 'Steam trade URL is required.';
+  end if;
+
+  if v_profile.steam_trade_url !~* '^https://(www\.)?steamcommunity\.com/tradeoffer/new/?\?' or
+     v_profile.steam_trade_url !~ '(^|[?&])partner=[0-9]+(&|$)' or
+     v_profile.steam_trade_url !~ '(^|[?&])token=[A-Za-z0-9_-]+(&|$)' then
+    raise exception 'Steam trade URL is invalid.';
+  end if;
+
+  if v_profile.steam_id ~ '^[0-9]+$' then
+    v_partner := substring(v_profile.steam_trade_url from '[?&]partner=([0-9]+)');
+    if v_partner is null or v_partner::numeric <> (v_profile.steam_id::numeric - 76561197960265728::numeric) then
+      raise exception 'Steam trade URL belongs to a different connected Steam account.';
+    end if;
   end if;
 
   select * into v_reward
@@ -795,6 +837,7 @@ $$;
 -- -----------------------------
 
 alter table public.profiles enable row level security;
+alter table public.contact_email_verifications enable row level security;
 alter table public.admin_users enable row level security;
 alter table public.reward_items enable row level security;
 alter table public.redemption_requests enable row level security;
@@ -912,7 +955,11 @@ drop view if exists public.admin_notification_subscribers;
 create or replace view public.admin_notification_subscribers as
 select
   p.id as user_id,
-  coalesce(u.email, case when p.username like '%@%' then p.username else null end) as email,
+  coalesce(
+    case when p.contact_email_verified_at is not null then p.contact_email else null end,
+    case when lower(coalesce(u.email, '')) not like '%@steam.skinquestcs.com' then u.email else null end,
+    case when p.username like '%@%' then p.username else null end
+  ) as email,
   p.username,
   p.steam_id,
   p.steam_name,
@@ -922,7 +969,8 @@ select
   p.account_status,
   p.created_at,
   p.updated_at,
-  u.email_confirmed_at,
+  coalesce(p.contact_email_verified_at, u.email_confirmed_at) as email_confirmed_at,
+  p.contact_email_verified_at,
   u.last_sign_in_at
 from public.profiles p
 left join auth.users u on u.id = p.id
@@ -953,6 +1001,7 @@ where product_updates = true
 grant usage on schema public to anon, authenticated;
 grant select on public.reward_items to anon, authenticated;
 grant select on public.profiles to authenticated;
+revoke all on public.contact_email_verifications from anon, authenticated;
 revoke update (steam_trade_url) on public.profiles from authenticated;
 grant select on public.redemption_requests to authenticated;
 grant select on public.coin_adjustments to authenticated;
@@ -1150,7 +1199,7 @@ notify pgrst, 'reload schema';
 -- ============================================================================
 -- SkinQuest v14 product layer (included in full fresh-project setup)
 -- Existing v14.0.2 projects already contain this database layer.
--- v14.1.2 has no database changes, so its upgrade file contains comments only.
+-- v14.1.3 adds verified contact email storage and stronger trade-link checks.
 -- ============================================================================
 
 
@@ -1165,7 +1214,7 @@ begin
      or to_regclass('public.redemption_requests') is null
      or to_regclass('public.coin_adjustments') is null
      or to_regclass('public.favorite_rewards') is null then
-    raise exception 'SkinQuest v14 upgrade requires the existing v13.1.0 database schema. Use skinquest_full_setup_v14_1_2.sql only for a NEW empty Supabase project.';
+    raise exception 'SkinQuest v14 upgrade requires the existing v13.1.0 database schema. Use skinquest_full_setup_v14_1_3.sql only for a NEW empty Supabase project.';
   end if;
 end $$;
 
