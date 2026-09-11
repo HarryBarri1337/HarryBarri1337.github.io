@@ -77,17 +77,21 @@ Deno.serve(async (req) => {
       if (parsed.origin === "https://skinquestcs.com")
         pageUrl = parsed.toString().slice(0, 500);
     } catch {}
-    const { error } = await admin.from("support_requests").insert({
-      user_id: userId,
-      topic,
-      message,
-      page_url: pageUrl,
-      user_agent: (req.headers.get("user-agent") || "").slice(0, 500),
-      account_email: email,
-      browser_language: String(body.browser_language || "").slice(0, 50),
-    });
+    const { data: created, error } = await admin
+      .from("support_requests")
+      .insert({
+        user_id: userId,
+        topic,
+        message,
+        page_url: pageUrl,
+        user_agent: (req.headers.get("user-agent") || "").slice(0, 500),
+        account_email: email,
+        browser_language: String(body.browser_language || "").slice(0, 50),
+      })
+      .select("ticket_number")
+      .single();
     if (error) throw error;
-    return reply({ ok: true });
+    return reply({ ok: true, ticket_number: created.ticket_number });
   } catch (error) {
     return reply(
       { error: error instanceof Error ? error.message : "Unexpected error." },

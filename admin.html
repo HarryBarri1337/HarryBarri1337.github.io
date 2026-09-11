@@ -3,9 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="description" content="SkinQuest admin panel for managing reward listings and manual redemption requests." />
-  <title>Admin - SkinQuest</title>
-  <meta name="robots" content="noindex,follow" />
+  <meta name="description" content="Secure SkinQuest operations workspace for orders, support, rewards, and platform status." />
+  <title>Operations - SkinQuest</title>
+  <meta name="robots" content="noindex,nofollow,noarchive" />
+  <meta name="referrer" content="same-origin" />
   <script>
     (function () {
       try {
@@ -17,299 +18,180 @@
       }
     }());
   </script>
-  <link rel="stylesheet" href="styles.css?v=1420" />
+  <link rel="stylesheet" href="styles.css?v=1430" />
+  <link rel="stylesheet" href="skinquest-v14.css?v=1430" />
+  <link rel="stylesheet" href="admin.css?v=1430" />
   <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#0b0f16" />
+  <meta name="theme-color" content="#080b10" />
   <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png" />
   <link rel="icon" href="assets/icons/favicon-16.png" sizes="16x16" type="image/png" />
   <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="SkinQuest" />
-  <link rel="stylesheet" href="skinquest-v14.css?v=1420" />
 </head>
-<body>
+<body class="admin-ops-body">
 <div id="pageLoader" class="page-loader">
-  <div class="loader-card">
-    <span class="loader-mark">SQ</span>
-    <span class="loader-line"></span>
+  <div class="loader-card"><span class="loader-mark">SQ</span><span class="loader-line"></span></div>
+</div>
+
+<section id="adminLocked" class="admin-gate" aria-live="polite">
+  <div class="admin-gate-card">
+    <a class="admin-gate-brand" href="/" aria-label="Back to SkinQuest">
+      <img src="assets/interface/skinquestlogo.png" alt="SkinQuest" />
+      <span>Operations</span>
+    </a>
+    <div class="admin-gate-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><path d="M12 3 4.5 6.3v5.3c0 4.5 3.1 8.7 7.5 9.9 4.4-1.2 7.5-5.4 7.5-9.9V6.3L12 3Z"/><path d="M9.2 12.1 11 14l4-4.3"/></svg>
+    </div>
+    <p class="admin-gate-kicker">Protected workspace</p>
+    <h1 id="adminGateTitle">Verifying admin access</h1>
+    <p id="adminGateCopy">Checking your signed-in account against the SkinQuest admin directory.</p>
+    <div id="adminGateActions" class="admin-gate-actions"><span class="admin-gate-loader" aria-label="Loading"></span></div>
+    <a class="admin-gate-back" href="/">Back to SkinQuest</a>
+  </div>
+</section>
+
+<div id="adminPanel" class="admin-ops-shell hidden">
+  <div id="adminSidebarScrim" class="admin-sidebar-scrim" data-admin-close-sidebar></div>
+  <aside id="adminSidebar" class="admin-sidebar" aria-label="Admin navigation">
+    <div class="admin-sidebar-head">
+      <a class="admin-brand" href="#overview" data-admin-view-link="overview" aria-label="SkinQuest operations overview">
+        <span class="admin-brand-mark">SQ</span>
+        <span><strong>SkinQuest</strong><small>Operations</small></span>
+      </a>
+      <button class="admin-icon-button admin-sidebar-close" type="button" data-admin-close-sidebar aria-label="Close navigation"><svg viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
+    </div>
+
+    <nav class="admin-nav">
+      <p class="admin-nav-label">Workspace</p>
+      <button class="admin-nav-item active" type="button" data-admin-view="overview"><svg viewBox="0 0 24 24"><path d="M4 13h6V4H4v9Zm10 7h6v-9h-6v9ZM4 20h6v-3H4v3Zm10-13h6V4h-6v3Z"/></svg><span>Overview</span></button>
+      <button class="admin-nav-item" type="button" data-admin-view="orders"><svg viewBox="0 0 24 24"><path d="M7 3h10v4H7V3Z"/><path d="M5 5H3v16h18V5h-2M8 12h8M8 16h5"/></svg><span>Redeem orders</span><b class="admin-nav-count hidden" data-nav-count="orders">0</b></button>
+      <button class="admin-nav-item" type="button" data-admin-view="support"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4V5Z"/><path d="M8 9h8M8 12h5"/></svg><span>Support inbox</span><b class="admin-nav-count hidden" data-nav-count="support">0</b></button>
+      <button class="admin-nav-item" type="button" data-admin-view="rewards"><svg viewBox="0 0 24 24"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="m4.5 7.8 7.5 4.3 7.5-4.3M12 12v9"/></svg><span>Rewards &amp; stock</span></button>
+      <button class="admin-nav-item admin-nav-subitem" type="button" data-admin-action="add-reward" data-owner-only><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>Add reward</span></button>
+
+      <p class="admin-nav-label">Operations</p>
+      <button class="admin-nav-item" type="button" data-admin-view="status"><svg viewBox="0 0 24 24"><path d="M4 18V6M4 18h16M7 15l4-4 3 2 5-6"/></svg><span>System status</span></button>
+      <button class="admin-nav-item" type="button" data-admin-view="promos"><svg viewBox="0 0 24 24"><path d="M4 8h16v12H4V8Zm-1-4h18v4H3V4Z"/><path d="M12 4v16M8.5 4C7 4 6 3.2 6 2.3S7 1 8.1 1C10 1 12 4 12 4Zm7.5-1.7c0 .9-1 1.7-2.5 1.7H12s2-3 3.9-3C17 1 18 1.4 18 2.3Z"/></svg><span>Promo codes</span></button>
+      <button class="admin-nav-item" type="button" data-admin-view="audit"><svg viewBox="0 0 24 24"><path d="M5 3h14v18H5V3Z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg><span>Audit trail</span></button>
+
+      <div data-owner-only>
+        <p class="admin-nav-label">Owner tools</p>
+        <button class="admin-nav-item" type="button" data-admin-view="coins"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15 8.5c-.7-.7-1.7-1-3-1-1.7 0-3 .8-3 2s1 1.8 3 2.2 3 1 3 2.3-1.3 2.5-3 2.5c-1.4 0-2.5-.4-3.2-1.2M12 5.5v13"/></svg><span>Coin adjustments</span></button>
+        <button class="admin-nav-item" type="button" data-admin-view="team"><svg viewBox="0 0 24 24"><path d="M8.5 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm7-1a3 3 0 1 0 0-6M2.5 20v-2.2c0-2.7 2.4-4.8 6-4.8s6 2.1 6 4.8V20h-12Zm12-6.4c3.8.2 7 1.8 7 4.6V20h-4"/></svg><span>Team access</span></button>
+      </div>
+    </nav>
+
+    <div class="admin-sidebar-account">
+      <div class="admin-account-avatar" id="adminAccountAvatar">A</div>
+      <div><strong id="adminAccountName">Admin</strong><span id="adminAccountRole">Verifying…</span></div>
+      <button class="admin-icon-button" id="adminSignOutButton" type="button" aria-label="Sign out" title="Sign out"><svg viewBox="0 0 24 24"><path d="M10 5H5v14h5M14 8l4 4-4 4M18 12H9"/></svg></button>
+    </div>
+    <div class="admin-sidebar-footer"><a href="/">Open customer site</a><span>v14.3.0</span></div>
+  </aside>
+
+  <div class="admin-main-shell">
+    <header class="admin-topbar">
+      <div class="admin-topbar-context">
+        <button class="admin-icon-button admin-menu-button" id="adminMenuButton" type="button" aria-label="Open navigation" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+        <div><span>SkinQuest operations</span><strong id="adminViewTitle">Overview</strong></div>
+      </div>
+      <form id="adminGlobalSearchForm" class="admin-global-search" role="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="m16 16 4 4"/></svg><input id="adminGlobalSearch" type="search" maxlength="120" autocomplete="off" placeholder="Search order, ticket, user or email" aria-label="Search all admin cases" /><kbd>/</kbd></form>
+      <div class="admin-topbar-actions"><span class="admin-sync-state"><i></i><span id="adminSyncLabel">Data current</span></span><button class="admin-icon-button" id="refreshAdmin" type="button" aria-label="Refresh admin data" title="Refresh"><svg viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6.1 8.2A7 7 0 0 1 18.7 7M17.9 15.8A7 7 0 0 1 5.3 17"/></svg></button></div>
+    </header>
+
+    <main class="admin-workspace">
+      <section class="admin-view" data-admin-view-panel="overview">
+        <div class="admin-page-head"><div><p class="admin-eyebrow">Command center</p><h1>Operations overview</h1><p>What needs attention across rewards, support, inventory, and platform health.</p></div><div class="admin-page-head-meta"><span id="adminOverviewDate">Today</span><small id="adminLastUpdated">Waiting for data</small></div></div>
+        <div id="adminKpis" class="admin-kpi-grid"><div class="admin-skeleton-card"></div><div class="admin-skeleton-card"></div><div class="admin-skeleton-card"></div></div>
+        <div class="admin-dashboard-grid">
+          <section class="admin-card admin-card-span-2"><div class="admin-card-head"><div><p class="admin-eyebrow">Priority queue</p><h2>Needs attention</h2></div><button class="admin-text-button" type="button" data-admin-view="orders">All orders</button></div><div id="adminPriorityQueue" class="admin-compact-list"><div class="admin-empty">Loading open cases…</div></div></section>
+          <section class="admin-card"><div class="admin-card-head"><div><p class="admin-eyebrow">Health</p><h2>Platform status</h2></div><button class="admin-text-button" type="button" data-admin-view="status">Manage</button></div><div id="adminOverviewHealth" class="admin-health-summary"><div class="admin-empty">Loading status…</div></div></section>
+          <section class="admin-card admin-card-span-3"><div class="admin-card-head"><div><p class="admin-eyebrow">Accountability</p><h2>Latest admin activity</h2></div><button class="admin-text-button" type="button" data-admin-view="audit">Full audit trail</button></div><div id="adminOverviewAudit" class="admin-audit-compact"><div class="admin-empty">Loading activity…</div></div></section>
+        </div>
+      </section>
+
+      <section class="admin-view hidden" data-admin-view-panel="search">
+        <div class="admin-page-head"><div><p class="admin-eyebrow">All cases</p><h1>Search results</h1><p id="adminSearchSummary">Search redeem orders and support tickets.</p></div><button class="admin-secondary-button" type="button" data-admin-view="overview">Close search</button></div>
+        <div id="adminSearchResults" class="admin-search-results"><div class="admin-empty">Enter a search above.</div></div>
+      </section>
+
+      <section class="admin-view hidden" data-admin-view-panel="orders">
+        <div class="admin-page-head"><div><p class="admin-eyebrow">Fulfilment</p><h1>Redeem orders</h1><p>Review every reward order, send the Steam trade, and keep a traceable status history.</p></div></div>
+        <div class="admin-toolbar"><label class="admin-filter-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m16 16 4 4"/></svg><input id="redeemSearch" type="search" maxlength="120" placeholder="Order number, reward, user or note" /></label><label><span>Status</span><select id="adminStatusFilter"><option value="open">Open orders</option><option value="pending">Pending</option><option value="reviewing">Reviewing</option><option value="trade_sent">Trade sent</option><option value="completed">Completed</option><option value="rejected">Rejected</option><option value="refunded">Refunded</option><option value="cancelled">Cancelled</option><option value="all">All statuses</option></select></label><div id="adminOrderResultCount" class="admin-toolbar-count">Loading…</div></div>
+        <section class="admin-card admin-table-card"><div id="adminRequests" class="admin-case-list"><div class="admin-empty">Loading orders…</div></div><button id="ordersLoadMore" class="admin-load-more hidden" type="button">Load more orders</button></section>
+      </section>
+
+      <section class="admin-view hidden" data-admin-view-panel="support">
+        <div class="admin-page-head"><div><p class="admin-eyebrow">Customer care</p><h1>Support inbox</h1><p>Find current and historical tickets, add internal notes, and record who resolved each case.</p></div></div>
+        <div class="admin-toolbar"><label class="admin-filter-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m16 16 4 4"/></svg><input id="supportSearch" type="search" maxlength="120" placeholder="Ticket number, email, topic or message" /></label><label><span>Status</span><select id="adminSupportStatusFilter"><option value="open">Open tickets</option><option value="new">New</option><option value="resolved">Resolved</option><option value="all">All statuses</option></select></label><div id="adminSupportResultCount" class="admin-toolbar-count">Loading…</div></div>
+        <section class="admin-card admin-table-card"><div id="adminSupportRequests" class="admin-case-list"><div class="admin-empty">Loading tickets…</div></div><button id="supportLoadMore" class="admin-load-more hidden" type="button">Load more tickets</button></section>
+      </section>
+
+      <section class="admin-view hidden" data-admin-view-panel="rewards">
+        <div class="admin-page-head"><div><p class="admin-eyebrow">Inventory</p><h1>Rewards &amp; stock</h1><p>See live availability, reserved quantities, pricing, and visibility in one place.</p></div><button class="admin-primary-button" id="openRewardCreate" type="button" data-owner-only><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add reward</button></div>
+        <div id="adminRewardStats" class="admin-mini-stats"></div>
+        <div class="admin-toolbar admin-toolbar-single"><label class="admin-filter-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m16 16 4 4"/></svg><input id="rewardAdminSearch" type="search" maxlength="100" placeholder="Search reward name, rarity or condition" /></label></div>
+        <section class="admin-card admin-table-card"><div id="adminRewardsList" class="admin-reward-list"><div class="admin-empty">Loading rewards…</div></div></section>
+      </section>
+
+      <section class="admin-view hidden" data-admin-view-panel="status">
+        <div class="admin-page-head"><div><p class="admin-eyebrow">Public status</p><h1>Operating status</h1><p>Control the service health shown to customers. Every change is written to the audit trail.</p></div></div>
+        <section class="admin-card"><div id="adminSystemStatus" class="admin-status-list"><div class="admin-empty">Loading system status…</div></div></section>
+      </section>
+
+      <section class="admin-view hidden" data-admin-view-panel="promos">
+        <div class="admin-page-head"><div><p class="admin-eyebrow">Campaigns</p><h1>Promo codes</h1><p>Create controlled coin codes and monitor usage without leaving the operations workspace.</p></div></div>
+        <section class="admin-card admin-form-card"><div class="admin-card-head"><div><p class="admin-eyebrow">New campaign code</p><h2>Create promo code</h2></div></div><form id="adminPromoForm" class="admin-form-grid"><label>Code<input name="code" maxlength="64" placeholder="SQ-CAMPAIGN" required /></label><label>Coin value<input name="coins" type="number" min="1" max="100000" value="50" required /></label><label>Maximum uses<input name="max" type="number" min="1" placeholder="No limit" /></label><label>Campaign<input name="campaign" maxlength="160" placeholder="Campaign name" /></label><label>Starts at<input name="starts" type="datetime-local" /></label><label>Ends at<input name="ends" type="datetime-local" /></label><div class="admin-form-actions admin-form-wide"><button class="admin-primary-button" type="submit">Create code</button></div></form></section>
+        <section class="admin-card admin-table-card"><div class="admin-card-head admin-card-head-padded"><div><p class="admin-eyebrow">History</p><h2>Promo codes</h2></div></div><div id="adminPromoList" class="admin-promo-list"><div class="admin-empty">Loading codes…</div></div></section>
+      </section>
+
+      <section class="admin-view hidden" data-admin-view-panel="audit">
+        <div class="admin-page-head"><div><p class="admin-eyebrow">Security record</p><h1>Admin audit trail</h1><p>Review who changed what and when across orders, support, stock, roles, coins, and status.</p></div></div>
+        <div class="admin-toolbar admin-toolbar-single"><label class="admin-filter-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m16 16 4 4"/></svg><input id="adminAuditSearch" type="search" maxlength="100" placeholder="Search action, case number, admin or entity" /></label></div>
+        <section class="admin-card admin-table-card"><div id="adminAuditList" class="admin-audit-list"><div class="admin-empty">Loading audit trail…</div></div></section>
+      </section>
+
+      <section class="admin-view hidden" data-admin-view-panel="coins" data-owner-only-view>
+        <div class="admin-page-head"><div><p class="admin-eyebrow">Owner control</p><h1>Coin adjustments</h1><p>Correct a balance with a required reason. Adjustments are server-authorized and permanently audited.</p></div></div>
+        <section class="admin-card admin-form-card"><form id="adminCoinForm" class="admin-form-grid admin-form-grid-compact"><label>User email or user ID<input id="coinUserIdentifier" autocomplete="off" placeholder="customer@example.com or UUID" required /></label><label>Amount<input id="coinAmount" type="number" step="1" placeholder="100 or -100" required /></label><label class="admin-form-wide">Reason<input id="coinReason" maxlength="240" placeholder="Why this adjustment is required" required /></label><div class="admin-form-actions admin-form-wide"><button class="admin-primary-button" type="submit">Apply adjustment</button></div></form></section>
+        <section class="admin-card admin-table-card"><div class="admin-card-head admin-card-head-padded"><div><p class="admin-eyebrow">Recent</p><h2>Manual adjustments</h2></div></div><div id="adminCoinHistory" class="admin-audit-list"><div class="admin-empty">Loading adjustments…</div></div></section>
+      </section>
+
+      <section class="admin-view hidden" data-admin-view-panel="team" data-owner-only-view>
+        <div class="admin-page-head"><div><p class="admin-eyebrow">Owner control</p><h1>Team access</h1><p>Grant only the access each teammate needs. Owner actions are validated on the server.</p></div></div>
+        <section class="admin-card admin-form-card"><form id="ownerRoleForm" class="admin-form-grid admin-form-grid-compact"><label>User email or user ID<input id="roleUserIdentifier" autocomplete="off" placeholder="teammate@example.com or UUID" required /></label><label>Access level<select id="roleValue"><option value="admin">Admin</option><option value="owner">Owner</option><option value="remove">Remove access</option></select></label><div class="admin-form-actions admin-form-wide"><button class="admin-primary-button" type="submit">Save access</button></div></form></section>
+        <section class="admin-card admin-table-card"><div class="admin-card-head admin-card-head-padded"><div><p class="admin-eyebrow">Admin directory</p><h2>Current team</h2></div></div><div id="adminUsersList" class="admin-team-list"><div class="admin-empty">Loading team…</div></div></section>
+      </section>
+    </main>
   </div>
 </div>
-<header class="site-header">
-  <a class="brand" href="/" aria-label="SkinQuest home">
-    <img class="brand-logo" src="assets/interface/skinquestlogo.png" alt="SkinQuest" onerror="this.classList.add('hidden'); this.nextElementSibling.classList.remove('hidden');" />
-    <span class="brand-fallback hidden"><span class="brand-mark">SQ</span><span>SkinQuest</span></span>
-  </a>
-  <button class="nav-toggle" aria-label="Open navigation" data-nav-toggle>☰</button>
-  <nav class="site-nav" data-nav>
-    <a href="/dashboard">Dashboard</a>
-    <a href="/surveys">Surveys</a>
-    <a href="/rewards">Rewards</a>
-    <a class="hidden-admin-link" href="/admin">Admin</a>
-    <a href="/how-it-works">How it works</a>
-  </nav>
-  <div class="nav-actions auth-loading" id="navAuthActions" aria-live="polite">
-    <span class="auth-skeleton" aria-hidden="true"></span>
-  </div>
-</header>
 
-<main class="page admin-page">
-  <section class="page-heading">
-    <span class="pill">Owner admin</span>
-    <h1>SkinQuest control room</h1>
-    <p>Manage rewards, stock, manual Steam trades, and redeem statuses. Only approved admin accounts can access this page.</p>
+<div id="adminDrawerBackdrop" class="admin-drawer-backdrop hidden" aria-hidden="true"><aside id="adminCaseDrawer" class="admin-case-drawer" role="dialog" aria-modal="true" aria-labelledby="adminDrawerTitle"><button class="admin-icon-button admin-drawer-close" type="button" data-close-admin-drawer aria-label="Close details"><svg viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17"/></svg></button><div id="adminDrawerContent"></div></aside></div>
+
+<div id="rewardEditorBackdrop" class="admin-modal-backdrop hidden" aria-hidden="true">
+  <section class="admin-reward-modal" role="dialog" aria-modal="true" aria-labelledby="rewardFormTitle">
+    <div class="admin-modal-head"><div><p class="admin-eyebrow">Reward manager</p><h2 id="rewardFormTitle">Add reward</h2></div><button class="admin-icon-button" type="button" data-close-reward-editor aria-label="Close reward editor"><svg viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div>
+    <form id="adminRewardForm" class="admin-form-grid admin-reward-form">
+      <input type="hidden" id="rewardId" />
+      <label>Name<input id="rewardName" maxlength="160" required placeholder="AK-47 | Slate" /></label><label>Coin price<input id="rewardCost" type="number" min="1" step="1" required placeholder="900" /></label><label>Total quantity<input id="rewardTotal" type="number" min="0" step="1" value="1" /></label><label>Reserved<input id="rewardReserved" type="number" min="0" step="1" value="0" /></label><label>Rarity<select id="rewardRarity"><option value="">No rarity</option><option value="consumer">Consumer</option><option value="industrial">Industrial</option><option value="milspec">Mil-Spec</option><option value="restricted">Restricted</option><option value="classified">Classified</option><option value="covert">Covert</option><option value="contraband">Contraband</option></select></label><label>Condition<input id="rewardCondition" maxlength="40" placeholder="FN / MW / FT / WW / BS" /></label><label>Sort order<input id="rewardSort" type="number" step="1" value="0" /></label><label>Limit per user<input id="rewardMaxPerUser" type="number" min="1" step="1" placeholder="No limit" /></label><label class="admin-form-wide">Image URL<input id="rewardImage" maxlength="500" placeholder="assets/rewards/weapons/ak-slate.png" /><small>Use a site path with forward slashes. File names are case-sensitive online.</small></label><label class="admin-form-wide">Description<textarea id="rewardDescription" rows="3" maxlength="500" placeholder="Manual Steam trade after review"></textarea></label><label class="admin-check-row admin-form-wide"><input id="rewardActive" type="checkbox" checked /><span>Active and visible in the reward shop</span></label><div class="admin-form-actions admin-form-wide"><button class="admin-secondary-button" type="button" data-close-reward-editor>Cancel</button><button class="admin-primary-button" type="submit">Save reward</button></div>
+    </form>
   </section>
-
-  <section id="adminLocked" class="panel locked-panel">
-    <h2>Admin access required</h2>
-    <p class="muted">Log in with an approved admin account to manage rewards and redeem requests.</p>
-    <button class="button button-primary" data-open-auth="login">Sign in</button>
-  </section>
-
-  <section id="adminPanel" class="hidden admin-layout">
-    <section class="panel admin-request-panel">
-      <div class="section-headline">
-        <div>
-          <span class="pill">Manual workflow</span>
-          <h2>Redeem requests <span class="role-badge" id="adminRoleBadge">Admin</span></h2>
-        </div>
-      </div>
-      <div class="admin-request-controls">
-        <p class="muted">Use this while you send skins manually. Rejected, refunded, or cancelled requests refund coins and release reserved stock.</p>
-        <div class="admin-toolbar-actions">
-          <select id="adminStatusFilter">
-            <option value="open">Open requests</option>
-            <option value="pending">Pending</option>
-            <option value="reviewing">Reviewing</option>
-            <option value="trade_sent">Trade sent</option>
-            <option value="completed">Completed</option>
-            <option value="rejected">Rejected</option>
-            <option value="refunded">Refunded</option>
-            <option value="cancelled">Cancelled</option>
-            <option value="all">All</option>
-          </select>
-          <button class="button button-primary" id="refreshAdmin">Refresh</button>
-        </div>
-      </div>
-      <div id="adminRequests" class="admin-list empty-state">Loading requests...</div>
-    </section>
-
-    <section class="panel admin-system-panel">
-      <div class="section-headline">
-        <div>
-          <span class="pill">System status</span>
-          <h2>Test phase overview</h2>
-          <p class="muted">Quick admin-only status cards for the parts users depend on.</p>
-        </div>
-      </div>
-      <div id="adminSystemStatus" class="system-status-grid">
-        <div class="empty-state compact-empty">Loading system status...</div>
-      </div>
-    </section>
-
-    <section class="panel admin-support-panel">
-      <div class="section-headline">
-        <div>
-          <span class="pill">Support inbox</span>
-          <h2>Recent support requests</h2>
-          <p class="muted">Support messages sent from the floating widget show up here. New requests can also trigger email notifications to support@skinquestcs.com.</p>
-        </div>
-      </div>
-      <div id="adminSupportRequests" class="empty-state">Loading support requests...</div>
-    </section>
-
-    <section id="ownerToolsLocked" class="panel owner-lock hidden">
-      <div class="section-headline">
-        <div>
-          <span class="pill">Owner tools locked</span>
-          <h2>Owner role required</h2>
-        </div>
-      </div>
-      <p class="muted">Regular admins can review redeem requests and support, but only owner accounts can adjust coins or manage reward stock.</p>
-    </section>
-
-
-    <section class="panel owner-role-panel" data-owner-only>
-      <div class="section-headline">
-        <div>
-          <span class="pill">Owner tools</span>
-          <h2>Admin roles</h2>
-          <p class="muted">Promote helpers to admin, upgrade an account to owner, or remove admin access. Use this carefully.</p>
-        </div>
-      </div>
-      <form id="ownerRoleForm" class="admin-grid-form compact">
-        <label>User email or user id
-          <input id="roleUserIdentifier" placeholder="friend@example.com or uuid" required />
-        </label>
-        <label>Role
-          <select id="roleValue">
-            <option value="admin">Admin</option>
-            <option value="owner">Owner</option>
-            <option value="remove">Remove access</option>
-          </select>
-        </label>
-        <div class="form-actions wide">
-          <button class="button button-primary" type="submit">Save role</button>
-        </div>
-      </form>
-      <div id="adminUsersList" class="empty-state compact-empty">Loading admin users...</div>
-    </section>
-
-    <section class="panel admin-coin-panel" data-owner-only>
-      <div class="section-headline">
-        <div>
-          <span class="pill">Testing tools</span>
-          <h2>Adjust user coins</h2>
-          <p class="muted">Use this to give a friend test coins or correct a balance while you are testing. Enter their email if they have confirmed/logged in, or their user id from Supabase.</p>
-        </div>
-      </div>
-      <form id="adminCoinForm" class="admin-grid-form compact">
-        <label>User email or user id
-          <input id="coinUserIdentifier" placeholder="friend@example.com or uuid" required />
-        </label>
-        <label>Amount
-          <input id="coinAmount" type="number" step="1" placeholder="10 or -10" required />
-        </label>
-        <label class="wide">Reason
-          <input id="coinReason" placeholder="Test coins" value="Test coins" />
-        </label>
-        <div class="form-actions wide">
-          <button class="button button-primary" type="submit">Apply coin adjustment</button>
-        </div>
-      </form>
-    </section>
-
-    <section class="panel reward-admin-panel" data-owner-only>
-      <div class="section-headline">
-        <div>
-          <span class="pill">Reward manager</span>
-          <h2 id="rewardFormTitle">Add reward</h2>
-        </div>
-        <button class="button button-ghost" id="resetRewardForm" type="button">Clear form</button>
-      </div>
-
-      <form id="adminRewardForm" class="admin-grid-form reward-editor">
-        <input type="hidden" id="rewardId" />
-
-        <label>Name
-          <input id="rewardName" required placeholder="AK-47 | Slate" />
-        </label>
-
-        <label>Coin price
-          <input id="rewardCost" type="number" min="1" step="1" required placeholder="900" />
-        </label>
-
-        <label>Total quantity
-          <input id="rewardTotal" type="number" min="0" step="1" value="1" />
-        </label>
-
-        <label>Reserved
-          <input id="rewardReserved" type="number" min="0" step="1" value="0" />
-        </label>
-
-        <label>Rarity
-          <select id="rewardRarity">
-            <option value="">No rarity</option>
-            <option value="consumer">Consumer</option>
-            <option value="industrial">Industrial</option>
-            <option value="milspec">Mil-Spec</option>
-            <option value="restricted">Restricted</option>
-            <option value="classified">Classified</option>
-            <option value="covert">Covert</option>
-            <option value="contraband">Contraband</option>
-          </select>
-        </label>
-
-        <label>Condition
-          <input id="rewardCondition" placeholder="FN / MW / FT / WW / BS" />
-        </label>
-
-        <label>Sort order
-          <input id="rewardSort" type="number" step="1" value="0" />
-        </label>
-
-        <label class="wide">Image URL
-          <input id="rewardImage" placeholder="assets/rewards/weapons/ak-slate.png" />
-          <small class="field-help">Use web paths with /, for example assets/rewards/cases/recoil.png. File names are case-sensitive online.</small>
-        </label>
-
-        <label class="wide">Description
-          <textarea id="rewardDescription" rows="3" placeholder="Manual Steam trade after review"></textarea>
-        </label>
-
-        <label class="check-row">
-          <input id="rewardActive" type="checkbox" checked />
-          <span>Active / visible in shop</span>
-        </label>
-
-        <div class="form-actions wide">
-          <button class="button button-primary" type="submit">Save reward</button>
-        </div>
-      </form>
-    </section>
-
-    <section class="panel" data-owner-only>
-      <div class="section-headline">
-        <div>
-          <span class="pill">Current stock</span>
-          <h2>Rewards in Supabase</h2>
-        </div>
-      </div>
-      <div id="adminRewardsList" class="empty-state">Loading rewards...</div>
-    </section>
-  </section>
-</main>
-
-<footer class="site-footer">
-  <div>
-    <strong>SkinQuest</strong>
-    <p>Earn coins from verified partner tasks and redeem CS2 skins.</p>
-  </div>
-  <div class="footer-links">
-    <a href="/terms">Terms</a>
-    <a href="/privacy">Privacy</a>
-    <a href="/how-it-works">Help</a>
-    <a href="/install">Install app</a>
-    <a href="mailto:support@skinquestcs.com">Support</a>
-  </div>
-  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v14.2.0</a></p>
-</footer>
+</div>
 
 <div class="modal-backdrop hidden" id="authModal">
-  <div class="auth-modal" role="dialog" aria-modal="true">
+  <div class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
     <button class="modal-close" data-close-auth aria-label="Close">×</button>
-    <div class="auth-modal-head">
-      <span class="pill">SkinQuest account</span>
-      <h2 id="authTitle">Create your account</h2>
-      <p id="authSubtitle">Start earning coins toward CS2 skins.</p>
-    </div>
-    <div class="auth-tabs">
-      <button class="auth-tab active" data-auth-tab="signup">Sign up</button>
-      <button class="auth-tab" data-auth-tab="login">Sign in</button>
-    </div>
-        <div class="auth-provider-grid hidden" aria-label="Future linked sign-in options">
-      <button class="button auth-provider-button steam-button" id="steamLoginButton" type="button">
-        <span>ST</span>
-        <strong>Sign in with Steam</strong>
-        <small>v12</small>
-      </button>
-    </div>
+    <div class="auth-modal-head"><span class="pill">SkinQuest account</span><h2 id="authTitle">Sign in</h2><p id="authSubtitle">Use an approved admin account.</p></div>
+    <div class="auth-tabs"><button class="auth-tab" data-auth-tab="signup">Sign up</button><button class="auth-tab active" data-auth-tab="login">Sign in</button></div>
+    <div class="auth-provider-grid hidden" aria-label="Linked sign-in options"><button class="button auth-provider-button steam-button" id="steamLoginButton" type="button"><span>ST</span><strong>Sign in with Steam</strong><small>v12</small></button></div>
     <div class="divider hidden"><span>or use email</span></div>
-    <form id="modalSignupForm" class="stack-form auth-pane" data-auth-pane="signup">
-      <input id="modalSignupEmail" type="email" placeholder="Email address" required />
-      <input id="modalSignupPassword" type="password" placeholder="Password" required minlength="10" />
-      <button class="button button-primary" type="submit">Create account</button>
-    </form>
-    <form id="modalLoginForm" class="stack-form auth-pane hidden" data-auth-pane="login">
-      <input id="modalLoginEmail" type="email" placeholder="Email address" required />
-      <input id="modalLoginPassword" type="password" placeholder="Password" required />
-      <button class="button button-primary" type="submit">Sign in</button>
-    </form>
-    <p class="fine-auth">Rewards require verified completions. Do not use VPNs, bots, or fake survey answers.</p>
+    <form id="modalSignupForm" class="stack-form auth-pane hidden" data-auth-pane="signup"><input id="modalSignupEmail" type="email" placeholder="Email address" required /><input id="modalSignupPassword" type="password" placeholder="Password" required minlength="10" /><button class="button button-primary" type="submit">Create account</button></form>
+    <form id="modalLoginForm" class="stack-form auth-pane" data-auth-pane="login"><input id="modalLoginEmail" type="email" placeholder="Email address" required /><input id="modalLoginPassword" type="password" placeholder="Password" required /><button class="button button-primary" type="submit">Sign in</button></form>
+    <p class="fine-auth">Admin access is checked server-side after sign-in.</p>
   </div>
 </div>
+
 <script src="assets/vendor/supabase-js-2.45.4.js"></script>
-<script src="app.js?v=1420"></script>
-<script src="skinquest-v14.js?v=1420"></script>
+<script src="admin.js?v=1430"></script>
+<script src="app.js?v=1430"></script>
 </body>
 </html>

@@ -47,6 +47,8 @@ Deno.serve(async (req) => {
       .eq("user_id", user.id)
       .single();
     if (error || !order) return json({ error: "Order not found." }, 404);
+    const orderNumber =
+      order.order_number || `SQ-R-${String(order.id).padStart(6, "0")}`;
     const { data: profile } = await admin
       .from("profiles")
       .select("steam_id,username,contact_email,contact_email_verified_at")
@@ -79,17 +81,17 @@ Deno.serve(async (req) => {
     const authEmail = String(user.email || "").trim().toLowerCase();
     const contactEmail = profile?.contact_email_verified_at ? String(profile?.contact_email || "").trim().toLowerCase() : "";
     const userEmail = contactEmail || (authEmail && !authEmail.endsWith("@steam.skinquestcs.com") ? authEmail : "");
-    const adminHtml = `<h1>New SkinQuest reward order</h1><table><tr><th>User</th><td>${esc(userEmail || user.email || "No contact email")} (${esc(user.id)})</td></tr><tr><th>Steam ID</th><td>${esc(profile?.steam_id || "Not connected")}</td></tr><tr><th>Reward</th><td>${esc(order.reward_name)}</td></tr><tr><th>Coin price</th><td>${esc(order.points_coins || order.points_cost)}</td></tr><tr><th>Order ID</th><td>${esc(order.id)}</td></tr><tr><th>Time</th><td>${esc(created)}</td></tr><tr><th>Trade URL</th><td><a href="${esc(order.steam_trade_url)}">Open Steam trade URL</a></td></tr></table><p><a href="https://skinquestcs.com/admin?order=${esc(order.id)}">Open order in admin</a></p>`;
-    const userHtml = `<h1>We received your reward request</h1><p>Your request for <strong>${esc(order.reward_name)}</strong> is saved as order #${esc(order.id)}.</p><p>${esc(order.points_coins || order.points_cost)} coins were deducted and the item was reserved for manual review.</p><p><a href="https://skinquestcs.com/dashboard">View request status</a></p>`;
+    const adminHtml = `<h1>New SkinQuest reward order</h1><table><tr><th>Order</th><td>${esc(orderNumber)}</td></tr><tr><th>User</th><td>${esc(userEmail || user.email || "No contact email")} (${esc(user.id)})</td></tr><tr><th>Steam ID</th><td>${esc(profile?.steam_id || "Not connected")}</td></tr><tr><th>Reward</th><td>${esc(order.reward_name)}</td></tr><tr><th>Coin price</th><td>${esc(order.points_coins || order.points_cost)}</td></tr><tr><th>Time</th><td>${esc(created)}</td></tr><tr><th>Trade URL</th><td><a href="${esc(order.steam_trade_url)}">Open Steam trade URL</a></td></tr></table><p><a href="https://skinquestcs.com/admin?order=${esc(order.id)}">Open ${esc(orderNumber)} in admin</a></p>`;
+    const userHtml = `<h1>We received your reward request</h1><p>Your request for <strong>${esc(order.reward_name)}</strong> is saved as <strong>${esc(orderNumber)}</strong>.</p><p>${esc(order.points_coins || order.points_cost)} coins were deducted and the item was reserved for manual review.</p><p><a href="https://skinquestcs.com/dashboard?request=${esc(order.id)}">View request status</a></p>`;
 
     const emailJobs = [
       send(
         adminEmail,
-        `New reward order #${order.id}: ${order.reward_name}`,
+        `New reward order ${orderNumber}: ${order.reward_name}`,
         adminHtml,
       ),
     ];
-    if (userEmail) emailJobs.push(send(userEmail, `SkinQuest order #${order.id} received`, userHtml));
+    if (userEmail) emailJobs.push(send(userEmail, `SkinQuest order ${orderNumber} received`, userHtml));
     const results = await Promise.allSettled(emailJobs);
     if (results[0].status === "fulfilled")
       await admin

@@ -1,4 +1,4 @@
-// SkinQuest v14.2.0 core - secure base; enhanced by skinquest-v14.js
+// SkinQuest v14.3.0 core - secure base; enhanced by skinquest-v14.js
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -2215,7 +2215,8 @@ async function requestRedeem(rewardId, sourceButton = null) {
       throw new Error("The reward server returned an invalid response. No redeem request was confirmed.");
     }
 
-    showMessage("Redeem request created. Coins were deducted and stock was reserved for manual review.", "success");
+    const orderNumber = data.order_number || `SQ-R-${String(data.request_id).padStart(6, "0")}`;
+    showMessage(`Redeem request ${orderNumber} created. Coins were deducted and stock was reserved for manual review.`, "success");
     sb.functions.invoke("reward-order-notify", { body: { request_id: data.request_id } })
       .then(({ error: notifyError }) => { if (notifyError) console.warn("Order notification delayed", notifyError); })
       .catch((notifyError) => console.warn("Order notification delayed", notifyError));
@@ -2829,6 +2830,7 @@ function getSupportContext(user) {
 }
 
 function initSupportWidget() {
+  if (document.body.classList.contains("admin-ops-body")) return;
   if (document.querySelector("[data-support-widget]")) return;
 
   const shell = document.createElement("div");
@@ -2930,7 +2932,8 @@ function initSupportWidget() {
 
       if (error || !data?.ok) throw error || new Error(data?.error || "Support request failed.");
 
-      showMessage("Support request sent. We’ll reply by email if needed.", "success");
+      const ticketNumber = data.ticket_number ? ` Reference: ${data.ticket_number}.` : "";
+      showMessage(`Support request sent.${ticketNumber} We’ll reply by email if needed.`, "success");
       form.reset();
       setOpen(false);
     } catch (error) {
@@ -3171,7 +3174,7 @@ function renderRedeemHistory(redemptions) {
     <div class="redeem-row ${index >= 5 ? "redeem-extra hidden" : ""}" id="redeem-request-${escapeHtml(item.id)}" data-redeem-request-id="${escapeHtml(item.id)}">
       <div>
         <strong>${escapeHtml(item.reward_name)}</strong>
-        <p class="muted">${formatDate(item.created_at)} · ${formatCoins(getRequestCost(item))}</p>
+        <p class="muted">${escapeHtml(item.order_number || `SQ-R-${String(item.id).padStart(6, "0")}`)} · ${formatDate(item.created_at)} · ${formatCoins(getRequestCost(item))}</p>
         ${isValidSteamTradeOfferUrl(item.trade_offer_url) ? `<a class="mini-link" target="_blank" rel="noopener" href="${escapeHtml(item.trade_offer_url)}">Open trade offer</a>` : ""}
         ${item.admin_note ? `<p class="muted admin-note-view">${escapeHtml(item.admin_note)}</p>` : ""}
       </div>
@@ -3923,7 +3926,8 @@ async function refreshAll() {
     renderRewards();
     await updateRewardAccountNotice();
   }
-  await initAdmin();
+  if (typeof window.initAdminV143 === "function") await window.initAdminV143();
+  else await initAdmin();
 }
 
 function applyRewardSearchFromQuery() {
@@ -3963,7 +3967,8 @@ async function boot() {
 
   await initDashboard();
   await initSettingsPage();
-  await initAdmin();
+  if (typeof window.initAdminV143 === "function") await window.initAdminV143();
+  else await initAdmin();
   finishPageLoad();
 }
 

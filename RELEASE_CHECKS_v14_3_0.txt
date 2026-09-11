@@ -1,0 +1,57 @@
+SkinQuest v14.3.0 release checks
+================================
+
+DEPLOYMENT
+[ ] Back up the existing Supabase database.
+[ ] Run skinquest_upgrade_existing_to_v14_3_0.sql once on the v14.2.0 database.
+[ ] Confirm the SQL Editor finishes without an error.
+[ ] Redeploy support-submit and reward-order-notify from the included function files.
+[ ] Upload/replace the public website files.
+[ ] Hard-refresh (Ctrl+Shift+R).
+[ ] Do not add any new Edge Function specifically for v14.3.0.
+
+ACCESS CONTROL
+[ ] Signed-out /admin shows the secure sign-in gate and no operations data.
+[ ] A normal signed-in user receives Access denied and cannot read other users' cases.
+[ ] A regular admin can use overview, orders, support, status, promos, and audit.
+[ ] A regular admin cannot add/edit rewards, adjust coins, or change team access.
+[ ] An owner can access all owner tools.
+[ ] Attempting to remove or demote the final owner is rejected by Supabase.
+
+CASE NUMBERS AND SEARCH
+[ ] Existing and new redemption rows show unique SQ-R-###### numbers.
+[ ] Existing and new support rows show unique SQ-S-###### numbers.
+[ ] Redeem confirmation/dashboard/email show the SQ-R number.
+[ ] A successful support submission shows the SQ-S number.
+[ ] Global search finds a case by full number, customer/email, reward/topic, or user ID.
+[ ] Redeem and support pages filter open, terminal, and all historical cases.
+[ ] Load more appends results without removing the current list.
+
+REDEEM ORDERS
+[ ] Opening an order shows customer, Steam trade URL, timestamps, coins, and history.
+[ ] Marking Trade sent requires a valid HTTPS steamcommunity.com/tradeoffer/ URL.
+[ ] Completing an order records completed_by, completion time, and stock once.
+[ ] Reject/refund/cancel refunds coins and releases reserved stock once.
+[ ] A terminal order cannot be moved to a different status.
+[ ] Every saved change records last_handled_by and an audit event.
+
+SUPPORT
+[ ] Opening a ticket shows message, email, page, browser context, notes, and history.
+[ ] Resolving a ticket records resolved_by and resolved_at.
+[ ] Reopening a support ticket clears the previous resolution fields.
+[ ] Every saved change records last_handled_by and an audit event.
+[ ] A direct browser-table update fails; the audited support RPC succeeds for admins.
+
+OWNER TOOLS
+[ ] Adding, editing, hiding, and activating a reward works for an owner.
+[ ] A coin correction requires a clear reason and shows the resulting balance.
+[ ] A correction that would create a negative balance is rejected without a log mismatch.
+[ ] Adding, promoting, demoting, and removing an admin works when at least one owner remains.
+
+LAYOUT AND REGRESSION
+[ ] Desktop sidebar, table rows, drawers, and forms fit without overlap.
+[ ] Mobile navigation opens/closes and each case row remains readable.
+[ ] Escape closes a drawer/modal; backdrop press closes only when pressed on the backdrop.
+[ ] Customer dashboard, reward redemption, notifications, login, password reset, and
+    verified Steam contact-email flows still work.
+[ ] Offline cache updates to skinquest-cache-v1430.

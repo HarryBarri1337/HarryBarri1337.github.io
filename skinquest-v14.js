@@ -1,13 +1,13 @@
-/* SkinQuest v14.2.0 product upgrade layer.
+/* SkinQuest v14.3.0 product upgrade layer.
    Loaded after app.js. The full setup includes the v14 database layer;
-   v14.2.0 adds one-reset-email-per-minute protection and fixes accidental auth-modal closing during text selection; it retains the notification, contact-email, and trade-link safeguards.
+   v14.3.0 adds the dedicated admin operations workspace and traceable case workflow.
    This layer extends the secure SkinQuest core without replacing reward authority.
 */
 
 (() => {
   "use strict";
 
-  const VERSION = "14.2.0";
+  const VERSION = "14.3.0";
   const GA_ID = "G-DFRR03C4BP";
   const ATTRIBUTION_KEY = "skinquest.firstTouch.v14";
   const CONSENT_KEY = "skinquest.cookieConsent.v1";
@@ -1350,6 +1350,7 @@
   }
 
   async function bootV14() {
+    const isAdminWorkspace = location.pathname.split("/").pop() === "admin.html" || location.pathname === "/admin";
     captureAttribution();
     addCookiePreferencesLink();
     showConsentManager(false);
@@ -1359,7 +1360,7 @@
     hideDevelopmentLeakage();
     bindAuthWatcher();
 
-    if (!IS_CAMPAIGN_PAGE) {
+    if (!IS_CAMPAIGN_PAGE && !isAdminWorkspace) {
       initMobileNav();
       initInstallPrompt();
       injectRewardExtraFilters();
@@ -1369,7 +1370,7 @@
 
     await Promise.allSettled([
       enhanceHomepage(),
-      IS_CAMPAIGN_PAGE ? Promise.resolve() : enhanceAdmin(),
+      IS_CAMPAIGN_PAGE || isAdminWorkspace ? Promise.resolve() : enhanceAdmin(),
       afterAuthReady()
     ]);
 

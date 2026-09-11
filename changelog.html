@@ -18,7 +18,7 @@
       }
     }());
   </script>
-  <link rel="stylesheet" href="styles.css?v=1420" />
+  <link rel="stylesheet" href="styles.css?v=1430" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#0b0f16" />
   <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png" />
@@ -30,7 +30,7 @@
   <meta property="og:site_name" content="SkinQuest" />
   <meta property="og:description" content="SkinQuest version history and recent platform updates." />
   <meta property="og:image" content="https://skinquestcs.com/assets/interface/skinquestlogo.png" />
-  <link rel="stylesheet" href="skinquest-v14.css?v=1420" />
+  <link rel="stylesheet" href="skinquest-v14.css?v=1430" />
 </head>
 <body>
 <div id="pageLoader" class="page-loader">
@@ -66,6 +66,18 @@
   <section class="panel changelog-list">
     <article class="changelog-entry current">
       <span class="pill">Current</span>
+      <h2>v14.3.0 - Admin operations workspace</h2>
+      <ul>
+        <li>Rebuilt Admin as a dedicated operations workspace with its own responsive navigation, overview, queues, inventory, system status, promo, audit, coin, and team views.</li>
+        <li>Every redeem order and support request now has a permanent searchable case number: SQ-R-000001 and SQ-S-000001.</li>
+        <li>Added cross-case search, historical filters, detailed case drawers, handler attribution, resolution ownership, and per-case activity timelines.</li>
+        <li>Order and support changes now use server-authorized RPCs with audit records; direct support updates are no longer granted to browser clients.</li>
+        <li>Terminal reward decisions cannot be reopened, preventing accidental duplicate refunds or stock changes.</li>
+        <li>Owner-only controls now protect the last owner and record role and coin-balance changes in the audit trail.</li>
+      </ul>
+    </article>
+
+    <article class="changelog-entry">
       <h2>v14.2.0 - Password reset cooldown and safer login modal</h2>
       <ul>
         <li>Forgot password now allows only one reset email per email address every 60 seconds through a server-side rate limiter.</li>
@@ -394,7 +406,7 @@
     <a href="/install">Install app</a>
     <a href="mailto:support@skinquestcs.com">Support</a>
   </div>
-  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v14.2.0</a></p>
+  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v14.3.0</a></p>
 </footer>
 <div class="modal-backdrop hidden" id="authModal">
   <div class="auth-modal" role="dialog" aria-modal="true">
@@ -436,7 +448,7 @@
   </div>
 </div>
 <script src="assets/vendor/supabase-js-2.45.4.js"></script>
-<script src="app.js?v=1420"></script>
-<script src="skinquest-v14.js?v=1420"></script>
+<script src="app.js?v=1430"></script>
+<script src="skinquest-v14.js?v=1430"></script>
 </body>
 </html>

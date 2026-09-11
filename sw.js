@@ -4,13 +4,14 @@
 // when offline. Supabase/API calls and any cross-origin requests are
 // always left alone and go straight to network.
 
-const CACHE_NAME = "skinquest-cache-v1420";
+const CACHE_NAME = "skinquest-cache-v1430";
 const APP_SHELL = [
-    "skinquest-v14.css?v=1420",
-  "skinquest-v14.js?v=1420",
+  "skinquest-v14.css?v=1430",
+  "skinquest-v14.js?v=1430",
   "offline.html",
-"/", "/surveys", "/rewards", "/how-it-works", "/install",
-  "/styles.css?v=1420", "/app.js?v=1420", "/manifest.json",
+  "/", "/surveys", "/rewards", "/how-it-works", "/install", "/admin",
+  "/styles.css?v=1430", "/app.js?v=1430", "/manifest.json",
+  "/admin.css?v=1430", "/admin.js?v=1430",
   "/assets/vendor/supabase-js-2.45.4.js",
   "/assets/interface/skinquestlogo.png", "/assets/interface/coin_logo.png",
   "/assets/providers/cpx-research-logo.png",
