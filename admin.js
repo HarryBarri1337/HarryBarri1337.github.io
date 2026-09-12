@@ -1,4 +1,4 @@
-/* SkinQuest v14.5.1 admin operations workspace */
+/* SkinQuest v14.5.2 admin operations workspace */
 (() => {
   "use strict";
 
@@ -8,6 +8,7 @@
     search: "Search results",
     orders: "Reward orders",
     support: "Support inbox",
+    users: "Users",
     rewards: "Rewards & stock",
     status: "System status",
     promos: "Promo codes",
@@ -29,6 +30,9 @@
     kpis: null,
     orders: [],
     support: [],
+    users: [],
+    userTotal: 0,
+    userLoading: false,
     rewards: [],
     rewardOffset: 0,
     rewardTotal: 0,
@@ -45,6 +49,7 @@
     profileMap: new Map(),
     globalOrders: [],
     globalSupport: [],
+    globalUsers: [],
     orderOffset: 0,
     supportOffset: 0,
     activeDrawer: null,
@@ -369,11 +374,13 @@
     $("#adminSupportStatusFilter")?.addEventListener("change", () => loadSupport({ reset: true }));
     $("#redeemSearch")?.addEventListener("input", debounce(() => loadOrders({ reset: true })));
     $("#supportSearch")?.addEventListener("input", debounce(() => loadSupport({ reset: true })));
+    $("#adminUserSearch")?.addEventListener("input", debounce(() => loadUsers({ reset: true })));
     $("#rewardAdminSearch")?.addEventListener("input", debounce(() => loadRewards({ reset: true })));
     $("#rewardAdminModeFilter")?.addEventListener("change", () => loadRewards({ reset: true }));
     $("#adminAuditSearch")?.addEventListener("input", renderAudit);
     $("#ordersLoadMore")?.addEventListener("click", () => loadOrders({ append: true }));
     $("#supportLoadMore")?.addEventListener("click", () => loadSupport({ append: true }));
+    $("#usersLoadMore")?.addEventListener("click", () => loadUsers({ append: true }));
     $("#rewardsLoadMore")?.addEventListener("click", () => loadRewards({ append: true }));
     $("#openRewardCreate")?.addEventListener("click", () => openRewardEditor(null));
     $("#rewardFulfillmentMode")?.addEventListener("change", updateRewardEditorMode);
@@ -482,17 +489,25 @@
 
   function retryPendingOrderNotifications(rows) {
     (rows || []).forEach((item) => {
-      if (!item?.admin_notified_at || !item?.user_notified_at) {
+      // Retry failed initial email only while a newly placed order is recent.
+      // Legacy orders must not receive a fresh "order received" email months later.
+      const placedAt = Date.parse(item?.created_at || "");
+      const recentOrder = Number.isFinite(placedAt) && placedAt <= Date.now()
+        && Date.now() - placedAt < 24 * 60 * 60 * 1000;
+      if (recentOrder && (!item?.admin_notified_at || !item?.user_notified_at)) {
         sb.functions.invoke("reward-order-notify", { body: { request_id: item.id } })
           .then(({ error }) => { if (error) console.warn("Initial order notification retry delayed", error); })
           .catch((error) => console.warn("Initial order notification retry delayed", error));
       }
       const status = textValue(item?.status);
+      const statusChangedAt = Date.parse(item?.updated_at || item?.last_handled_at || "");
+      const recentStatusChange = Number.isFinite(statusChangedAt) && statusChangedAt <= Date.now()
+        && Date.now() - statusChangedAt < 24 * 60 * 60 * 1000;
       const retryable = ["trade_locked", "trade_sent", "completed", "rejected", "refunded", "cancelled"].includes(status)
         || (status === "ready_to_trade" && item?.fulfillment_mode === "orderable");
       const needsUserStatus = item?.last_user_notified_status !== status;
       const needsReadyAdmin = status === "ready_to_trade" && item?.fulfillment_mode === "orderable" && !item?.ready_admin_notified_at;
-      if (retryable && (needsUserStatus || needsReadyAdmin)) notifyOrderStatus(item.id);
+      if (retryable && recentStatusChange && (needsUserStatus || needsReadyAdmin)) notifyOrderStatus(item.id);
     });
   }
 
@@ -524,7 +539,7 @@
       console.error("Admin directory failed", error);
     }
 
-    const tasks = [loadKpis(), loadOrders({ reset: true }), loadSupport({ reset: true }), loadRewards({ reset: true }), loadPricingDashboard(), loadSystemStatus(), loadPromos(), loadAudit()];
+    const tasks = [loadKpis(), loadOrders({ reset: true }), loadSupport({ reset: true }), loadUsers({ reset: true }), loadRewards({ reset: true }), loadPricingDashboard(), loadSystemStatus(), loadPromos(), loadAudit()];
     if (state.owner) tasks.push(loadCoinHistory());
     const results = await Promise.allSettled(tasks);
     if (results.some((item) => item.status === "rejected")) failed = true;
@@ -580,7 +595,7 @@
       ["Open orders", kpi.open_rewards, "Awaiting fulfilment", "orders", true],
       ["Open support", kpi.open_support, "New or active tickets", "support", true],
       ["Active rewards", kpi.active_rewards, "Visible in the shop", "rewards", false],
-      ["Users", kpi.users, `${formatNumber(kpi.new_users_24h)} new in 24h`, null, false],
+      ["Users", kpi.users, `${formatNumber(kpi.new_users_24h)} new in 24h`, "users", false],
       ["Coin liability", kpi.coin_liability, "Coins held by users", state.owner ? "coins" : null, false],
       ["Completed", kpi.completed_rewards, "Reward orders delivered", "orders", false]
     ];
@@ -709,6 +724,88 @@
     $("#supportLoadMore")?.classList.toggle("hidden", state.support.length === 0 || state.support.length % PAGE_SIZE !== 0);
   }
 
+  async function searchUsers(queryText, limit, offset) {
+    return rpc("sq_admin_search_users", {
+      p_query: textValue(queryText) || null,
+      p_limit: limit,
+      p_offset: offset
+    });
+  }
+
+  async function loadUsers({ reset = false, append = false } = {}) {
+    const target = $("#adminUserList");
+    if (!target || state.userLoading) return;
+    state.userLoading = true;
+    if (!append) target.innerHTML = '<div class="admin-empty">Loading users…</div>';
+    const more = $("#usersLoadMore");
+    if (more) { more.disabled = true; more.textContent = "Loading…"; }
+    try {
+      const offset = append ? state.users.length : 0;
+      const result = await searchUsers($("#adminUserSearch")?.value || "", PAGE_SIZE, offset);
+      const rows = Array.isArray(result?.items) ? result.items : [];
+      state.users = append ? [...state.users, ...rows] : rows;
+      state.userTotal = Number(result?.total ?? state.users.length);
+      state.users.forEach((item) => state.profileMap.set(item.user_id, {
+        ...(state.profileMap.get(item.user_id) || {}),
+        id: item.user_id,
+        email: item.email,
+        username: item.username,
+        steam_name: item.steam_name,
+        contact_email: item.contact_email,
+        contact_email_verified_at: item.contact_email_verified_at
+      }));
+      renderUsers();
+    } catch (error) {
+      target.innerHTML = `<div class="admin-empty"><strong>Could not load users</strong>${safe(error.message)}</div>`;
+      throw error;
+    } finally {
+      state.userLoading = false;
+      if (more) { more.disabled = false; more.textContent = "Load more users"; }
+    }
+  }
+
+  function userDisplayName(item) {
+    return textValue(item.steam_name) || textValue(item.username) || textValue(item.contact_email) || textValue(item.email) || shortId(item.user_id);
+  }
+
+  function renderUserTable(target, rows) {
+    if (!rows?.length) {
+      target.innerHTML = '<div class="admin-empty"><strong>No users found</strong>Try another email, Steam name, Steam ID, or user ID.</div>';
+      return;
+    }
+    target.innerHTML = `<div class="admin-user-header"><span></span><span>User</span><span>Steam / ID</span><span>Coins</span><span>Orders</span><span>Status</span><span></span></div>${rows.map((item) => {
+      const email = textValue(item.contact_email) || textValue(item.email) || "No verified email";
+      const steam = textValue(item.steam_name) || "No Steam name";
+      const completed = Number(item.completed_count || 0);
+      return `<div class="admin-user-row">
+        <span class="admin-account-avatar">${safe((userDisplayName(item)[0] || "U").toUpperCase())}</span>
+        <div><strong>${safe(userDisplayName(item))}</strong><small>${safe(email)}</small></div>
+        <div><strong>${safe(steam)}</strong><small>${safe(item.steam_id || shortId(item.user_id))}</small></div>
+        <span class="admin-stock-value"><b>${formatNumber(item.points_balance)}</b> coins</span>
+        <span class="admin-stock-value"><b>${formatNumber(item.order_count)}</b> orders<small>${formatNumber(completed)} completed · ${formatNumber(item.support_count)} tickets</small></span>
+        ${statusPill(item.account_status || "active")}
+        <div class="admin-row-actions"><button class="admin-row-action" type="button" data-user-orders="${safe(item.user_id)}">Orders</button><button class="admin-row-action" type="button" data-copy-user-id="${safe(item.user_id)}">Copy ID</button></div>
+      </div>`;
+    }).join("")}`;
+    $$("[data-copy-user-id]", target).forEach((button) => button.addEventListener("click", () => copyToClipboard(button.dataset.copyUserId, "User ID copied.")));
+    $$("[data-user-orders]", target).forEach((button) => button.addEventListener("click", async () => {
+      showView("orders");
+      if ($("#redeemSearch")) $("#redeemSearch").value = button.dataset.userOrders;
+      if ($("#adminStatusFilter")) $("#adminStatusFilter").value = "all";
+      await loadOrders({ reset: true });
+    }));
+  }
+
+  function renderUsers() {
+    const target = $("#adminUserList");
+    if (!target) return;
+    renderUserTable(target, state.users);
+    if ($("#adminUserResultCount")) $("#adminUserResultCount").textContent = state.userTotal
+      ? `Showing ${formatNumber(state.users.length)} of ${formatNumber(state.userTotal)}`
+      : "No matching users";
+    $("#usersLoadMore")?.classList.toggle("hidden", state.users.length >= state.userTotal);
+  }
+
   function renderCaseTable(target, items, type) {
     if (!items?.length) {
       target.innerHTML = `<div class="admin-empty"><strong>No ${type === "order" ? "orders" : "tickets"} found</strong>Try another search or status filter.</div>`;
@@ -743,30 +840,43 @@
 
   async function executeGlobalSearch(rawQuery) {
     const query = textValue(rawQuery);
-    if (query.length < 2) return notify("Enter at least 2 characters to search all cases.", "error");
+    if (query.length < 2) return notify("Enter at least 2 characters to search all records.", "error");
     const target = $("#adminSearchResults");
     if (!target) return;
     showView("search");
-    target.innerHTML = '<div class="admin-empty">Searching every order and support ticket…</div>';
+    target.innerHTML = '<div class="admin-empty">Searching users, orders, and support tickets…</div>';
     if ($("#adminSearchSummary")) $("#adminSearchSummary").textContent = `Results for “${query}”`;
 
     try {
-      const [orders, support] = await Promise.all([
+      const [usersResult, orders, support] = await Promise.all([
+        searchUsers(query, 50, 0),
         searchOrders(query, "all", 50, 0),
         searchSupport(query, "all", 50, 0)
       ]);
+      state.globalUsers = Array.isArray(usersResult?.items) ? usersResult.items : [];
       state.globalOrders = orders || [];
       state.globalSupport = support || [];
+      state.globalUsers.forEach((item) => state.profileMap.set(item.user_id, {
+        ...(state.profileMap.get(item.user_id) || {}),
+        id: item.user_id,
+        email: item.email,
+        username: item.username,
+        steam_name: item.steam_name,
+        contact_email: item.contact_email,
+        contact_email_verified_at: item.contact_email_verified_at
+      }));
       await hydrateProfiles([...state.globalOrders.flatMap((item) => [item.user_id, item.completed_by, item.last_handled_by]), ...state.globalSupport.flatMap((item) => [item.user_id, item.resolved_by, item.last_handled_by])]);
-      const total = state.globalOrders.length + state.globalSupport.length;
+      const total = state.globalUsers.length + state.globalOrders.length + state.globalSupport.length;
       if ($("#adminSearchSummary")) $("#adminSearchSummary").textContent = `${formatNumber(total)} result${total === 1 ? "" : "s"} for “${query}”`;
       if (!total) {
-        target.innerHTML = '<div class="admin-card"><div class="admin-empty"><strong>No matching cases</strong>Check the number, email, reward, topic, or user ID and try again.</div></div>';
+        target.innerHTML = '<div class="admin-card"><div class="admin-empty"><strong>No matching records</strong>Check the email, Steam name, number, reward, topic, or user ID and try again.</div></div>';
         return;
       }
       target.innerHTML = `
+        ${state.globalUsers.length ? '<section class="admin-search-group"><h2>Users</h2><div class="admin-card admin-table-card" data-global-user-results></div></section>' : ""}
         ${state.globalOrders.length ? '<section class="admin-search-group"><h2>Reward orders</h2><div class="admin-card admin-table-card" data-global-order-results></div></section>' : ""}
         ${state.globalSupport.length ? '<section class="admin-search-group"><h2>Support tickets</h2><div class="admin-card admin-table-card" data-global-support-results></div></section>' : ""}`;
+      if (state.globalUsers.length) renderUserTable($("[data-global-user-results]", target), state.globalUsers);
       if (state.globalOrders.length) renderCaseTable($("[data-global-order-results]", target), state.globalOrders, "order");
       if (state.globalSupport.length) renderCaseTable($("[data-global-support-results]", target), state.globalSupport, "support");
     } catch (error) {
@@ -877,7 +987,7 @@
           ${isTerminal ? '<div class="admin-terminal-notice">This order is final. Notes and proof can still be documented, but its status cannot be reopened.</div>' : ""}
           <label>Status<select id="drawerOrderStatus" ${isTerminal ? "disabled" : ""}>${allowedOrderStatuses(item).map((status) => `<option value="${status}" ${status === item.status ? "selected" : ""}>${safe(statusLabel(status))}</option>`).join("")}</select><small>Only safe next steps are shown. Sent trades cannot be refunded from the normal workflow.</small></label>
           <label>Trade lock ends<input id="drawerOrderLockUntil" type="datetime-local" value="${safe(toLocalDateTimeInput(item.trade_locked_until))}" ${(isTerminal || item.fulfillment_mode !== "orderable") ? "disabled" : ""} /><small>${item.fulfillment_mode === "orderable" ? "After purchase, enter Steam's exact tradable time. The customer sees a live countdown." : "Prepared rewards do not use the purchase trade-lock stage."}</small></label>
-          <label>Steam trade offer URL (optional)<input id="drawerOrderTrade" maxlength="500" value="${safe(item.trade_offer_url || "")}" placeholder="https://steamcommunity.com/tradeoffer/123456789/" /><small>Leave blank if Steam does not give you a link. Confirm the offer was sent on Steam before selecting Trade sent; add its offer ID or details in the admin note if useful.</small></label>
+          <label>Steam trade offer URL (optional)<input id="drawerOrderTrade" maxlength="500" value="${safe(item.trade_offer_url || "")}" placeholder="https://steamcommunity.com/tradeoffer/123456789/" /><small>Leave blank if Steam does not provide a link. Confirm the offer was actually sent before choosing Trade sent.</small></label>
           <label>Admin note<textarea id="drawerOrderNote" maxlength="2000" placeholder="Internal context or a customer-visible update">${safe(item.admin_note || "")}</textarea></label>
           <div class="admin-quick-actions">${allowedOrderStatuses(item).filter((status) => status !== item.status && !["rejected","refunded","cancelled"].includes(status)).map((status) => `<button class="admin-secondary-button" type="button" data-order-quick="${safe(status)}">${safe(status === "trade_locked" ? "Purchased / trade locked" : statusLabel(status))}</button>`).join("")}</div>
           <div class="admin-drawer-actions"><button class="admin-secondary-button" type="button" data-copy-order-message>Copy customer update</button><button class="admin-primary-button" type="submit">Save order</button></div>
@@ -917,10 +1027,10 @@
     if (trade && !isValidTradeProof(trade)) return notify("Use a Steam trade-offer URL like https://steamcommunity.com/tradeoffer/123456789/.", "error");
     if (status === "trade_locked" && item.fulfillment_mode !== "orderable") return notify("Prepared rewards do not use Trade locked.", "error");
     if (status === "trade_locked" && (!lockUntil || Number.isNaN(lockUntil.getTime()) || lockUntil.getTime() <= Date.now())) return notify("Set a future Steam trade-lock end time first.", "error");
-    if (status === "completed" && item.status !== "trade_sent") return notify("Mark the Steam trade as sent before completing the order.", "error");
 
+    if (status === "completed" && item.status !== "trade_sent") return notify("Mark the Steam trade as sent before completing the order.", "error");
     if (status === "trade_sent" && item.status !== "trade_sent") {
-      const confirmed = await confirmAction("Confirm that you sent the Steam trade offer to this customer. The order cannot be refunded through the normal workflow after this step.", { title: "Mark trade sent?", confirmText: "Trade was sent", cancelText: "Cancel", icon: "↗" });
+      const confirmed = await confirmAction("Confirm that you actually sent the Steam trade offer. This order cannot be refunded through the normal workflow after this step.", { title: "Mark trade sent?", confirmText: "Trade was sent", cancelText: "Cancel", icon: "↗" });
       if (!confirmed) return;
     }
 
@@ -1054,7 +1164,7 @@
   function openTrustedUrl(value) {
     try {
       const url = new URL(value);
-      if (url.protocol !== "https:" || !["steamcommunity.com", "www.steamcommunity.com"].includes(url.hostname.toLowerCase()) || url.pathname.replace(/\/$/, "") !== "/tradeoffer/new" || !url.searchParams.get("partner")?.match(/^\d+$/) || !url.searchParams.get("token")?.match(/^[A-Za-z0-9_-]+$/)) throw new Error();
+      if (url.protocol !== "https:" || !["steamcommunity.com", "www.steamcommunity.com"].includes(url.hostname.toLowerCase()) || url.pathname.replace(/\/$/, "") !== "/tradeoffer/new" || !/^\d+$/.test(url.searchParams.get("partner") || "") || !/^[A-Za-z0-9_-]+$/.test(url.searchParams.get("token") || "")) throw new Error();
       window.open(url.href, "_blank", "noopener,noreferrer");
     } catch { notify("No valid customer Steam trade URL is available.", "error"); }
   }
@@ -1185,12 +1295,13 @@
         <span class="admin-stock-value"><b>${formatNumber(rewardCost(item))}</b> coins<small class="admin-price-source ${sourceClass}">${safe(sourceLabel)}</small></span>
         <span class="admin-stock-value">${rewardMode(item) === "orderable" ? `<b>Available to order</b><small>ETA ${formatNumber(item.order_eta_days || 8)}+ days</small>` : `<b>${formatNumber(stock.available)}</b> available<small>${formatNumber(stock.reserved)} reserved / ${formatNumber(stock.total)} total</small>`}</span>
         ${statusPill(item.active ? "active" : "inactive")}
-        <div class="admin-row-actions">${marketHref ? `<a class="admin-row-action admin-market-link" href="${safe(marketHref)}" target="_blank" rel="noopener noreferrer">Steam</a>` : ""}${state.owner ? `<button class="admin-row-action" type="button" data-edit-reward="${safe(item.id)}">Edit</button><button class="admin-row-action" type="button" data-toggle-reward="${safe(item.id)}">${item.active ? "Hide" : "Activate"}</button>` : ""}</div>
+        <div class="admin-row-actions">${marketHref ? `<a class="admin-row-action admin-market-link" href="${safe(marketHref)}" target="_blank" rel="noopener noreferrer">Steam</a>` : ""}${state.owner ? `<button class="admin-row-action" type="button" data-edit-reward="${safe(item.id)}">Edit</button><button class="admin-row-action" type="button" data-toggle-reward="${safe(item.id)}">${item.active ? "Hide" : "Activate"}</button>${item.catalog_managed ? "" : `<button class="admin-row-action is-danger" type="button" data-delete-reward="${safe(item.id)}">Delete</button>`}` : ""}</div>
       </div>`;
     }).join("")}`;
 
     $$('[data-edit-reward]', target).forEach((button) => button.addEventListener("click", () => openRewardEditor(state.rewards.find((item) => Number(item.id) === Number(button.dataset.editReward)))));
     $$('[data-toggle-reward]', target).forEach((button) => button.addEventListener("click", () => toggleReward(Number(button.dataset.toggleReward))));
+    $$('[data-delete-reward]', target).forEach((button) => button.addEventListener("click", () => deleteManualReward(Number(button.dataset.deleteReward))));
   }
 
   async function loadPricingDashboard() {
@@ -1205,7 +1316,7 @@
       const progress = $("#steamCatalogProgress");
       if (progress) {
         progress.classList.add("has-error");
-        progress.innerHTML = `<span><strong>Pricing database unavailable.</strong> Run the v14.5.1 upgrade SQL before uploading the website files.</span>`;
+        progress.innerHTML = `<span><strong>Pricing database unavailable.</strong> Confirm the existing v14.5 pricing SQL is installed before using Steam sync.</span>`;
       }
       if (!isMissingRpc(error)) throw error;
     }
@@ -1428,6 +1539,22 @@
     renderOverview();
   }
 
+  async function deleteManualReward(id) {
+    if (!state.owner) return notify("Owner access is required.", "error");
+    const item = state.rewards.find((reward) => Number(reward.id) === Number(id));
+    if (!item || item.catalog_managed) return notify("Only manually created rewards can be deleted.", "error");
+    const confirmed = await confirmAction(`Permanently delete ${item.name}? Rewards with order history are protected and cannot be deleted.`, { title: "Delete manual reward?", confirmText: "Delete reward", cancelText: "Cancel", danger: true, icon: "!" });
+    if (!confirmed) return;
+    try {
+      await rpc("sq_owner_delete_manual_reward", { p_reward_id: id });
+      notify("Manual reward deleted.", "success");
+      await Promise.allSettled([loadRewards({ reset: true }), loadPricingDashboard(), loadKpis(), loadAudit()]);
+      renderOverview();
+    } catch (error) {
+      notify(error.message || "Could not delete the reward.", "error");
+    }
+  }
+
   async function loadSystemStatus() {
     const target = $("#adminSystemStatus");
     if (!target) return;
@@ -1505,9 +1632,25 @@
     }
     target.innerHTML = state.promos.map((item) => {
       const current = promoState(item);
-      return `<div class="admin-promo-row"><div><strong class="admin-case-number">${safe(item.code)}</strong><small>${safe(item.campaign || "No campaign label")}</small></div><div><strong>${formatNumber(item.coin_amount)} coins</strong><small>Created by ${safe(adminLabel(item.created_by))}</small></div><div><strong>${formatNumber(item.redemptions_count)}</strong><small>${item.max_redemptions ? `of ${formatNumber(item.max_redemptions)} uses` : "unlimited"}</small></div><div><strong>${safe(formatShortDate(item.created_at))}</strong><small>${item.ends_at ? `Ends ${safe(formatShortDate(item.ends_at))}` : "No end date"}</small></div><div>${statusPill(current === "scheduled" || current === "used" || current === "expired" ? "inactive" : current)}</div><button class="admin-row-action" type="button" data-copy-promo="${safe(item.code)}">Copy</button></div>`;
+      return `<div class="admin-promo-row"><div><strong class="admin-case-number">${safe(item.code)}</strong><small>${safe(item.campaign || "No campaign label")}</small></div><div><strong>${formatNumber(item.coin_amount)} coins</strong><small>Created by ${safe(adminLabel(item.created_by))}</small></div><div><strong>${formatNumber(item.redemptions_count)}</strong><small>${item.max_redemptions ? `of ${formatNumber(item.max_redemptions)} uses` : "unlimited"}</small></div><div><strong>${safe(formatShortDate(item.created_at))}</strong><small>${item.ends_at ? `Ends ${safe(formatShortDate(item.ends_at))}` : "No end date"}</small></div><div>${statusPill(current === "scheduled" || current === "used" || current === "expired" ? "inactive" : current)}</div><div class="admin-row-actions"><button class="admin-row-action" type="button" data-copy-promo="${safe(item.code)}">Copy</button>${state.owner && Number(item.redemptions_count || 0) === 0 ? `<button class="admin-row-action is-danger" type="button" data-delete-promo="${safe(item.id)}">Delete</button>` : ""}</div></div>`;
     }).join("");
     $$('[data-copy-promo]', target).forEach((button) => button.addEventListener("click", () => copyToClipboard(button.dataset.copyPromo, "Promo code copied.")));
+    $$('[data-delete-promo]', target).forEach((button) => button.addEventListener("click", () => deletePromo(Number(button.dataset.deletePromo))));
+  }
+
+  async function deletePromo(id) {
+    if (!state.owner) return notify("Owner access is required.", "error");
+    const item = state.promos.find((promo) => Number(promo.id) === Number(id));
+    if (!item) return;
+    const confirmed = await confirmAction(`Permanently delete promo code ${item.code}? Used codes are protected and cannot be deleted.`, { title: "Delete promo code?", confirmText: "Delete code", cancelText: "Cancel", danger: true, icon: "!" });
+    if (!confirmed) return;
+    try {
+      await rpc("sq_owner_delete_promo_code", { p_promo_id: id });
+      notify(`Promo code ${item.code} deleted.`, "success");
+      await Promise.allSettled([loadPromos(), loadAudit()]);
+    } catch (error) {
+      notify(error.message || "Could not delete the promo code.", "error");
+    }
   }
 
   async function createPromo(event) {
@@ -1558,6 +1701,8 @@
       support_status_update: "Support ticket updated",
       system_status_update: "System status updated",
       promo_create: "Promo code created",
+      promo_delete: "Promo code deleted",
+      reward_delete: "Manual reward deleted",
       admin_role_update: "Admin access changed",
       coin_adjustment: "Coin balance adjusted",
       reward_pricing_settings_update: "Steam pricing updated",
@@ -1580,6 +1725,8 @@
     if (row.action === "admin_role_update") return `${details.previous_role || "No access"} → ${details.role || "No access"}`;
     if (row.action === "system_status_update") return statusLabel(details.status);
     if (row.action === "promo_create") return `${formatNumber(details.coins)} coins${details.max ? ` · ${formatNumber(details.max)} uses` : ""}`;
+    if (row.action === "promo_delete") return "Unused code permanently removed";
+    if (row.action === "reward_delete") return "Unused manual reward permanently removed";
     if (row.action === "reward_pricing_settings_update") return `${details.markup_percent ?? "?"}% markup · ${details.coins_per_eur ?? "?"} coins/€`;
     if (row.entity_type === "reward_item") return details.active_before === details.active_after ? "Inventory details changed" : `${details.active_before ? "Visible" : "Hidden"} → ${details.active_after ? "Visible" : "Hidden"}`;
     return "Change recorded";

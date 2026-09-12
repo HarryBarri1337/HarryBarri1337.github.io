@@ -18,7 +18,7 @@
       }
     }());
   </script>
-  <link rel="stylesheet" href="styles.css?v=1451" />
+  <link rel="stylesheet" href="styles.css?v=1452" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#0b0f16" />
   <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png" />
@@ -30,7 +30,7 @@
   <meta property="og:site_name" content="SkinQuest" />
   <meta property="og:description" content="SkinQuest version history and recent platform updates." />
   <meta property="og:image" content="https://skinquestcs.com/assets/interface/skinquestlogo.png" />
-  <link rel="stylesheet" href="skinquest-v14.css?v=1451" />
+  <link rel="stylesheet" href="skinquest-v14.css?v=1452" />
 </head>
 <body>
 <div id="pageLoader" class="page-loader">
@@ -66,15 +66,23 @@
   <section class="panel changelog-list">
     <article class="changelog-entry current">
       <span class="pill">Current</span>
-      <h2>v14.5.1 - Trade offer evidence optional</h2>
+      <h2>v14.5.2 - Admin directory and cleanup controls</h2>
       <ul>
-        <li>Admins can mark a Steam trade as sent without a proof URL, after confirming that the offer was actually sent.</li>
-        <li>The optional offer link still accepts only valid Steam URLs. Status changes retain handler and time records; completion still requires Trade sent first.</li>
-        <li>Fixed the Admin button that opens the customer's saved Steam trade URL.</li>
-        <li>Includes the improved Steam sync function for page-by-page progress and clearer failure details; existing Cron settings do not change.</li>
+        <li>Added searchable users to Admin with account, Steam, coin, order, and support context.</li>
+        <li>Replaced the generic Admin SQ badge with the existing SkinQuest logo.</li>
+        <li>Owners can permanently delete unused manually created rewards while Steam-managed and historically used rewards remain protected.</li>
+        <li>Owners can permanently delete unused promo codes while redemption history remains protected.</li>
       </ul>
     </article>
-
+    <article class="changelog-entry">
+      <h2>v14.5.1 - Order evidence and achievement dates</h2>
+      <ul>
+        <li>Trade sent no longer needs an optional Steam offer link; Admin asks for confirmation before recording the status.</li>
+        <li>Achievement dates now use the recorded activity or order event, with an honest unknown date where historic evidence is missing.</li>
+        <li>Admin no longer retries original order emails for months-old orders.</li>
+        <li>Fixed the Admin button that opens the customer's Steam trade URL.</li>
+      </ul>
+    </article>
     <article class="changelog-entry">
       <h2>v14.5.0 - Steam-linked reward catalog</h2>
       <ul>
@@ -449,7 +457,7 @@
     <a href="/install">Install app</a>
     <a href="mailto:support@skinquestcs.com">Support</a>
   </div>
-  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v14.5.1</a></p>
+  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v14.5.2</a></p>
 </footer>
 <div class="modal-backdrop hidden" id="authModal">
   <div class="auth-modal" role="dialog" aria-modal="true">
@@ -491,7 +499,7 @@
   </div>
 </div>
 <script src="assets/vendor/supabase-js-2.45.4.js"></script>
-<script src="app.js?v=1451"></script>
-<script src="skinquest-v14.js?v=1451"></script>
+<script src="app.js?v=1452"></script>
+<script src="skinquest-v14.js?v=1452"></script>
 </body>
 </html>

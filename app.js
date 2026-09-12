@@ -1,4 +1,4 @@
-// SkinQuest v14.5.1 core - secure base; enhanced by skinquest-v14.js
+// SkinQuest v14.5.2 core - secure base; enhanced by skinquest-v14.js
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -1894,9 +1894,8 @@ async function updateRewardAccountNotice() {
 }
 
 function getRewardStockSortValue(item) {
-  if (rewardIsOrderable(item)) return -1;
   const available = getRewardAvailableStock(item);
-  if (available === null) return -1;
+  if (available === null) return 999999;
   return available;
 }
 
@@ -1914,7 +1913,7 @@ function sortRewardsForShop(items, sortValue) {
     const aSort = Number(a.sort_order ?? 0);
     const bSort = Number(b.sort_order ?? 0);
     if (aSort !== bSort) return aSort - bSort;
-    return String(a.name || "").localeCompare(String(b.name || "")) || Number(a.id) - Number(b.id);
+    return getRewardCost(a) - getRewardCost(b);
   });
 }
 
@@ -2102,9 +2101,7 @@ function renderRewards() {
       return matchesSearch && matchesMin && matchesMax && matchesVisibility && matchesAfford;
     });
 
-    // Keep the database's stable order across page boundaries; sort locally only
-    // for older installations where the paginated catalog RPC is unavailable.
-    const sorted = rewardCatalogState.serverBacked ? filtered : sortRewardsForShop(filtered, sortValue);
+    const sorted = sortRewardsForShop(filtered, sortValue);
     if (resultCount) {
       const total = rewardCatalogState.serverBacked ? Number(rewardCatalogState.total || 0) : rewardItems.length;
       resultCount.textContent = total === 0

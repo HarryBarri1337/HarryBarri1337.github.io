@@ -1,13 +1,13 @@
-/* SkinQuest v14.5.1 product upgrade layer.
+/* SkinQuest v14.5.2 product upgrade layer.
    Loaded after app.js. The full setup includes the v14 database layer;
-   v14.5.1 adds the unified Steam-priced catalog while preserving the hardened fulfilment lifecycle.
+   v14.5.2 adds the Admin user directory and protected cleanup controls while preserving the hardened fulfilment lifecycle.
    This layer extends the secure SkinQuest core without replacing reward authority.
 */
 
 (() => {
   "use strict";
 
-  const VERSION = "14.5.1";
+  const VERSION = "14.5.2";
   const GA_ID = "G-DFRR03C4BP";
   const ATTRIBUTION_KEY = "skinquest.firstTouch.v14";
   const CONSENT_KEY = "skinquest.cookieConsent.v1";
@@ -635,7 +635,7 @@
     try {
       const [{ data: achievements }, { data: unlocked }] = await Promise.all([
         c.from("sq_achievements").select("achievement_key,title,description,icon,sort_order").eq("active", true).order("sort_order"),
-        c.from("sq_user_achievements").select("achievement_key,unlocked_at")
+        c.from("sq_user_achievements").select("achievement_key,earned_at")
       ]);
       renderAchievements(achievements || [], unlocked || []);
     } catch {}
@@ -653,7 +653,7 @@
       return `
         <article class="sq-achievement ${row ? "unlocked" : "locked"}">
           <span class="sq-achievement-icon">${safeText(item.icon || "★")}</span>
-          <div><strong>${safeText(item.title)}</strong><p>${safeText(item.description)}</p>${row ? `<small>Unlocked ${safeText(formatDate(row.unlocked_at))}</small>` : `<small>Locked</small>`}</div>
+          <div><strong>${safeText(item.title)}</strong><p>${safeText(item.description)}</p>${row ? `<small>${row.earned_at ? `Unlocked ${safeText(formatDate(row.earned_at))}` : "Unlocked · date unavailable"}</small>` : `<small>Locked</small>`}</div>
         </article>`;
     }).join("");
   }

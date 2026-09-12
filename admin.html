@@ -18,9 +18,9 @@
       }
     }());
   </script>
-  <link rel="stylesheet" href="styles.css?v=1451" />
-  <link rel="stylesheet" href="skinquest-v14.css?v=1451" />
-  <link rel="stylesheet" href="admin.css?v=1451" />
+  <link rel="stylesheet" href="styles.css?v=1452" />
+  <link rel="stylesheet" href="skinquest-v14.css?v=1452" />
+  <link rel="stylesheet" href="admin.css?v=1452" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#080b10" />
   <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png" />
@@ -54,8 +54,8 @@
   <aside id="adminSidebar" class="admin-sidebar" aria-label="Admin navigation">
     <div class="admin-sidebar-head">
       <a class="admin-brand" href="#overview" data-admin-view-link="overview" aria-label="SkinQuest operations overview">
-        <span class="admin-brand-mark">SQ</span>
-        <span><strong>SkinQuest</strong><small>Operations</small></span>
+        <img class="admin-brand-logo" src="assets/interface/skinquestlogo.png" alt="SkinQuest" />
+        <small>Operations</small>
       </a>
       <button class="admin-icon-button admin-sidebar-close" type="button" data-admin-close-sidebar aria-label="Close navigation"><svg viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
     </div>
@@ -65,6 +65,7 @@
       <button class="admin-nav-item active" type="button" data-admin-view="overview"><svg viewBox="0 0 24 24"><path d="M4 13h6V4H4v9Zm10 7h6v-9h-6v9ZM4 20h6v-3H4v3Zm10-13h6V4h-6v3Z"/></svg><span>Overview</span></button>
       <button class="admin-nav-item" type="button" data-admin-view="orders"><svg viewBox="0 0 24 24"><path d="M7 3h10v4H7V3Z"/><path d="M5 5H3v16h18V5h-2M8 12h8M8 16h5"/></svg><span>Reward orders</span><b class="admin-nav-count hidden" data-nav-count="orders">0</b></button>
       <button class="admin-nav-item" type="button" data-admin-view="support"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4V5Z"/><path d="M8 9h8M8 12h5"/></svg><span>Support inbox</span><b class="admin-nav-count hidden" data-nav-count="support">0</b></button>
+      <button class="admin-nav-item" type="button" data-admin-view="users"><svg viewBox="0 0 24 24"><path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm7-1a3.5 3.5 0 1 0 0-7M2 21v-3c0-3 2.8-5 7-5s7 2 7 5v3H2Zm14-7c3.5.3 6 1.9 6 4.5V21h-4"/></svg><span>Users</span></button>
       <button class="admin-nav-item" type="button" data-admin-view="rewards"><svg viewBox="0 0 24 24"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="m4.5 7.8 7.5 4.3 7.5-4.3M12 12v9"/></svg><span>Rewards &amp; stock</span></button>
       <button class="admin-nav-item admin-nav-subitem" type="button" data-admin-action="add-reward" data-owner-only><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>Add reward</span></button>
 
@@ -85,7 +86,7 @@
       <div><strong id="adminAccountName">Admin</strong><span id="adminAccountRole">Verifying…</span></div>
       <button class="admin-icon-button" id="adminSignOutButton" type="button" aria-label="Sign out" title="Sign out"><svg viewBox="0 0 24 24"><path d="M10 5H5v14h5M14 8l4 4-4 4M18 12H9"/></svg></button>
     </div>
-    <div class="admin-sidebar-footer"><a href="/">Open customer site</a><span>v14.5.1</span></div>
+    <div class="admin-sidebar-footer"><a href="/">Open customer site</a><span>v14.5.2</span></div>
   </aside>
 
   <div class="admin-main-shell">
@@ -110,7 +111,7 @@
       </section>
 
       <section class="admin-view hidden" data-admin-view-panel="search">
-        <div class="admin-page-head"><div><p class="admin-eyebrow">All cases</p><h1>Search results</h1><p id="adminSearchSummary">Search reward orders and support tickets.</p></div><button class="admin-secondary-button" type="button" data-admin-view="overview">Close search</button></div>
+        <div class="admin-page-head"><div><p class="admin-eyebrow">All records</p><h1>Search results</h1><p id="adminSearchSummary">Search users, reward orders, and support tickets.</p></div><button class="admin-secondary-button" type="button" data-admin-view="overview">Close search</button></div>
         <div id="adminSearchResults" class="admin-search-results"><div class="admin-empty">Enter a search above.</div></div>
       </section>
 
@@ -124,6 +125,12 @@
         <div class="admin-page-head"><div><p class="admin-eyebrow">Customer care</p><h1>Support inbox</h1><p>Find current and historical tickets, add internal notes, and record who resolved each case.</p></div></div>
         <div class="admin-toolbar"><label class="admin-filter-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m16 16 4 4"/></svg><input id="supportSearch" type="search" maxlength="120" placeholder="Ticket number, email, topic or message" /></label><label><span>Status</span><select id="adminSupportStatusFilter"><option value="open">Open tickets</option><option value="new">New</option><option value="resolved">Resolved</option><option value="all">All statuses</option></select></label><div id="adminSupportResultCount" class="admin-toolbar-count">Loading…</div></div>
         <section class="admin-card admin-table-card"><div id="adminSupportRequests" class="admin-case-list"><div class="admin-empty">Loading tickets…</div></div><button id="supportLoadMore" class="admin-load-more hidden" type="button">Load more tickets</button></section>
+      </section>
+
+      <section class="admin-view hidden" data-admin-view-panel="users">
+        <div class="admin-page-head"><div><p class="admin-eyebrow">Customer directory</p><h1>Users</h1><p>Search by email, username, Steam name, Steam ID, or SkinQuest user ID.</p></div></div>
+        <div class="admin-toolbar admin-toolbar-single"><label class="admin-filter-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m16 16 4 4"/></svg><input id="adminUserSearch" type="search" maxlength="120" placeholder="Search users" /></label><div id="adminUserResultCount" class="admin-toolbar-count">Loading…</div></div>
+        <section class="admin-card admin-table-card"><div id="adminUserList" class="admin-user-list"><div class="admin-empty">Loading users…</div></div><button id="usersLoadMore" class="admin-load-more hidden" type="button">Load more users</button></section>
       </section>
 
       <section class="admin-view hidden" data-admin-view-panel="rewards">
@@ -207,7 +214,7 @@
 </div>
 
 <script src="assets/vendor/supabase-js-2.45.4.js"></script>
-<script src="admin.js?v=1451"></script>
-<script src="app.js?v=1451"></script>
+<script src="admin.js?v=1452"></script>
+<script src="app.js?v=1452"></script>
 </body>
 </html>
