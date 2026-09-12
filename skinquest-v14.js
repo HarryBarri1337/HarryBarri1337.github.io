@@ -1,13 +1,13 @@
-/* SkinQuest v14.5.0 product upgrade layer.
+/* SkinQuest v14.5.1 product upgrade layer.
    Loaded after app.js. The full setup includes the v14 database layer;
-   v14.5.0 adds the unified Steam-priced catalog while preserving the hardened fulfilment lifecycle.
+   v14.5.1 adds the unified Steam-priced catalog while preserving the hardened fulfilment lifecycle.
    This layer extends the secure SkinQuest core without replacing reward authority.
 */
 
 (() => {
   "use strict";
 
-  const VERSION = "14.5.0";
+  const VERSION = "14.5.1";
   const GA_ID = "G-DFRR03C4BP";
   const ATTRIBUTION_KEY = "skinquest.firstTouch.v14";
   const CONSENT_KEY = "skinquest.cookieConsent.v1";

@@ -1,4 +1,4 @@
-# v14.5.0: scheduled functions authenticate with their own server-side secrets.
+# v14.5.1: scheduled functions authenticate with their own server-side secrets.
 [functions.reward-order-ready-sweep]
 verify_jwt = false
 

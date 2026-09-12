@@ -1,4 +1,4 @@
-/* SkinQuest v14.5.0 admin operations workspace */
+/* SkinQuest v14.5.1 admin operations workspace */
 (() => {
   "use strict";
 
@@ -877,7 +877,7 @@
           ${isTerminal ? '<div class="admin-terminal-notice">This order is final. Notes and proof can still be documented, but its status cannot be reopened.</div>' : ""}
           <label>Status<select id="drawerOrderStatus" ${isTerminal ? "disabled" : ""}>${allowedOrderStatuses(item).map((status) => `<option value="${status}" ${status === item.status ? "selected" : ""}>${safe(statusLabel(status))}</option>`).join("")}</select><small>Only safe next steps are shown. Sent trades cannot be refunded from the normal workflow.</small></label>
           <label>Trade lock ends<input id="drawerOrderLockUntil" type="datetime-local" value="${safe(toLocalDateTimeInput(item.trade_locked_until))}" ${(isTerminal || item.fulfillment_mode !== "orderable") ? "disabled" : ""} /><small>${item.fulfillment_mode === "orderable" ? "After purchase, enter Steam's exact tradable time. The customer sees a live countdown." : "Prepared rewards do not use the purchase trade-lock stage."}</small></label>
-          <label>Trade offer URL / proof<input id="drawerOrderTrade" maxlength="500" value="${safe(item.trade_offer_url || "")}" placeholder="https://steamcommunity.com/tradeoffer/123456789/" /></label>
+          <label>Steam trade offer URL (optional)<input id="drawerOrderTrade" maxlength="500" value="${safe(item.trade_offer_url || "")}" placeholder="https://steamcommunity.com/tradeoffer/123456789/" /><small>Leave blank if Steam does not give you a link. Confirm the offer was sent on Steam before selecting Trade sent; add its offer ID or details in the admin note if useful.</small></label>
           <label>Admin note<textarea id="drawerOrderNote" maxlength="2000" placeholder="Internal context or a customer-visible update">${safe(item.admin_note || "")}</textarea></label>
           <div class="admin-quick-actions">${allowedOrderStatuses(item).filter((status) => status !== item.status && !["rejected","refunded","cancelled"].includes(status)).map((status) => `<button class="admin-secondary-button" type="button" data-order-quick="${safe(status)}">${safe(status === "trade_locked" ? "Purchased / trade locked" : statusLabel(status))}</button>`).join("")}</div>
           <div class="admin-drawer-actions"><button class="admin-secondary-button" type="button" data-copy-order-message>Copy customer update</button><button class="admin-primary-button" type="submit">Save order</button></div>
@@ -917,8 +917,12 @@
     if (trade && !isValidTradeProof(trade)) return notify("Use a Steam trade-offer URL like https://steamcommunity.com/tradeoffer/123456789/.", "error");
     if (status === "trade_locked" && item.fulfillment_mode !== "orderable") return notify("Prepared rewards do not use Trade locked.", "error");
     if (status === "trade_locked" && (!lockUntil || Number.isNaN(lockUntil.getTime()) || lockUntil.getTime() <= Date.now())) return notify("Set a future Steam trade-lock end time first.", "error");
-    if (["trade_sent", "completed"].includes(status) && !trade) return notify("Add the Steam trade-offer URL before marking this order as sent/completed.", "error");
     if (status === "completed" && item.status !== "trade_sent") return notify("Mark the Steam trade as sent before completing the order.", "error");
+
+    if (status === "trade_sent" && item.status !== "trade_sent") {
+      const confirmed = await confirmAction("Confirm that you sent the Steam trade offer to this customer. The order cannot be refunded through the normal workflow after this step.", { title: "Mark trade sent?", confirmText: "Trade was sent", cancelText: "Cancel", icon: "↗" });
+      if (!confirmed) return;
+    }
 
     if (["rejected", "refunded", "cancelled"].includes(status) && status !== item.status) {
       const stockEffect = item.fulfillment_mode === "orderable" ? " Prepared stock will not be changed." : " The reserved prepared unit will be released.";
@@ -1048,8 +1052,11 @@
   }
 
   function openTrustedUrl(value) {
-    if (!isValidTradeProof(value)) return notify("No valid Steam trade offer URL is available.", "error");
-    window.open(value, "_blank", "noopener,noreferrer");
+    try {
+      const url = new URL(value);
+      if (url.protocol !== "https:" || !["steamcommunity.com", "www.steamcommunity.com"].includes(url.hostname.toLowerCase()) || url.pathname.replace(/\/$/, "") !== "/tradeoffer/new" || !url.searchParams.get("partner")?.match(/^\d+$/) || !url.searchParams.get("token")?.match(/^[A-Za-z0-9_-]+$/)) throw new Error();
+      window.open(url.href, "_blank", "noopener,noreferrer");
+    } catch { notify("No valid customer Steam trade URL is available.", "error"); }
   }
 
   function openSkinQuestUrl(value) {
@@ -1198,7 +1205,7 @@
       const progress = $("#steamCatalogProgress");
       if (progress) {
         progress.classList.add("has-error");
-        progress.innerHTML = `<span><strong>Pricing database unavailable.</strong> Run the v14.5.0 upgrade SQL before uploading the website files.</span>`;
+        progress.innerHTML = `<span><strong>Pricing database unavailable.</strong> Run the v14.5.1 upgrade SQL before uploading the website files.</span>`;
       }
       if (!isMissingRpc(error)) throw error;
     }

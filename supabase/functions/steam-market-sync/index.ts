@@ -63,6 +63,16 @@ function text(value: unknown, max = 500) {
   return String(value ?? "").trim().slice(0, max);
 }
 
+function describeError(value: unknown) {
+  if (value instanceof Error) return text(value.message, 650);
+  if (value && typeof value === "object") {
+    const error = value as Record<string, unknown>;
+    return [text(error.code, 40), text(error.message, 450), text(error.details, 150)]
+      .filter(Boolean).join(" · ") || "Unexpected Steam catalog sync error.";
+  }
+  return text(value, 650) || "Unexpected Steam catalog sync error.";
+}
+
 function tagValue(description: SteamDescription, category: string) {
   const tag = (description.tags || []).find((item) =>
     text(item.category, 80).toLowerCase() === category.toLowerCase() ||
@@ -209,7 +219,7 @@ Deno.serve(async (req) => {
       .select("next_start")
       .eq("id", 1)
       .maybeSingle();
-    if (stateError) throw stateError;
+    if (stateError) throw new Error(`Could not read the saved catalog cursor: ${describeError(stateError)}`);
 
     const requestedStart = Number(body.start);
     let cursor = body.reset === true
@@ -217,55 +227,67 @@ Deno.serve(async (req) => {
       : Number.isInteger(requestedStart) && requestedStart >= 0
         ? requestedStart
         : Math.max(0, Number(syncState?.next_start || 0));
-    const initialStart = cursor;
-    const maxPages = Math.max(1, Math.min(8, Math.trunc(Number(body.max_pages || 3))));
+    const requestedPages = Number(body.max_pages);
+    const maxPages = Number.isInteger(requestedPages) && requestedPages > 0
+      ? Math.min(8, requestedPages)
+      : 3;
     const pageSize = 100;
     let totalCount = 0;
     let scanned = 0;
+    let eligible = 0;
+    let created = 0;
+    let updated = 0;
     let completed = false;
-    const items = new Map<string, NonNullable<ReturnType<typeof normalizeResult>>>();
 
     for (let page = 0; page < maxPages; page += 1) {
       const payload = await fetchSteamPage(cursor, pageSize);
       const results = payload.results || [];
       totalCount = Math.max(0, Math.trunc(Number(payload.total_count || totalCount || 0)));
-      scanned += results.length;
+      if (!results.length) throw new Error(`Steam returned an empty page at position ${cursor} before the catalog ended. The cursor was preserved.`);
+      const items = new Map<string, NonNullable<ReturnType<typeof normalizeResult>>>();
       for (const raw of results) {
         const item = normalizeResult(raw);
         if (item) items.set(item.market_name.toLowerCase(), item);
       }
 
       const returnedPageSize = Math.max(1, Math.trunc(Number(payload.pagesize || results.length || pageSize)));
-      cursor += returnedPageSize;
-      completed = totalCount > 0 && cursor >= totalCount;
+      const nextCursor = cursor + returnedPageSize;
+      const pageCompleted = totalCount > 0 && nextCursor >= totalCount;
+      // Commit each page before requesting the next one. A later Steam failure
+      // cannot discard already-scanned pages or force them to be fetched again.
+      const { data: applied, error: applyError } = await admin.rpc("sq_service_apply_steam_catalog_batch", {
+        p_items: Array.from(items.values()),
+        p_start: cursor,
+        p_next_start: nextCursor,
+        p_total_count: totalCount,
+        p_results_scanned: results.length,
+        p_completed: pageCompleted,
+      });
+      if (applyError) throw new Error(`Could not save catalog page at position ${cursor}: ${describeError(applyError)}`);
+
+      cursor = nextCursor;
+      scanned += results.length;
+      eligible += items.size;
+      created += Number(applied?.created || 0);
+      updated += Number(applied?.updated || 0);
+      completed = pageCompleted;
       if (completed) break;
-      if (!results.length) throw new Error("Steam returned an empty page before the catalog ended. The cursor was preserved.");
       if (page + 1 < maxPages) await pause(900);
     }
-
-    const catalogItems = Array.from(items.values());
-    const { data: applied, error: applyError } = await admin.rpc("sq_service_apply_steam_catalog_batch", {
-      p_items: catalogItems,
-      p_start: initialStart,
-      p_next_start: cursor,
-      p_total_count: totalCount,
-      p_results_scanned: scanned,
-      p_completed: completed,
-    });
-    if (applyError) throw applyError;
 
     return json({
       ok: true,
       scanned,
-      eligible: catalogItems.length,
-      created: Number(applied?.created || 0),
-      updated: Number(applied?.updated || 0),
-      next_start: Number(applied?.next_start || 0),
-      total_count: Number(applied?.total_count || totalCount),
-      completed: Boolean(applied?.completed),
+      eligible,
+      created,
+      updated,
+      next_start: completed ? 0 : cursor,
+      total_count: totalCount,
+      completed,
     }, 200, origin);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unexpected Steam catalog sync error.";
+    const message = describeError(error);
+    console.error(`Steam catalog sync failed: ${message}`);
     try { await admin.rpc("sq_service_record_steam_sync_error", { p_error: message }); } catch {}
     return json({ error: message }, 500, origin);
   }

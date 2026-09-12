@@ -4310,12 +4310,8 @@ begin
     end if;
   end if;
 
-  if v_status = 'trade_sent' and coalesce(v_final_trade_url, '') = '' then
-    raise exception 'A Steam trade-offer URL is required before marking the order as Trade sent.';
-  end if;
   if v_status = 'completed' then
     if v_old_status <> 'trade_sent' then raise exception 'Mark the order Trade sent before completing it.'; end if;
-    if coalesce(v_final_trade_url, '') = '' then raise exception 'A Steam trade-offer URL is required before completing the order.'; end if;
   end if;
 
   v_cost := coalesce(nullif(v_request.points_coins, 0), v_request.points_cost, 0);

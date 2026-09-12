@@ -1,0 +1,24 @@
+SkinQuest v14.5.1 deployment and live checks
+============================================
+
+[ ] Back up the database and run ONLY skinquest_upgrade_existing_to_v14_5_1.sql
+    on the already-upgraded v14.5.0 database.
+[ ] Upload the v14.5.1 website files and reload Admin (cache v1451).
+[ ] Open a Ready to trade order. Copy/Open on the CUSTOMER trade URL works.
+[ ] Leave the optional Steam offer URL empty, select Trade sent, and cancel the
+    confirmation: the order stays Ready to trade.
+[ ] Actually send the Steam offer, select Trade sent and confirm: status becomes
+    Trade sent; timestamp, handler and audit entry are saved; customer is notified.
+[ ] Complete the order after Steam confirms acceptance, without an offer URL;
+    stocked quantity is consumed exactly once.
+[ ] An invalid nonempty offer URL is rejected by both Admin and the SQL RPC.
+[ ] Invalid status skips and a refund after Trade sent are still rejected.
+[ ] If Steam declines/expires the offer, Trade sent can return to Ready to trade.
+[ ] An unauthenticated/non-admin call to sq_admin_update_order is rejected.
+
+Optional separate Steam-function update, NOT previously installed on the live site:
+[ ] Deploy the included steam-market-sync/index.ts; keep the current Cron,
+    secret and Verify JWT setting. A bad Steam page does not lose prior page
+    progress; an error shows useful detail. This does not speed up import.
+
+Local syntax/package checks do not replace these live Supabase checks.
