@@ -1,4 +1,4 @@
-// SkinQuest v14.5.2 core - secure base; enhanced by skinquest-v14.js
+// SkinQuest v14.5.3 core - secure base; enhanced by skinquest-v14.js
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -93,6 +93,100 @@ function qs(selector) {
 
 function qsa(selector) {
   return Array.from(document.querySelectorAll(selector));
+}
+
+function initSkinQuestSelects() {
+  if (window.__skinQuestSelectsReady) return;
+  window.__skinQuestSelectsReady = true;
+
+  const closeMenus = (except = null) => {
+    qsa(".sq-select-shell.is-open").forEach((shell) => {
+      if (shell === except) return;
+      shell.classList.remove("is-open");
+      shell.querySelector(".sq-select-trigger")?.setAttribute("aria-expanded", "false");
+    });
+  };
+
+  const syncSelect = (select) => {
+    const shell = select.nextElementSibling?.classList?.contains("sq-select-shell") ? select.nextElementSibling : null;
+    if (!shell) return;
+    const selected = select.options[select.selectedIndex] || select.options[0];
+    const trigger = shell.querySelector(".sq-select-trigger");
+    const menu = shell.querySelector(".sq-select-menu");
+    if (!trigger || !menu) return;
+    trigger.disabled = select.disabled;
+    trigger.textContent = selected?.textContent || "Select";
+    trigger.setAttribute("aria-label", select.getAttribute("aria-label") || selected?.textContent || "Select option");
+    menu.innerHTML = Array.from(select.options).map((option, index) => `<button class="sq-select-option${option.selected ? " is-selected" : ""}" type="button" role="option" aria-selected="${option.selected ? "true" : "false"}" data-sq-option="${index}" ${option.disabled ? "disabled" : ""}>${escapeHtml(option.textContent)}</button>`).join("");
+    menu.querySelectorAll("[data-sq-option]").forEach((button) => button.addEventListener("click", () => {
+      const option = select.options[Number(button.dataset.sqOption)];
+      if (!option || option.disabled) return;
+      select.value = option.value;
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+      syncSelect(select);
+      closeMenus();
+      trigger.focus();
+    }));
+  };
+
+  const enhanceSelect = (select) => {
+    if (!(select instanceof HTMLSelectElement) || select.dataset.sqSelectReady) return;
+    select.dataset.sqSelectReady = "true";
+    select.classList.add("sq-native-select");
+    const shell = document.createElement("span");
+    shell.className = "sq-select-shell";
+    shell.innerHTML = '<button class="sq-select-trigger" type="button" aria-haspopup="listbox" aria-expanded="false"></button><span class="sq-select-menu" role="listbox"></span>';
+    select.insertAdjacentElement("afterend", shell);
+    const trigger = shell.querySelector(".sq-select-trigger");
+    trigger.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (select.disabled) return;
+      const opening = !shell.classList.contains("is-open");
+      closeMenus(shell);
+      shell.classList.toggle("is-open", opening);
+      trigger.setAttribute("aria-expanded", String(opening));
+      if (opening) shell.querySelector(".sq-select-option.is-selected")?.scrollIntoView({ block: "nearest" });
+    });
+    trigger.addEventListener("keydown", (event) => {
+      if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+      event.preventDefault();
+      const options = Array.from(select.options).filter((option) => !option.disabled);
+      if (!options.length) return;
+      let index = options.indexOf(select.options[select.selectedIndex]);
+      if (event.key === "ArrowDown") index = Math.min(options.length - 1, index + 1);
+      if (event.key === "ArrowUp") index = Math.max(0, index - 1);
+      if (event.key === "Home") index = 0;
+      if (event.key === "End") index = options.length - 1;
+      select.value = options[index]?.value;
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+      syncSelect(select);
+    });
+    select.addEventListener("change", () => syncSelect(select));
+    syncSelect(select);
+  };
+
+  window.refreshSkinQuestSelects = () => qsa("select").forEach((select) => {
+    enhanceSelect(select);
+    syncSelect(select);
+  });
+  window.refreshSkinQuestSelects();
+  document.addEventListener("click", (event) => {
+    if (!event.target.closest(".sq-select-shell")) closeMenus();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeMenus();
+  });
+  new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if (mutation.target instanceof HTMLSelectElement) syncSelect(mutation.target);
+      mutation.addedNodes.forEach((node) => {
+        if (!(node instanceof Element)) return;
+        if (node.matches("select")) enhanceSelect(node);
+        node.querySelectorAll?.("select").forEach(enhanceSelect);
+      });
+    });
+  }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["disabled"] });
 }
 
 function escapeHtml(value) {
@@ -1782,12 +1876,15 @@ function getRewardFulfillmentMode(item) {
 }
 
 function rewardIsOrderable(item) {
+  const available = getRewardAvailableStock(item);
+  if (available !== null && available > 0) return false;
   return getRewardFulfillmentMode(item) === "orderable";
 }
 
 function rewardIsOutOfStock(item) {
-  if (rewardIsOrderable(item)) return false;
   const available = getRewardAvailableStock(item);
+  if (available !== null && available > 0) return false;
+  if (rewardIsOrderable(item)) return false;
   return available !== null && available <= 0;
 }
 
@@ -3398,7 +3495,7 @@ function renderRedeemHistory(redemptions) {
     return `
     <div class="redeem-row ${index >= 5 ? "redeem-extra hidden" : ""}" id="redeem-request-${escapeHtml(item.id)}" data-redeem-request-id="${escapeHtml(item.id)}">
       <div>
-        <strong>${escapeHtml(item.reward_name)}</strong>
+        <strong>${item.reward_id == null ? "Deleted item · " : ""}${escapeHtml(item.reward_name)}</strong>
         <p class="muted">${escapeHtml(item.order_number || `SQ-R-${String(item.id).padStart(6, "0")}`)} · ${formatDate(item.created_at)} · ${formatCoins(getRequestCost(item))}</p>
         ${renderOrderProgress(item)}
         ${isValidSteamTradeOfferUrl(item.trade_offer_url) ? `<a class="mini-link" target="_blank" rel="noopener" href="${escapeHtml(item.trade_offer_url)}">Open trade offer</a>` : ""}
@@ -3905,7 +4002,7 @@ async function loadAdminRequests() {
     <article class="admin-request">
       <div class="admin-request-main">
         <div class="request-topline">
-          <strong>${escapeHtml(item.reward_name)}</strong>
+          <strong>${item.reward_id == null ? "Deleted item · " : ""}${escapeHtml(item.reward_name)}</strong>
           <span class="status-pill status-${escapeHtml(item.status)}">${escapeHtml(formatStatus(item.status))}</span>
         </div>
         <p class="muted">${formatDate(item.created_at)} · ${getRequestCost(item).toLocaleString()} coins · User: ${escapeHtml(item.user_id)}</p>
@@ -4176,6 +4273,7 @@ function applyRewardSearchFromQuery() {
 }
 
 async function boot() {
+  initSkinQuestSelects();
   initThemeControls();
   applyRewardShopVisualPreferences();
   initNav();

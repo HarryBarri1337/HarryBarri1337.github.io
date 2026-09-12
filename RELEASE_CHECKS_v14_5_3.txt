@@ -1,0 +1,23 @@
+SkinQuest v14.5.3 live checks
+==============================
+
+[ ] Back up the database before upgrading.
+[ ] Run only skinquest_upgrade_existing_to_v14_5_3.sql on the live v14.5.2 database.
+[ ] Native browser select menus no longer appear on public or Admin pages.
+[ ] Rewards can be searched and filtered as In stock now or Order items only.
+[ ] Rewards can be sorted stock-first, order-first, by name, or by price.
+[ ] A reward with five prepared units and order fallback stays one listing.
+[ ] The first five redemptions use stock; the next uses the order workflow.
+[ ] Creating an exact duplicate reward opens the existing listing instead.
+[ ] Owner can delete a manual reward with only terminal order history.
+[ ] A Steam-managed reward cannot be deleted and only offers Edit/Hide.
+[ ] A manual reward with an open order or reserved stock cannot be deleted.
+[ ] Historic orders for a deleted reward show Deleted item, original name, and coins.
+[ ] Promo codes can be searched by code/campaign and filtered by status.
+[ ] Owner can enable and disable a promo code.
+[ ] Owner can delete an unused or used promo code.
+[ ] Used promo deletion preserves redemption history and awarded coins.
+[ ] A deleted, previously used promo code cannot be recreated and reused.
+[ ] Reward and promo deletions appear in the audit trail.
+[ ] Non-owner admins cannot use the deletion RPCs.
+[ ] Existing Steam sync and Cron settings remain unchanged.

@@ -1,4 +1,4 @@
-/* SkinQuest v14.5.2 admin operations workspace */
+/* SkinQuest v14.5.3 admin operations workspace */
 :root {
   --ops-bg: #080b10;
   --ops-sidebar: #0b0f15;
@@ -408,6 +408,18 @@ body.admin-ops-body {
   gap: 12px;
   margin-bottom: 14px;
 }
+.admin-reward-toolbar { grid-template-columns: minmax(260px, 1fr) 190px 190px auto; }
+.admin-toolbar .sq-select-trigger,
+.admin-form-grid .sq-select-trigger,
+.admin-drawer-form .sq-select-trigger,
+.admin-status-row .sq-select-trigger {
+  min-height: 42px;
+  border-color: var(--ops-line-strong);
+  border-radius: 8px;
+  color: var(--ops-text);
+  background: #0c1118;
+  font-size: .84rem;
+}
 .admin-toolbar-single { grid-template-columns: minmax(260px, 620px); }
 .admin-toolbar > label:not(.admin-filter-search) { display: grid; gap: 6px; color: var(--ops-muted); font-size: .7rem; font-weight: 800; }
 .admin-toolbar select,
@@ -776,6 +788,8 @@ body.admin-ops-body {
   .admin-card-span-2,
   .admin-card-span-3 { grid-column: auto; }
   .admin-toolbar { grid-template-columns: 1fr 150px; }
+  .admin-reward-toolbar { grid-template-columns: 1fr 1fr; }
+  .admin-reward-toolbar .admin-filter-search { grid-column: 1 / -1; }
   .admin-toolbar-count { grid-column: 1 / -1; }
   .admin-toolbar-single { grid-template-columns: 1fr; }
   .admin-case-row { grid-template-columns: 116px minmax(130px,1fr) 105px 22px; gap: 9px; padding: 13px; }

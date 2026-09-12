@@ -1,4 +1,4 @@
-/* SkinQuest v14.5.2 admin operations workspace */
+/* SkinQuest v14.5.3 admin operations workspace */
 (() => {
   "use strict";
 
@@ -43,6 +43,9 @@
     editingReward: null,
     statuses: [],
     promos: [],
+    promoTotal: 0,
+    promoLoading: false,
+    promoRequestId: 0,
     audit: [],
     admins: [],
     coinHistory: [],
@@ -131,6 +134,11 @@
 
   function orderNumber(item) {
     return textValue(item?.order_number) || `SQ-R-${String(item?.id || 0).padStart(6, "0")}`;
+  }
+
+  function orderRewardLabel(item) {
+    const name = textValue(item?.reward_name) || "Unknown reward";
+    return item?.reward_id == null ? `Deleted item · ${name}` : name;
   }
 
   function ticketNumber(item) {
@@ -377,6 +385,9 @@
     $("#adminUserSearch")?.addEventListener("input", debounce(() => loadUsers({ reset: true })));
     $("#rewardAdminSearch")?.addEventListener("input", debounce(() => loadRewards({ reset: true })));
     $("#rewardAdminModeFilter")?.addEventListener("change", () => loadRewards({ reset: true }));
+    $("#rewardAdminSort")?.addEventListener("change", () => loadRewards({ reset: true }));
+    $("#adminPromoSearch")?.addEventListener("input", debounce(() => loadPromos()));
+    $("#adminPromoState")?.addEventListener("change", () => loadPromos());
     $("#adminAuditSearch")?.addEventListener("input", renderAudit);
     $("#ordersLoadMore")?.addEventListener("click", () => loadOrders({ append: true }));
     $("#supportLoadMore")?.addEventListener("click", () => loadSupport({ append: true }));
@@ -818,7 +829,7 @@
       </div>
       ${items.map((item) => {
         const number = isOrder ? orderNumber(item) : ticketNumber(item);
-        const primary = isOrder ? item.reward_name : item.topic;
+        const primary = isOrder ? orderRewardLabel(item) : item.topic;
         const customer = isOrder ? profileLabel(item.user_id) : (item.account_email || profileLabel(item.user_id));
         const value = isOrder ? formatNumber(item.points_coins || item.points_cost) : "Web form";
         const handler = isOrder ? (item.completed_by || item.last_handled_by) : (item.resolved_by || item.last_handled_by);
@@ -893,7 +904,7 @@
   function renderPriorityQueue() {
     const target = $("#adminPriorityQueue");
     if (!target) return;
-    const orderRows = state.orders.filter((item) => ["pending", "reviewing", "ordered", "trade_locked", "ready_to_trade", "trade_sent"].includes(item.status)).map((item) => ({ ...item, caseType: "order", number: orderNumber(item), title: item.reward_name, customer: profileLabel(item.user_id) }));
+    const orderRows = state.orders.filter((item) => ["pending", "reviewing", "ordered", "trade_locked", "ready_to_trade", "trade_sent"].includes(item.status)).map((item) => ({ ...item, caseType: "order", number: orderNumber(item), title: orderRewardLabel(item), customer: profileLabel(item.user_id) }));
     const supportRows = state.support.filter((item) => ["new", "open", null].includes(item.status)).map((item) => ({ ...item, caseType: "support", number: ticketNumber(item), title: item.topic, customer: item.account_email || profileLabel(item.user_id) }));
     const rows = [...orderRows, ...supportRows].sort((a, b) => new Date(a.created_at) - new Date(b.created_at)).slice(0, 7);
     if (!rows.length) {
@@ -975,7 +986,7 @@
       const number = orderNumber(item);
       const isTerminal = ["completed", "rejected", "refunded", "cancelled"].includes(item.status);
       openDrawer(`
-        <div class="admin-drawer-head"><p class="admin-eyebrow">Reward order</p><h2 id="adminDrawerTitle">${safe(number)}</h2><p>${safe(item.reward_name || "Reward order")}</p></div>
+        <div class="admin-drawer-head"><p class="admin-eyebrow">Reward order</p><h2 id="adminDrawerTitle">${safe(number)}</h2><p>${safe(orderRewardLabel(item))}</p></div>
         <div class="admin-drawer-meta">
           <div><span>Status</span>${statusPill(item.status)}</div><div><span>Customer</span><strong>${safe(profileLabel(item.user_id))}</strong></div>
           <div><span>Created</span><strong>${safe(formatDateTime(item.created_at))}</strong></div><div><span>Value</span><strong>${formatNumber(item.points_coins || item.points_cost)} coins</strong></div>
@@ -1191,6 +1202,7 @@
       const result = await rpc("sq_admin_search_reward_items", {
         p_query: textValue($("#rewardAdminSearch")?.value) || null,
         p_filter: $("#rewardAdminModeFilter")?.value || "all",
+        p_sort: $("#rewardAdminSort")?.value || "stock-first",
         p_limit: PAGE_SIZE,
         p_offset: offset
       });
@@ -1224,6 +1236,7 @@
   }
 
   function rewardMode(item) {
+    if (rewardStock(item).available > 0) return "stocked";
     return item?.fulfillment_mode === "orderable" ? "orderable" : "stocked";
   }
 
@@ -1293,7 +1306,7 @@
         <div class="admin-reward-image">${image ? `<img src="${safe(image)}" alt="" loading="lazy" referrerpolicy="no-referrer" />` : `<span>${safe((item.name || "SQ").slice(0, 3).toUpperCase())}</span>`}</div>
         <div><strong>${safe(item.name)}</strong><small>${safe([item.rarity, item.condition].filter(Boolean).join(" · ") || "No rarity or condition")}</small></div>
         <span class="admin-stock-value"><b>${formatNumber(rewardCost(item))}</b> coins<small class="admin-price-source ${sourceClass}">${safe(sourceLabel)}</small></span>
-        <span class="admin-stock-value">${rewardMode(item) === "orderable" ? `<b>Available to order</b><small>ETA ${formatNumber(item.order_eta_days || 8)}+ days</small>` : `<b>${formatNumber(stock.available)}</b> available<small>${formatNumber(stock.reserved)} reserved / ${formatNumber(stock.total)} total</small>`}</span>
+        <span class="admin-stock-value">${rewardMode(item) === "orderable" ? `<b>Available to order</b><small>ETA ${formatNumber(item.order_eta_days || 8)}+ days</small>` : `<b>${formatNumber(stock.available)}</b> in stock<small>${formatNumber(stock.reserved)} reserved / ${formatNumber(stock.total)} total${item.fulfillment_mode === "orderable" ? " · order fallback" : ""}</small>`}</span>
         ${statusPill(item.active ? "active" : "inactive")}
         <div class="admin-row-actions">${marketHref ? `<a class="admin-row-action admin-market-link" href="${safe(marketHref)}" target="_blank" rel="noopener noreferrer">Steam</a>` : ""}${state.owner ? `<button class="admin-row-action" type="button" data-edit-reward="${safe(item.id)}">Edit</button><button class="admin-row-action" type="button" data-toggle-reward="${safe(item.id)}">${item.active ? "Hide" : "Activate"}</button>${item.catalog_managed ? "" : `<button class="admin-row-action is-danger" type="button" data-delete-reward="${safe(item.id)}">Delete</button>`}` : ""}</div>
       </div>`;
@@ -1407,11 +1420,7 @@
 
   function updateRewardEditorMode() {
     const orderable = $("#rewardFulfillmentMode")?.value === "orderable";
-    const total = $("#rewardTotal");
-    const reserved = $("#rewardReserved");
     const eta = $("#rewardOrderEtaDays");
-    if (total) { total.disabled = orderable; total.title = orderable ? "Physical prepared stock is not used for Available to order rewards." : ""; }
-    if (reserved) { reserved.disabled = orderable; reserved.title = orderable ? "Orderable rewards never reserve prepared stock." : ""; }
     if (eta) eta.disabled = !orderable;
   }
 
@@ -1442,7 +1451,7 @@
     if ($("#rewardMarketName")) $("#rewardMarketName").value = item?.market_name || "";
     if ($("#rewardPricingMode")) $("#rewardPricingMode").value = item?.pricing_mode === "steam" ? "steam" : "manual";
     if ($("#rewardCost")) $("#rewardCost").value = item ? rewardCost(item) : "";
-    if ($("#rewardFulfillmentMode")) $("#rewardFulfillmentMode").value = rewardMode(item);
+    if ($("#rewardFulfillmentMode")) $("#rewardFulfillmentMode").value = item?.fulfillment_mode === "orderable" ? "orderable" : "stocked";
     if ($("#rewardOrderEtaDays")) $("#rewardOrderEtaDays").value = item?.order_eta_days ?? state.pricing?.catalog_default_eta_days ?? 8;
     if ($("#rewardTotal")) $("#rewardTotal").value = item?.quantity_total ?? 1;
     if ($("#rewardReserved")) $("#rewardReserved").value = item?.quantity_reserved ?? 0;
@@ -1455,6 +1464,7 @@
     if ($("#rewardActive")) $("#rewardActive").checked = item?.active ?? true;
     updateRewardEditorMode();
     updateRewardEditorPricing();
+    window.refreshSkinQuestSelects?.();
     const backdrop = $("#rewardEditorBackdrop");
     backdrop?.classList.remove("hidden");
     backdrop?.setAttribute("aria-hidden", "false");
@@ -1490,8 +1500,8 @@
       points_cost: Number($("#rewardCost")?.value || 0),
       fulfillment_mode: fulfillmentMode,
       order_eta_days: Number($("#rewardOrderEtaDays")?.value || state.pricing?.catalog_default_eta_days || 8),
-      quantity_total: fulfillmentMode === "orderable" ? 0 : Number($("#rewardTotal")?.value || 0),
-      quantity_reserved: fulfillmentMode === "orderable" ? 0 : Number($("#rewardReserved")?.value || 0),
+      quantity_total: Number($("#rewardTotal")?.value || 0),
+      quantity_reserved: Number($("#rewardReserved")?.value || 0),
       rarity: textValue($("#rewardRarity")?.value) || null,
       condition: textValue($("#rewardCondition")?.value) || null,
       sort_order: Number($("#rewardSort")?.value || 0),
@@ -1511,9 +1521,21 @@
 
     const restore = buttonBusy(button, "Saving…");
     try {
-      const request = id ? sb.from("reward_items").update(payload).eq("id", id) : sb.from("reward_items").insert(payload);
-      const { error } = await request;
-      if (error) throw error;
+      if (id) {
+        const { error } = await sb.from("reward_items").update(payload).eq("id", id);
+        if (error) throw error;
+      } else {
+        const result = await rpc("sq_owner_create_manual_reward", { p_reward: payload });
+        if (result?.existing) {
+          closeRewardEditor();
+          if ($("#rewardAdminSearch")) $("#rewardAdminSearch").value = result.name || payload.name;
+          await loadRewards({ reset: true });
+          const existing = state.rewards.find((item) => Number(item.id) === Number(result.id));
+          notify("That reward already exists. Edit its prepared quantity instead of creating a duplicate.", "info");
+          if (existing) openRewardEditor(existing);
+          return;
+        }
+      }
       notify(id ? "Reward updated." : "Custom reward created.", "success");
       closeRewardEditor();
       await Promise.allSettled([loadRewards({ reset: true }), loadPricingDashboard(), loadKpis(), loadAudit()]);
@@ -1543,7 +1565,7 @@
     if (!state.owner) return notify("Owner access is required.", "error");
     const item = state.rewards.find((reward) => Number(reward.id) === Number(id));
     if (!item || item.catalog_managed) return notify("Only manually created rewards can be deleted.", "error");
-    const confirmed = await confirmAction(`Permanently delete ${item.name}? Rewards with order history are protected and cannot be deleted.`, { title: "Delete manual reward?", confirmText: "Delete reward", cancelText: "Cancel", danger: true, icon: "!" });
+    const confirmed = await confirmAction(`Permanently delete ${item.name}? Completed order rows will remain as “Deleted item” with their original name and coin amount. Open orders must be finished or cancelled first.`, { title: "Delete manual reward?", confirmText: "Delete reward", cancelText: "Cancel", danger: true, icon: "!" });
     if (!confirmed) return;
     try {
       await rpc("sq_owner_delete_manual_reward", { p_reward_id: id });
@@ -1604,12 +1626,22 @@
   async function loadPromos() {
     const target = $("#adminPromoList");
     if (!target) return;
-    const { data, error } = await sb.from("sq_promo_codes").select("id,code,campaign,coin_amount,max_redemptions,redemptions_count,starts_at,ends_at,active,created_by,created_at").order("created_at", { ascending: false }).limit(100);
-    if (error) {
+    const requestId = ++state.promoRequestId;
+    try {
+      const result = await rpc("sq_admin_search_promo_codes", {
+        p_query: textValue($("#adminPromoSearch")?.value) || null,
+        p_state: $("#adminPromoState")?.value || "all",
+        p_limit: 200,
+        p_offset: 0
+      });
+      if (requestId !== state.promoRequestId) return;
+      state.promos = Array.isArray(result?.items) ? result.items : [];
+      state.promoTotal = Number(result?.total ?? state.promos.length);
+    } catch (error) {
+      if (requestId !== state.promoRequestId) return;
       target.innerHTML = `<div class="admin-empty"><strong>Promo codes unavailable</strong>${safe(error.message)}</div>`;
       throw error;
     }
-    state.promos = data || [];
     await hydrateProfiles(state.promos.map((item) => item.created_by));
     renderPromos();
   }
@@ -1626,27 +1658,45 @@
   function renderPromos() {
     const target = $("#adminPromoList");
     if (!target) return;
+    if ($("#adminPromoResultCount")) $("#adminPromoResultCount").textContent = state.promoTotal
+      ? `Showing ${formatNumber(state.promos.length)} of ${formatNumber(state.promoTotal)}`
+      : "No matching codes";
     if (!state.promos.length) {
-      target.innerHTML = '<div class="admin-empty"><strong>No promo codes yet</strong>Create the first campaign code above.</div>';
+      target.innerHTML = '<div class="admin-empty"><strong>No promo codes found</strong>Try another code, campaign, or status.</div>';
       return;
     }
     target.innerHTML = state.promos.map((item) => {
       const current = promoState(item);
-      return `<div class="admin-promo-row"><div><strong class="admin-case-number">${safe(item.code)}</strong><small>${safe(item.campaign || "No campaign label")}</small></div><div><strong>${formatNumber(item.coin_amount)} coins</strong><small>Created by ${safe(adminLabel(item.created_by))}</small></div><div><strong>${formatNumber(item.redemptions_count)}</strong><small>${item.max_redemptions ? `of ${formatNumber(item.max_redemptions)} uses` : "unlimited"}</small></div><div><strong>${safe(formatShortDate(item.created_at))}</strong><small>${item.ends_at ? `Ends ${safe(formatShortDate(item.ends_at))}` : "No end date"}</small></div><div>${statusPill(current === "scheduled" || current === "used" || current === "expired" ? "inactive" : current)}</div><div class="admin-row-actions"><button class="admin-row-action" type="button" data-copy-promo="${safe(item.code)}">Copy</button>${state.owner && Number(item.redemptions_count || 0) === 0 ? `<button class="admin-row-action is-danger" type="button" data-delete-promo="${safe(item.id)}">Delete</button>` : ""}</div></div>`;
+      return `<div class="admin-promo-row"><div><strong class="admin-case-number">${safe(item.code)}</strong><small>${safe(item.campaign || "No campaign label")}</small></div><div><strong>${formatNumber(item.coin_amount)} coins</strong><small>Created by ${safe(adminLabel(item.created_by))}</small></div><div><strong>${formatNumber(item.redemptions_count)}</strong><small>${item.max_redemptions ? `of ${formatNumber(item.max_redemptions)} uses` : "unlimited"}</small></div><div><strong>${safe(formatShortDate(item.created_at))}</strong><small>${item.ends_at ? `Ends ${safe(formatShortDate(item.ends_at))}` : "No end date"}</small></div><div>${statusPill(current === "scheduled" || current === "used" || current === "expired" ? "inactive" : current)}</div><div class="admin-row-actions"><button class="admin-row-action" type="button" data-copy-promo="${safe(item.code)}">Copy</button>${state.owner ? `<button class="admin-row-action" type="button" data-toggle-promo="${safe(item.id)}">${item.active ? "Disable" : "Enable"}</button><button class="admin-row-action is-danger" type="button" data-delete-promo="${safe(item.id)}">Delete</button>` : ""}</div></div>`;
     }).join("");
     $$('[data-copy-promo]', target).forEach((button) => button.addEventListener("click", () => copyToClipboard(button.dataset.copyPromo, "Promo code copied.")));
+    $$('[data-toggle-promo]', target).forEach((button) => button.addEventListener("click", () => togglePromo(Number(button.dataset.togglePromo))));
     $$('[data-delete-promo]', target).forEach((button) => button.addEventListener("click", () => deletePromo(Number(button.dataset.deletePromo))));
+  }
+
+  async function togglePromo(id) {
+    if (!state.owner) return notify("Owner access is required.", "error");
+    const item = state.promos.find((promo) => Number(promo.id) === Number(id));
+    if (!item) return;
+    try {
+      await rpc("sq_owner_set_promo_active", { p_promo_id: id, p_active: !item.active });
+      notify(`${item.code} ${item.active ? "disabled" : "enabled"}.`, "success");
+      await Promise.allSettled([loadPromos(), loadAudit()]);
+    } catch (error) {
+      notify(error.message || "Could not update the promo code.", "error");
+    }
   }
 
   async function deletePromo(id) {
     if (!state.owner) return notify("Owner access is required.", "error");
     const item = state.promos.find((promo) => Number(promo.id) === Number(id));
     if (!item) return;
-    const confirmed = await confirmAction(`Permanently delete promo code ${item.code}? Used codes are protected and cannot be deleted.`, { title: "Delete promo code?", confirmText: "Delete code", cancelText: "Cancel", danger: true, icon: "!" });
+    const used = Number(item.redemptions_count || 0);
+    const confirmed = await confirmAction(`Permanently delete promo code ${item.code}? ${used ? `${formatNumber(used)} existing redemption${used === 1 ? "" : "s"} and awarded coins remain in history.` : "The code has no redemptions."}`, { title: "Delete promo code?", confirmText: "Delete code", cancelText: "Cancel", danger: true, icon: "!" });
     if (!confirmed) return;
     try {
-      await rpc("sq_owner_delete_promo_code", { p_promo_id: id });
-      notify(`Promo code ${item.code} deleted.`, "success");
+      const result = await rpc("sq_owner_delete_promo_code", { p_promo_id: id });
+      notify(`Promo code ${item.code} deleted. ${formatNumber(result?.preserved_redemptions || 0)} redemption records preserved.`, "success");
       await Promise.allSettled([loadPromos(), loadAudit()]);
     } catch (error) {
       notify(error.message || "Could not delete the promo code.", "error");
@@ -1701,6 +1751,7 @@
       support_status_update: "Support ticket updated",
       system_status_update: "System status updated",
       promo_create: "Promo code created",
+      promo_status_update: "Promo code status changed",
       promo_delete: "Promo code deleted",
       reward_delete: "Manual reward deleted",
       admin_role_update: "Admin access changed",
@@ -1720,13 +1771,15 @@
 
   function auditDetail(row) {
     const details = row.details || {};
+    if (row.action === "delete" && row.entity_type === "reward_item") return "Catalog entry removed; order history preserved";
     if (details.from_status || details.to_status) return `${statusLabel(details.from_status)} → ${statusLabel(details.to_status)}`;
     if (row.action === "coin_adjustment") return `${Number(details.amount || 0) > 0 ? "+" : ""}${formatNumber(details.amount)} coins · ${details.reason || "Manual adjustment"}`;
     if (row.action === "admin_role_update") return `${details.previous_role || "No access"} → ${details.role || "No access"}`;
     if (row.action === "system_status_update") return statusLabel(details.status);
     if (row.action === "promo_create") return `${formatNumber(details.coins)} coins${details.max ? ` · ${formatNumber(details.max)} uses` : ""}`;
-    if (row.action === "promo_delete") return "Unused code permanently removed";
-    if (row.action === "reward_delete") return "Unused manual reward permanently removed";
+    if (row.action === "promo_status_update") return details.active ? "Enabled" : "Disabled";
+    if (row.action === "promo_delete") return `${formatNumber(details.redemptions || 0)} redemption record${Number(details.redemptions || 0) === 1 ? "" : "s"} preserved`;
+    if (row.action === "reward_delete") return "Catalog entry removed; order history preserved";
     if (row.action === "reward_pricing_settings_update") return `${details.markup_percent ?? "?"}% markup · ${details.coins_per_eur ?? "?"} coins/€`;
     if (row.entity_type === "reward_item") return details.active_before === details.active_after ? "Inventory details changed" : `${details.active_before ? "Visible" : "Hidden"} → ${details.active_after ? "Visible" : "Hidden"}`;
     return "Change recorded";

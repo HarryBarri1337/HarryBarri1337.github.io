@@ -18,7 +18,7 @@
       }
     }());
   </script>
-  <link rel="stylesheet" href="styles.css?v=1452" />
+  <link rel="stylesheet" href="styles.css?v=1453" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#0b0f16" />
   <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png" />
@@ -30,7 +30,7 @@
   <meta property="og:site_name" content="SkinQuest" />
   <meta property="og:description" content="SkinQuest version history and recent platform updates." />
   <meta property="og:image" content="https://skinquestcs.com/assets/interface/skinquestlogo.png" />
-  <link rel="stylesheet" href="skinquest-v14.css?v=1452" />
+  <link rel="stylesheet" href="skinquest-v14.css?v=1453" />
 </head>
 <body>
 <div id="pageLoader" class="page-loader">
@@ -66,12 +66,21 @@
   <section class="panel changelog-list">
     <article class="changelog-entry current">
       <span class="pill">Current</span>
+      <h2>v14.5.3 - Inventory and history controls</h2>
+      <ul>
+        <li>Prepared stock and order fallback now share one reward listing: stock is used first, then ordering takes over.</li>
+        <li>Added reward stock/order filters and sorting plus searchable promo-code history.</li>
+        <li>Owners can enable, disable, and delete promo codes while existing redemptions and awarded coins remain recorded.</li>
+        <li>Owners can delete manual catalog items after open orders are resolved; historic orders retain the original item and coin snapshots.</li>
+        <li>Replaced native browser select menus with consistent SkinQuest-styled menus.</li>
+      </ul>
+    </article>
+    <article class="changelog-entry">
       <h2>v14.5.2 - Admin directory and cleanup controls</h2>
       <ul>
         <li>Added searchable users to Admin with account, Steam, coin, order, and support context.</li>
         <li>Replaced the generic Admin SQ badge with the existing SkinQuest logo.</li>
-        <li>Owners can permanently delete unused manually created rewards while Steam-managed and historically used rewards remain protected.</li>
-        <li>Owners can permanently delete unused promo codes while redemption history remains protected.</li>
+        <li>Added initial owner controls for manually created rewards and promo codes.</li>
       </ul>
     </article>
     <article class="changelog-entry">
@@ -457,7 +466,7 @@
     <a href="/install">Install app</a>
     <a href="mailto:support@skinquestcs.com">Support</a>
   </div>
-  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v14.5.2</a></p>
+  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v14.5.3</a></p>
 </footer>
 <div class="modal-backdrop hidden" id="authModal">
   <div class="auth-modal" role="dialog" aria-modal="true">
@@ -499,7 +508,7 @@
   </div>
 </div>
 <script src="assets/vendor/supabase-js-2.45.4.js"></script>
-<script src="app.js?v=1452"></script>
-<script src="skinquest-v14.js?v=1452"></script>
+<script src="app.js?v=1453"></script>
+<script src="skinquest-v14.js?v=1453"></script>
 </body>
 </html>
