@@ -7,6 +7,8 @@ PASSED LOCALLY
 - Node's TypeScript syntax checker: steam-market-sync/index.ts.
 - Edge Function normalization cases: weapon skin and case accepted; stickers
   and music kits excluded; wear and rarity mapped; secret comparison checked.
+- Browser preflight permits Supabase's x-client-info and other SDK headers in
+  addition to Authorization, apikey, and content-type.
 - All 14 HTML pages parsed without duplicate element IDs or missing referenced
   local files. CSS braces balanced.
 - Upgrade/full SQL block delimiters and transaction boundaries checked; the

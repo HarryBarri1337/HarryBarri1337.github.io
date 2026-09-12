@@ -41,7 +41,7 @@ function responseHeaders(origin: string | null) {
   };
   if (origin && ALLOWED_ORIGINS.has(origin)) {
     headers["Access-Control-Allow-Origin"] = origin;
-    headers["Access-Control-Allow-Headers"] = "authorization, apikey, content-type, x-steam-sync-secret";
+    headers["Access-Control-Allow-Headers"] = "authorization, x-client-info, apikey, content-type, x-retry-count, traceparent, tracestate, baggage, x-steam-sync-secret";
     headers["Access-Control-Allow-Methods"] = "POST, OPTIONS";
   }
   return headers;
