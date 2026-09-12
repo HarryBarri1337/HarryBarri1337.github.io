@@ -1,0 +1,25 @@
+SkinQuest v14.5.0 QA summary
+===========================
+
+PASSED LOCALLY
+--------------
+- node --check: app.js, admin.js, skinquest-v14.js, sw.js.
+- Node's TypeScript syntax checker: steam-market-sync/index.ts.
+- Edge Function normalization cases: weapon skin and case accepted; stickers
+  and music kits excluded; wear and rarity mapped; secret comparison checked.
+- All 14 HTML pages parsed without duplicate element IDs or missing referenced
+  local files. CSS braces balanced.
+- Upgrade/full SQL block delimiters and transaction boundaries checked; the
+  v14.5.0 portion of the full setup matches the upgrade delta byte for byte.
+- ZIP listing and integrity check passed for the completed release package.
+
+NOT VERIFIED LOCALLY
+--------------------
+- SQL migration execution, trigger behavior, RLS and redemption transaction
+  behavior: no local PostgreSQL/Supabase instance was supplied.
+- Real Steam HTTP responses/rate limits, scheduled sync, owner authentication,
+  existing email delivery, and order progression: require deployed services.
+- Browser visual interaction: the environment has no Playwright browser binary.
+
+Run RELEASE_CHECKS_v14_5_0.txt after backing up and deploying to staging or
+production. Do not treat these static checks as live end-to-end coverage.

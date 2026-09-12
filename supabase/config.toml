@@ -1,4 +1,6 @@
-# v14.4.1: this one scheduled function authenticates with ORDER_CRON_SECRET.
-# All other Edge Functions keep Supabase JWT verification at the default.
+# v14.5.0: scheduled functions authenticate with their own server-side secrets.
 [functions.reward-order-ready-sweep]
+verify_jwt = false
+
+[functions.steam-market-sync]
 verify_jwt = false

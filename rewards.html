@@ -18,7 +18,7 @@
       }
     }());
   </script>
-  <link rel="stylesheet" href="styles.css?v=1441" />
+  <link rel="stylesheet" href="styles.css?v=1450" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#0b0f16" />
   <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png" />
@@ -28,7 +28,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="SkinQuest" />
   <meta property="og:site_name" content="SkinQuest" />
-  <link rel="stylesheet" href="skinquest-v14.css?v=1441" />
+  <link rel="stylesheet" href="skinquest-v14.css?v=1450" />
 </head>
 <body>
 <div id="pageLoader" class="page-loader">
@@ -60,7 +60,7 @@
     <span class="pill">Reward shop</span>
     <h1>Redeem CS2 skins</h1>
     <p>
-      Spend coins on fixed CS2 rewards. Add your Steam trade URL first, then redeem listed skins for manual review.
+      Browse prepared stock and Steam-priced order items together. The displayed coin price is locked when your order is created.
     </p>
   </section>
 
@@ -87,6 +87,7 @@
         <button class="filter-chip active" type="button" data-afford-filter="all">All rewards</button>
         <button class="filter-chip" type="button" data-afford-filter="affordable">Can afford</button>
         <button class="filter-chip" type="button" data-afford-filter="in-stock">In stock</button>
+        <button class="filter-chip" type="button" data-afford-filter="orderable">Available to order</button>
       </div>
     </div>
 
@@ -115,6 +116,7 @@
   </section>
 
   <section class="reward-grid" id="rewardsGrid"></section>
+  <div class="reward-load-more-wrap"><button id="loadMoreRewards" class="button button-ghost hidden" type="button">Load more rewards</button></div>
 </main>
 
 <footer class="site-footer">
@@ -129,7 +131,7 @@
     <a href="/install">Install app</a>
     <a href="mailto:support@skinquestcs.com">Support</a>
   </div>
-  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v14.4.1</a></p>
+  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v14.5.0</a></p>
 </footer>
 <div class="modal-backdrop hidden" id="authModal">
   <div class="auth-modal" role="dialog" aria-modal="true">
@@ -171,7 +173,7 @@
   </div>
 </div>
 <script src="assets/vendor/supabase-js-2.45.4.js"></script>
-<script src="app.js?v=1441"></script>
-<script src="skinquest-v14.js?v=1441"></script>
+<script src="app.js?v=1450"></script>
+<script src="skinquest-v14.js?v=1450"></script>
 </body>
 </html>

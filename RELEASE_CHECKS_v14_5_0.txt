@@ -1,0 +1,80 @@
+SkinQuest v14.5.0 release checks
+================================
+
+DEPLOYMENT
+[ ] Back up Supabase.
+[ ] Run skinquest_upgrade_existing_to_v14_5_0.sql once after v14.4.1.
+[ ] Deploy steam-market-sync using the included supabase/config.toml.
+[ ] Set a long random STEAM_MARKET_SYNC_SECRET.
+[ ] Optional/recommended: schedule POST {"action":"catalog","max_pages":5}
+    every 10 minutes with x-steam-sync-secret.
+[ ] Keep the existing reward-order-ready-sweep deployment and secret.
+[ ] Upload website files.
+[ ] Hard-refresh and confirm cache name skinquest-cache-v1450.
+
+OWNER / ACCESS CONTROL
+[ ] Non-admin cannot call sq_admin_reward_pricing_dashboard.
+[ ] Admin can view pricing/catalog status but cannot save pricing or edit rewards.
+[ ] Non-owner cannot call sq_admin_update_reward_pricing_settings.
+[ ] Non-service clients cannot call sq_service_apply_steam_catalog_batch.
+[ ] steam-market-sync rejects missing/invalid owner JWT and scheduler secret.
+[ ] Browser code contains no service-role or scheduler secret.
+
+FIRST STEAM BATCH
+[ ] Admin shows the default 15% markup, 100 coins/€1, and 48-hour validity.
+[ ] Sync next Steam batch returns a success count and advances next_start.
+[ ] Imported listings have exact market_name, Steam image, positive raw EUR
+    cents, Steam-linked pricing, orderable mode, and physical quantity 0.
+[ ] Stickers, graffiti, patches, agents, music kits, and charms are excluded.
+[ ] A failed/rate-limited sync records an error and does not advance next_start.
+[ ] A later successful sync clears the previous error.
+[ ] Completing a full pass resets next_start to 0 and records last_completed_at.
+
+PRICE CALCULATION
+[ ] Check at least three items manually against:
+    ceil((Steam cents / 100) x coins per EUR x (1 + markup / 100)).
+[ ] Changing markup recalculates all Steam-linked coin prices immediately.
+[ ] Changing the conversion/minimum recalculates linked prices correctly.
+[ ] Manual-priced rewards do not change after saving global pricing.
+[ ] Existing customer redemption_requests keep their original points cost.
+
+STALE-PRICE SAFETY
+[ ] Force one Steam-linked valid_until into the past.
+[ ] Customer card shows Price updating and disables checkout.
+[ ] Calling redeem_reward directly rejects the stale price.
+[ ] Rejected stale checkout changes neither coin balance nor reserved stock.
+[ ] A successful sync makes the listing orderable again.
+
+UNIFIED CATALOG / INVENTORY
+[ ] Rewards page shows prepared and orderable items in the same results.
+[ ] Prepared items show exact available quantity.
+[ ] Available to order filter returns only orderable items.
+[ ] In stock filter returns only prepared items with available quantity.
+[ ] Search and min/max coin filters return an exact server count.
+[ ] Load more appends without duplicate reward IDs.
+[ ] Sort options remain correct across multiple pages.
+[ ] Admin search/filter/load-more can reach listings beyond the first 1,000.
+[ ] Editing an imported row to prepared stock preserves its Steam-linked price.
+[ ] Do not create a second row for an item SkinQuest owns.
+
+CATALOG CLEANUP
+[ ] A full pass hides only unseen catalog-managed orderable rows with zero stock.
+[ ] Prepared rows are not auto-hidden when absent from a Steam pass.
+[ ] Manually hidden catalog rows stay hidden after later syncs.
+[ ] Custom/manual rows are not deleted or auto-hidden.
+
+ORDER WORKFLOW REGRESSION
+[ ] Prepared order reserves exactly one unit and starts Ready to trade.
+[ ] Orderable reward starts Ordered and does not touch prepared stock.
+[ ] Ordered -> Trade locked requires an exact future unlock time.
+[ ] Ready to trade -> Trade sent requires a numeric Steam trade-offer URL.
+[ ] Trade sent -> Completed works; invalid status skipping remains rejected.
+[ ] Refund before Trade sent restores coins once and releases prepared stock once.
+[ ] Trade sent cannot be refunded through the normal flow.
+
+CUSTOMER / SETTINGS REGRESSION
+[ ] Login, Steam auth, verified contact email, and trade-link checks work.
+[ ] Goal stars and dashboard goal cards still work for catalog items.
+[ ] Forgot-password cooldown works.
+[ ] Unfinished Google login placeholder is no longer shown in Settings.
+[ ] Support inbox, account deletion, emails, and Cron trade-lock sweep work.

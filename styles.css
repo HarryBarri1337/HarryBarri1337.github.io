@@ -1,4 +1,4 @@
-/* SkinQuest v14.4.1 core styles - stable customer site + admin operations workspace */
+/* SkinQuest v14.5.0 core styles - stable customer site + admin operations workspace */
 
 :root {
   --bg: #0b0f16;
@@ -3202,6 +3202,9 @@ html.compact-reward-cards .reward-actions-smart small {
 .settings-login-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
+.settings-page .settings-login-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
 .theme-option {
   min-height: 104px;
   display: grid;
@@ -3271,7 +3274,8 @@ html.compact-reward-cards .reward-actions-smart small {
 @media (max-width: 900px) {
   .account-settings-grid,
   .theme-option-grid,
-  .settings-login-grid {
+  .settings-login-grid,
+  .settings-page .settings-login-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -4589,5 +4593,11 @@ body > footer {
 }
 
 .stock-pill.stock-order { border-color: rgba(96,165,250,.35); color: #bfdbfe; }
+.price-source-badge { display: inline-flex; align-items: center; min-height: 24px; padding: 4px 8px; border: 1px solid rgba(96,165,250,.26); border-radius: 999px; color: #bfdbfe; background: rgba(96,165,250,.07); font-size: .64rem; font-weight: 750; letter-spacing: .02em; }
+.price-source-badge.is-stale { color: #fde68a; border-color: rgba(250,204,21,.28); background: rgba(250,204,21,.07); }
+.reward-card.is-price-stale { border-color: rgba(250,204,21,.2); }
+.reward-card.is-price-stale .price { color: #fde68a; }
+.reward-load-more-wrap { display: flex; justify-content: center; padding: 24px 0 4px; }
+.reward-load-more-wrap .button { min-width: 210px; }
 .order-progress-line { margin-top: 6px; }
 .order-progress-line strong { color: var(--text, #f8fafc); }

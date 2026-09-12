@@ -1,4 +1,4 @@
-/* SkinQuest v14.4.1 admin operations workspace */
+/* SkinQuest v14.5.0 admin operations workspace */
 :root {
   --ops-bg: #080b10;
   --ops-sidebar: #0b0f15;
@@ -574,8 +574,34 @@ body.admin-ops-body {
 .admin-mini-stats { display: flex; flex-wrap: wrap; gap: 8px; margin: -7px 0 15px; }
 .admin-mini-stat { padding: 7px 10px; border: 1px solid var(--ops-line); border-radius: 8px; color: var(--ops-muted); background: rgba(255,255,255,.02); font-size: .73rem; }
 .admin-mini-stat strong { margin-right: 4px; color: var(--ops-text); }
+.admin-pricing-panel { margin-bottom: 20px; padding: 20px; }
+.admin-pricing-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
+.admin-pricing-head h2 { margin: 1px 0 7px; font-size: 1.12rem; letter-spacing: -.025em; }
+.admin-pricing-head p:last-child { max-width: 780px; margin: 0; color: var(--ops-muted); font-size: .76rem; line-height: 1.55; }
+.admin-pricing-health { flex: 0 0 auto; min-width: 146px; display: flex; align-items: center; justify-content: flex-end; }
+.admin-pricing-health-badge { display: inline-flex; align-items: center; gap: 7px; padding: 7px 10px; border: 1px solid rgba(74,222,128,.23); border-radius: 999px; color: #bbf7d0; background: rgba(74,222,128,.07); font-size: .7rem; font-weight: 800; }
+.admin-pricing-health-badge::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 0 4px rgba(74,222,128,.08); }
+.admin-pricing-health-badge.is-warning { color: #fde68a; border-color: rgba(250,204,21,.24); background: rgba(250,204,21,.07); }
+.admin-pricing-health-badge.is-warning::before { background: #facc15; }
+.admin-pricing-form { display: grid; grid-template-columns: repeat(5,minmax(120px,1fr)); align-items: end; gap: 12px; margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--ops-line); }
+.admin-pricing-form > label:not(.admin-check-row) { display: grid; gap: 6px; color: var(--ops-muted); font-size: .7rem; font-weight: 800; }
+.admin-pricing-form input { width: 100%; min-height: 42px; padding: 0 11px; border: 1px solid var(--ops-line); border-radius: 8px; color: var(--ops-text); background: #0c1118; font-size: .82rem; }
+.admin-pricing-form .admin-check-row input { width: 18px; min-height: 18px; padding: 0; }
+.admin-pricing-form small { color: var(--ops-muted-2); font-size: .64rem; font-weight: 500; line-height: 1.4; }
+.admin-pricing-check { grid-column: 1 / span 3; min-height: 40px; align-content: center; color: var(--ops-muted); font-size: .71rem; }
+.admin-pricing-actions { grid-column: 4 / -1; display: flex; justify-content: flex-end; gap: 8px; }
+.admin-catalog-progress { min-height: 36px; display: flex; align-items: center; gap: 12px; margin-top: 16px; padding: 9px 11px; border: 1px solid var(--ops-line); border-radius: 9px; color: var(--ops-muted); background: rgba(255,255,255,.018); font-size: .7rem; line-height: 1.45; }
+.admin-catalog-progress strong { color: var(--ops-text); }
+.admin-catalog-progress.has-error { color: #fecaca; border-color: rgba(248,113,113,.26); background: rgba(248,113,113,.06); }
+.admin-steam-price-status { padding: 10px 12px; border: 1px solid rgba(96,165,250,.2); border-radius: 9px; color: #bfdbfe; background: rgba(96,165,250,.055); font-size: .72rem; line-height: 1.45; }
+.admin-steam-price-status.is-warning { color: #fde68a; border-color: rgba(250,204,21,.2); background: rgba(250,204,21,.05); }
+.admin-price-source { display: inline-flex !important; width: max-content; max-width: 100%; align-items: center; gap: 5px; margin-top: 4px !important; padding: 3px 6px; border: 1px solid rgba(96,165,250,.2); border-radius: 999px; color: #bfdbfe !important; background: rgba(96,165,250,.06); font-size: .6rem !important; font-weight: 780; text-transform: uppercase; letter-spacing: .04em; }
+.admin-price-source.is-manual { color: var(--ops-muted) !important; border-color: var(--ops-line); background: rgba(255,255,255,.02); }
+.admin-price-source.is-stale { color: #fde68a !important; border-color: rgba(250,204,21,.22); }
+.admin-market-link { color: #bfdbfe; text-decoration: none; }
+.admin-market-link:hover { color: #dbeafe; text-decoration: underline; }
 .admin-reward-header,
-.admin-reward-row { display: grid; grid-template-columns: 56px minmax(220px, 1.4fr) 110px 175px 100px 145px; align-items: center; gap: 14px; }
+.admin-reward-row { display: grid; grid-template-columns: 56px minmax(220px, 1.4fr) 120px 175px 100px 205px; align-items: center; gap: 14px; }
 .admin-reward-header { min-height: 42px; padding: 0 18px; border-bottom: 1px solid var(--ops-line); color: var(--ops-muted-2); background: rgba(255,255,255,.018); font-size: .66rem; font-weight: 820; letter-spacing: .065em; text-transform: uppercase; }
 .admin-reward-row { min-height: 78px; padding: 11px 18px; border-bottom: 1px solid var(--ops-line); }
 .admin-reward-row:last-child { border-bottom: 0; }
@@ -590,7 +616,7 @@ body.admin-ops-body {
 .admin-reward-row small { margin-top: 4px; color: var(--ops-muted); font-size: .7rem; }
 .admin-stock-value { color: var(--ops-muted); font-size: .76rem; }
 .admin-stock-value b { color: var(--ops-text); }
-.admin-row-actions { display: flex; justify-content: flex-end; gap: 6px; }
+.admin-row-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
 .admin-row-action {
   min-height: 34px;
   padding: 6px 10px;
@@ -710,7 +736,10 @@ body.admin-ops-body {
   .admin-case-row { grid-template-columns: 132px minmax(180px, 1.3fr) minmax(120px, .8fr) 100px 122px 24px; }
   .admin-case-handler { display: none; }
   .admin-reward-header,
-  .admin-reward-row { grid-template-columns: 54px minmax(190px,1.3fr) 100px 150px 90px 132px; }
+  .admin-reward-row { grid-template-columns: 54px minmax(190px,1.3fr) 110px 150px 90px 185px; }
+  .admin-pricing-form { grid-template-columns: repeat(3,minmax(130px,1fr)); }
+  .admin-pricing-check { grid-column: 1 / span 2; }
+  .admin-pricing-actions { grid-column: 3; }
 }
 
 @media (max-width: 980px) {
@@ -773,6 +802,11 @@ body.admin-ops-body {
   .admin-drawer-meta { grid-template-columns: 1fr; }
   .admin-quick-actions { grid-template-columns: 1fr; }
   .admin-reward-modal { padding: 20px 16px; }
+  .admin-pricing-head { flex-direction: column; gap: 12px; }
+  .admin-pricing-health { justify-content: flex-start; }
+  .admin-pricing-form { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .admin-pricing-check,
+  .admin-pricing-actions { grid-column: 1 / -1; }
 }
 
 @media (max-width: 520px) {
@@ -797,6 +831,10 @@ body.admin-ops-body {
   .admin-reward-row > :nth-child(4),
   .admin-reward-row > :nth-child(5) { display: none; }
   .admin-row-actions { grid-column: 3; }
+  .admin-pricing-form { grid-template-columns: 1fr; }
+  .admin-pricing-check,
+  .admin-pricing-actions { grid-column: auto; }
+  .admin-pricing-actions { display: grid; grid-template-columns: 1fr; }
   .admin-promo-row { grid-template-columns: 1fr auto; }
   .admin-promo-row > :nth-child(3),
   .admin-promo-row > :nth-child(4) { display: none; }

@@ -18,9 +18,9 @@
       }
     }());
   </script>
-  <link rel="stylesheet" href="styles.css?v=1441" />
-  <link rel="stylesheet" href="skinquest-v14.css?v=1441" />
-  <link rel="stylesheet" href="admin.css?v=1441" />
+  <link rel="stylesheet" href="styles.css?v=1450" />
+  <link rel="stylesheet" href="skinquest-v14.css?v=1450" />
+  <link rel="stylesheet" href="admin.css?v=1450" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#080b10" />
   <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png" />
@@ -85,7 +85,7 @@
       <div><strong id="adminAccountName">Admin</strong><span id="adminAccountRole">Verifying…</span></div>
       <button class="admin-icon-button" id="adminSignOutButton" type="button" aria-label="Sign out" title="Sign out"><svg viewBox="0 0 24 24"><path d="M10 5H5v14h5M14 8l4 4-4 4M18 12H9"/></svg></button>
     </div>
-    <div class="admin-sidebar-footer"><a href="/">Open customer site</a><span>v14.4.1</span></div>
+    <div class="admin-sidebar-footer"><a href="/">Open customer site</a><span>v14.5.0</span></div>
   </aside>
 
   <div class="admin-main-shell">
@@ -127,10 +127,26 @@
       </section>
 
       <section class="admin-view hidden" data-admin-view-panel="rewards">
-        <div class="admin-page-head"><div><p class="admin-eyebrow">Inventory</p><h1>Rewards &amp; stock</h1><p>See live availability, reserved quantities, pricing, and visibility in one place.</p></div><button class="admin-primary-button" id="openRewardCreate" type="button" data-owner-only><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add reward</button></div>
+        <div class="admin-page-head"><div><p class="admin-eyebrow">Inventory</p><h1>Rewards &amp; stock</h1><p>Manage prepared quantities and Steam-priced order items in one catalog.</p></div><button class="admin-primary-button" id="openRewardCreate" type="button" data-owner-only><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add custom reward</button></div>
+        <section class="admin-card admin-pricing-panel">
+          <div class="admin-pricing-head">
+            <div><p class="admin-eyebrow">Automatic pricing</p><h2>Steam market sync</h2><p>Steam prices are stored server-side, converted to coins, and increased by the owner markup. Prices already captured on customer orders never change.</p></div>
+            <div id="steamPricingHealth" class="admin-pricing-health"><span class="admin-gate-loader" aria-label="Loading pricing status"></span></div>
+          </div>
+          <form id="rewardPricingForm" class="admin-pricing-form" data-owner-only>
+            <label>Markup above Steam<input id="pricingMarkupPercent" type="number" min="0" max="500" step="0.1" value="15" /><small>Applied to every Steam-linked listing.</small></label>
+            <label>Coins per €1<input id="pricingCoinsPerEur" type="number" min="0.01" max="100000" step="0.01" value="100" /><small>Base conversion before markup.</small></label>
+            <label>Price validity<input id="pricingMaxAgeHours" type="number" min="1" max="168" step="1" value="48" /><small>Hours before an unsynced price pauses ordering.</small></label>
+            <label>Default order ETA<input id="pricingDefaultEtaDays" type="number" min="7" max="30" step="1" value="8" /><small>Used for newly imported order items.</small></label>
+            <label>Minimum coin price<input id="pricingMinimumCoins" type="number" min="1" max="1000000" step="1" value="1" /><small>Floor after conversion and markup.</small></label>
+            <label class="admin-check-row admin-pricing-check"><input id="pricingAutoPublish" type="checkbox" checked /><span>Automatically publish newly discovered weapon skins, gloves, knives, and cases</span></label>
+            <div class="admin-pricing-actions"><button class="admin-secondary-button" id="syncSteamCatalog" type="button">Sync next Steam batch</button><button class="admin-primary-button" type="submit">Save pricing</button></div>
+          </form>
+          <div id="steamCatalogProgress" class="admin-catalog-progress"><span>Waiting for sync status…</span></div>
+        </section>
         <div id="adminRewardStats" class="admin-mini-stats"></div>
-        <div class="admin-toolbar admin-toolbar-single"><label class="admin-filter-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m16 16 4 4"/></svg><input id="rewardAdminSearch" type="search" maxlength="100" placeholder="Search reward name, rarity or condition" /></label></div>
-        <section class="admin-card admin-table-card"><div id="adminRewardsList" class="admin-reward-list"><div class="admin-empty">Loading rewards…</div></div></section>
+        <div class="admin-toolbar"><label class="admin-filter-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m16 16 4 4"/></svg><input id="rewardAdminSearch" type="search" maxlength="100" placeholder="Search market name, rarity or condition" /></label><label><span>Catalog</span><select id="rewardAdminModeFilter"><option value="all">All listings</option><option value="stocked">Prepared stock</option><option value="orderable">Available to order</option><option value="steam">Steam linked</option><option value="stale">Price needs refresh</option><option value="inactive">Hidden</option></select></label><div id="adminRewardResultCount" class="admin-toolbar-count">Loading…</div></div>
+        <section class="admin-card admin-table-card"><div id="adminRewardsList" class="admin-reward-list"><div class="admin-empty">Loading rewards…</div></div><button id="rewardsLoadMore" class="admin-load-more hidden" type="button">Load more listings</button></section>
       </section>
 
       <section class="admin-view hidden" data-admin-view-panel="status">
@@ -172,7 +188,7 @@
     <div class="admin-modal-head"><div><p class="admin-eyebrow">Reward manager</p><h2 id="rewardFormTitle">Add reward</h2></div><button class="admin-icon-button" type="button" data-close-reward-editor aria-label="Close reward editor"><svg viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div>
     <form id="adminRewardForm" class="admin-form-grid admin-reward-form">
       <input type="hidden" id="rewardId" />
-      <label>Name<input id="rewardName" maxlength="160" required placeholder="AK-47 | Slate" /></label><label>Coin price<input id="rewardCost" type="number" min="1" step="1" required placeholder="900" /></label><label>Fulfilment<select id="rewardFulfillmentMode"><option value="stocked">In stock / prepared</option><option value="orderable">Available to order</option></select></label><label>Order ETA (days)<input id="rewardOrderEtaDays" type="number" min="7" max="30" step="1" value="8" /><small>Shown before an exact Steam trade-lock time exists.</small></label><label>Total quantity<input id="rewardTotal" type="number" min="0" step="1" value="1" /></label><label>Reserved<input id="rewardReserved" type="number" min="0" step="1" value="0" /></label><label>Rarity<select id="rewardRarity"><option value="">No rarity</option><option value="consumer">Consumer</option><option value="industrial">Industrial</option><option value="milspec">Mil-Spec</option><option value="restricted">Restricted</option><option value="classified">Classified</option><option value="covert">Covert</option><option value="contraband">Contraband</option></select></label><label>Condition<input id="rewardCondition" maxlength="40" placeholder="FN / MW / FT / WW / BS" /></label><label>Sort order<input id="rewardSort" type="number" step="1" value="0" /></label><label>Limit per user<input id="rewardMaxPerUser" type="number" min="1" step="1" placeholder="No limit" /></label><label class="admin-form-wide">Image URL<input id="rewardImage" maxlength="500" placeholder="assets/rewards/weapons/ak-slate.png" /><small>Use a site path with forward slashes. File names are case-sensitive online.</small></label><label class="admin-form-wide">Description<textarea id="rewardDescription" rows="3" maxlength="500" placeholder="Manual Steam trade after review"></textarea></label><label class="admin-check-row admin-form-wide"><input id="rewardActive" type="checkbox" checked /><span>Active and visible in the reward shop</span></label><div class="admin-form-actions admin-form-wide"><button class="admin-secondary-button" type="button" data-close-reward-editor>Cancel</button><button class="admin-primary-button" type="submit">Save reward</button></div>
+      <label>Name<input id="rewardName" maxlength="240" required placeholder="AK-47 | Slate (Field-Tested)" /></label><label>Steam market name<input id="rewardMarketName" maxlength="240" placeholder="Exact Steam market_hash_name" /><small>Imported items already contain the exact Steam name.</small></label><label>Pricing<select id="rewardPricingMode"><option value="steam">Steam linked</option><option value="manual">Manual coin price</option></select></label><label>Coin price<input id="rewardCost" type="number" min="1" step="1" required placeholder="900" /><small id="rewardPriceHelp">Calculated from the latest Steam price and global markup.</small></label><div id="rewardSteamPriceStatus" class="admin-form-wide admin-steam-price-status">No Steam price loaded.</div><label>Fulfilment<select id="rewardFulfillmentMode"><option value="stocked">In stock / prepared</option><option value="orderable">Available to order</option></select></label><label>Order ETA (days)<input id="rewardOrderEtaDays" type="number" min="7" max="30" step="1" value="8" /><small>Shown before an exact Steam trade-lock time exists.</small></label><label>Total quantity<input id="rewardTotal" type="number" min="0" step="1" value="1" /></label><label>Reserved<input id="rewardReserved" type="number" min="0" step="1" value="0" /></label><label>Rarity<select id="rewardRarity"><option value="">No rarity</option><option value="consumer">Consumer</option><option value="industrial">Industrial</option><option value="milspec">Mil-Spec</option><option value="restricted">Restricted</option><option value="classified">Classified</option><option value="covert">Covert</option><option value="contraband">Contraband</option></select></label><label>Condition<input id="rewardCondition" maxlength="40" placeholder="FN / MW / FT / WW / BS" /></label><label>Sort order<input id="rewardSort" type="number" step="1" value="0" /></label><label>Limit per user<input id="rewardMaxPerUser" type="number" min="1" step="1" placeholder="No limit" /></label><label class="admin-form-wide">Image URL<input id="rewardImage" maxlength="500" placeholder="assets/rewards/weapons/ak-slate.png" /><small>Imported Steam images update automatically; custom images are preserved.</small></label><label class="admin-form-wide">Description<textarea id="rewardDescription" rows="3" maxlength="500" placeholder="Manual Steam trade after review"></textarea></label><label class="admin-check-row admin-form-wide"><input id="rewardActive" type="checkbox" checked /><span>Active and visible in the reward shop</span></label><div class="admin-form-actions admin-form-wide"><button class="admin-secondary-button" type="button" data-close-reward-editor>Cancel</button><button class="admin-primary-button" type="submit">Save reward</button></div>
     </form>
   </section>
 </div>
@@ -191,7 +207,7 @@
 </div>
 
 <script src="assets/vendor/supabase-js-2.45.4.js"></script>
-<script src="admin.js?v=1441"></script>
-<script src="app.js?v=1441"></script>
+<script src="admin.js?v=1450"></script>
+<script src="app.js?v=1450"></script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-// SkinQuest v14.4.1 core - secure base; enhanced by skinquest-v14.js
+// SkinQuest v14.5.0 core - secure base; enhanced by skinquest-v14.js
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -77,6 +77,13 @@ let currentIsAdmin = false;
 let currentAdminRole = null;
 let favoriteRewardIds = new Set();
 const MAX_FAVORITE_REWARDS = 6;
+const REWARD_CATALOG_PAGE_SIZE = 48;
+const rewardCatalogState = {
+  total: 0,
+  loading: false,
+  requestId: 0,
+  serverBacked: true
+};
 let dashboardRefreshPromise = null;
 let lastDashboardScrollTarget = "";
 
@@ -1549,30 +1556,93 @@ async function loadCpxWidget(widget, userId) {
   }
 }
 
-async function loadRewards() {
-  const attempts = [
-    () => sb.from("reward_items").select("*").eq("active", true).order("sort_order", { ascending: true }).order("points_coins", { ascending: true }),
-    () => sb.from("reward_items").select("*").eq("active", true).order("points_coins", { ascending: true }),
-    () => sb.from("reward_items").select("*").eq("active", true).order("points_cost", { ascending: true }),
-    () => sb.from("reward_items").select("*").eq("active", true)
-  ];
+function isMissingRewardCatalogRpc(error) {
+  const message = String(error?.message || error || "").toLowerCase();
+  return String(error?.code || "") === "PGRST202" || message.includes("could not find the function") || message.includes("schema cache");
+}
 
-  let lastError = null;
-  for (const attempt of attempts) {
-    const { data, error } = await attempt();
-    if (!error) {
-      rewardItems = (data || []).sort((a, b) => {
-        const aSort = Number(a.sort_order ?? 0);
-        const bSort = Number(b.sort_order ?? 0);
-        if (aSort !== bSort) return aSort - bSort;
-        return getRewardCost(a) - getRewardCost(b);
-      });
-      return;
+function getRewardCatalogRequest() {
+  const minInput = (qs("#minPriceFilter")?.value || "").trim();
+  const maxInput = (qs("#maxPriceFilter")?.value || "").trim();
+  const min = minInput ? Number(minInput) : null;
+  const max = maxInput ? Number(maxInput) : null;
+  return {
+    p_query: (qs("#skinSearch")?.value || "").trim() || null,
+    p_min_coins: Number.isFinite(min) ? Math.max(0, Math.trunc(min)) : null,
+    p_max_coins: Number.isFinite(max) ? Math.max(0, Math.trunc(max)) : null,
+    p_availability: getActiveAvailabilityFilter(),
+    p_balance: Math.max(0, Math.trunc(Number(currentProfile?.points_balance || 0))),
+    p_sort: qs("#sortFilter")?.dataset.value || getRewardShopPreferences().default_sort || "price-desc",
+    p_show_out_of_stock: getRewardShopPreferences().show_out_of_stock !== false
+  };
+}
+
+function updateRewardLoadMoreButton() {
+  const button = qs("#loadMoreRewards");
+  if (!button) return;
+  const hasMore = rewardItems.length < Number(rewardCatalogState.total || 0);
+  button.classList.toggle("hidden", !hasMore);
+  button.disabled = rewardCatalogState.loading;
+  button.textContent = rewardCatalogState.loading ? "Loading…" : `Load more rewards (${rewardItems.length.toLocaleString()} of ${Number(rewardCatalogState.total || 0).toLocaleString()})`;
+}
+
+async function loadRewards(options = {}) {
+  const append = options.append === true;
+  const requestId = ++rewardCatalogState.requestId;
+  rewardCatalogState.loading = true;
+  updateRewardLoadMoreButton();
+
+  const request = {
+    ...getRewardCatalogRequest(),
+    p_limit: REWARD_CATALOG_PAGE_SIZE,
+    p_offset: append ? rewardItems.length : 0
+  };
+
+  try {
+    const { data, error } = await sb.rpc("sq_search_rewards", request);
+    if (error) throw error;
+    if (requestId !== rewardCatalogState.requestId) return;
+
+    const items = Array.isArray(data?.items) ? data.items : [];
+    if (append) {
+      const merged = new Map(rewardItems.map((item) => [Number(item.id), item]));
+      items.forEach((item) => merged.set(Number(item.id), item));
+      rewardItems = Array.from(merged.values());
+    } else {
+      rewardItems = items;
     }
-    lastError = error;
-  }
+    rewardCatalogState.total = Number(data?.total ?? rewardItems.length);
+    rewardCatalogState.serverBacked = true;
+  } catch (error) {
+    if (!isMissingRewardCatalogRpc(error)) throw error;
 
-  throw lastError || new Error("Could not load rewards.");
+    const attempts = [
+      () => sb.from("reward_items").select("*").eq("active", true).order("sort_order", { ascending: true }).order("points_coins", { ascending: true }),
+      () => sb.from("reward_items").select("*").eq("active", true).order("points_coins", { ascending: true }),
+      () => sb.from("reward_items").select("*").eq("active", true).order("points_cost", { ascending: true }),
+      () => sb.from("reward_items").select("*").eq("active", true)
+    ];
+    let lastError = null;
+    for (const attempt of attempts) {
+      const result = await attempt();
+      if (!result.error) {
+        rewardItems = (result.data || []).sort((a, b) => {
+          const aSort = Number(a.sort_order ?? 0);
+          const bSort = Number(b.sort_order ?? 0);
+          if (aSort !== bSort) return aSort - bSort;
+          return getRewardCost(a) - getRewardCost(b);
+        });
+        rewardCatalogState.total = rewardItems.length;
+        rewardCatalogState.serverBacked = false;
+        return;
+      }
+      lastError = result.error;
+    }
+    throw lastError || error || new Error("Could not load rewards.");
+  } finally {
+    if (requestId === rewardCatalogState.requestId) rewardCatalogState.loading = false;
+    updateRewardLoadMoreButton();
+  }
 }
 
 async function loadFavoriteRewards(userId) {
@@ -1721,6 +1791,31 @@ function rewardIsOutOfStock(item) {
   return available !== null && available <= 0;
 }
 
+function rewardUsesSteamPricing(item) {
+  return item?.pricing_mode === "steam";
+}
+
+function rewardHasCurrentPrice(item) {
+  if (!rewardUsesSteamPricing(item)) return true;
+  if (typeof item?.price_is_current === "boolean") return item.price_is_current;
+  const price = Number(item?.steam_price_minor || 0);
+  const validUntil = new Date(item?.steam_price_valid_until || 0).getTime();
+  return price > 0 && Number.isFinite(validUntil) && validUntil > Date.now();
+}
+
+function formatSteamPrice(item) {
+  const minor = Number(item?.steam_price_minor || 0);
+  if (!Number.isFinite(minor) || minor <= 0) return "Steam price unavailable";
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency: item?.steam_price_currency || "EUR"
+    }).format(minor / 100);
+  } catch {
+    return `€${(minor / 100).toFixed(2)}`;
+  }
+}
+
 function getRewardOrderEtaDays(item) {
   const days = Number(item?.order_eta_days || 8);
   return Number.isFinite(days) ? Math.max(7, Math.min(30, Math.round(days))) : 8;
@@ -1736,7 +1831,7 @@ function renderRewardArt(item) {
 
   return `
     <div class="reward-art has-image">
-      <img src="${escapeHtml(image)}" alt="${name}" loading="lazy" onerror="this.closest('.reward-art').classList.add('image-failed'); this.remove();" />
+      <img src="${escapeHtml(image)}" alt="${name}" loading="lazy" referrerpolicy="no-referrer" onerror="this.closest('.reward-art').classList.add('image-failed'); this.remove();" />
       <span class="skin-abbrev fallback-abbrev">${shortSkinName(item.name || "")}</span>
     </div>
   `;
@@ -1799,8 +1894,9 @@ async function updateRewardAccountNotice() {
 }
 
 function getRewardStockSortValue(item) {
+  if (rewardIsOrderable(item)) return -1;
   const available = getRewardAvailableStock(item);
-  if (available === null) return 999999;
+  if (available === null) return -1;
   return available;
 }
 
@@ -1818,7 +1914,7 @@ function sortRewardsForShop(items, sortValue) {
     const aSort = Number(a.sort_order ?? 0);
     const bSort = Number(b.sort_order ?? 0);
     if (aSort !== bSort) return aSort - bSort;
-    return getRewardCost(a) - getRewardCost(b);
+    return String(a.name || "").localeCompare(String(b.name || "")) || Number(a.id) - Number(b.id);
   });
 }
 
@@ -1831,6 +1927,9 @@ function getRewardActionState(item, profile) {
 
   if (rewardIsOutOfStock(item)) {
     return { disabled: true, label: "Out of stock", note: "This prepared reward is currently unavailable.", action: "out" };
+  }
+  if (!rewardHasCurrentPrice(item)) {
+    return { disabled: true, label: "Price refreshing", note: "Ordering pauses automatically until a fresh Steam price is stored.", action: "price" };
   }
   if (!hasUser) {
     return { disabled: false, label: "Sign in to redeem", note: "Create an account before redeeming.", action: "login" };
@@ -1997,20 +2096,24 @@ function renderRewards() {
       const matchesAfford =
         affordValue === "all" ||
         (affordValue === "affordable" && signedIn && available && cost <= balance) ||
-        (affordValue === "in-stock" && physicallyInStock);
+        (affordValue === "in-stock" && physicallyInStock) ||
+        (affordValue === "orderable" && rewardIsOrderable(item));
 
       return matchesSearch && matchesMin && matchesMax && matchesVisibility && matchesAfford;
     });
 
-    const sorted = sortRewardsForShop(filtered, sortValue);
+    // Keep the database's stable order across page boundaries; sort locally only
+    // for older installations where the paginated catalog RPC is unavailable.
+    const sorted = rewardCatalogState.serverBacked ? filtered : sortRewardsForShop(filtered, sortValue);
     if (resultCount) {
-      const total = rewardItems.length;
+      const total = rewardCatalogState.serverBacked ? Number(rewardCatalogState.total || 0) : rewardItems.length;
       resultCount.textContent = total === 0
         ? "No rewards loaded yet"
-        : sorted.length === total
-          ? `Showing ${sorted.length.toLocaleString()} rewards`
-          : `Showing ${sorted.length.toLocaleString()} of ${total.toLocaleString()} rewards`;
+        : rewardItems.length >= total
+          ? `Showing ${total.toLocaleString()} rewards`
+          : `Showing ${rewardItems.length.toLocaleString()} of ${total.toLocaleString()} rewards`;
     }
+    updateRewardLoadMoreButton();
     clearFilters?.classList.toggle("hidden", !hasActiveRewardFilters());
 
     if (sorted.length === 0) {
@@ -2039,14 +2142,16 @@ function renderRewards() {
       const available = getRewardAvailableStock(item);
       const outOfStock = rewardIsOutOfStock(item);
       const orderable = rewardIsOrderable(item);
-      const stockText = orderable ? "Available to order" : (available === null ? "In stock" : `${available} available`);
+      const steamPriced = rewardUsesSteamPricing(item);
+      const currentPrice = rewardHasCurrentPrice(item);
+      const stockText = orderable ? "Available to order" : (available === null ? "In stock" : `${available} in stock`);
       const description = item.description || item.market_name || (orderable ? "Ordered by SkinQuest after checkout" : "Prepared for manual Steam delivery");
       const action = getRewardActionState(item, currentProfile);
 
       const isFavorited = favoriteRewardIds.has(Number(item.id));
 
       return `
-        <article class="reward-card steam-item ${rarityClass(item)} ${outOfStock ? "is-out" : ""}">
+        <article class="reward-card steam-item ${rarityClass(item)} ${outOfStock ? "is-out" : ""} ${steamPriced && !currentPrice ? "is-price-stale" : ""}">
           ${renderRewardArt(item)}
           <button class="favorite-star ${isFavorited ? "is-favorited" : ""}" type="button" data-favorite-star="${item.id}" aria-pressed="${isFavorited}" aria-label="${isFavorited ? "Remove goal star" : "Set as goal"}">
             <svg class="star-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.95 6.53 7.15.66-5.4 4.73 1.63 7-6.33-3.8-6.33 3.8 1.63-7-5.4-4.73 7.15-.66L12 2.6z"/></svg>
@@ -2055,6 +2160,7 @@ function renderRewards() {
             <div class="reward-title-row">
               ${rarity ? `<span class="rarity-badge">${escapeHtml(rarity.label)}</span>` : ""}
               ${condition ? `<span class="condition-badge">${escapeHtml(condition)}</span>` : ""}
+              ${steamPriced ? `<span class="price-source-badge ${currentPrice ? "" : "is-stale"}" title="${escapeHtml(currentPrice ? `${formatSteamPrice(item)} on Steam · converted with the SkinQuest markup` : "The stored Steam price needs to be refreshed")}">${currentPrice ? "Steam linked" : "Price updating"}</span>` : ""}
             </div>
             <h2>${escapeHtml(item.name)}</h2>
             <p class="muted reward-description">${escapeHtml(description)}</p>
@@ -2083,7 +2189,7 @@ function renderRewards() {
         if (action === "email") return showSteamEmailPrompt(currentUser, currentProfile);
         if (action === "trade") return location.href = "/settings#tradeForm";
         if (action === "earn") return location.href = "/surveys";
-        if (action === "out") return;
+        if (action === "out" || action === "price") return;
         requestRedeem(Number(button.dataset.redeem), button);
       });
     });
@@ -2101,10 +2207,20 @@ function renderRewards() {
   window.__skinquestRewardApply = apply;
   if (!grid.dataset.rewardFiltersBound) {
     grid.dataset.rewardFiltersBound = "true";
-    const scheduleApply = () => window.__skinquestRewardApply?.(true);
+    const scheduleApply = async () => {
+      if (!rewardCatalogState.serverBacked) return window.__skinquestRewardApply?.(true);
+      grid.classList.add("is-refreshing");
+      try {
+        await loadRewards();
+        window.__skinquestRewardApply?.(false);
+      } catch (error) {
+        showMessage(error?.message || "Could not refresh the reward catalog.", "error");
+        grid.classList.remove("is-refreshing");
+      }
+    };
     const scheduleSearchApply = () => {
       window.clearTimeout(window.__skinquestRewardSearchTimer);
-      window.__skinquestRewardSearchTimer = window.setTimeout(scheduleApply, 120);
+      window.__skinquestRewardSearchTimer = window.setTimeout(scheduleApply, 280);
     };
 
     search?.addEventListener("input", scheduleSearchApply);
@@ -2145,6 +2261,16 @@ function renderRewards() {
 
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape") setRewardSortMenuOpen(false);
+    });
+
+    qs("#loadMoreRewards")?.addEventListener("click", async () => {
+      if (rewardCatalogState.loading) return;
+      try {
+        await loadRewards({ append: true });
+        window.__skinquestRewardApply?.(false);
+      } catch (error) {
+        showMessage(error?.message || "Could not load more rewards.", "error");
+      }
     });
   }
   apply(false);
@@ -2188,6 +2314,13 @@ async function requestRedeem(rewardId, sourceButton = null) {
       { title: "Fix your Steam trade link", confirmText: "Fix trade link", cancelText: "Stay on rewards", icon: "!" }
     );
     if (goDashboard) location.href = "/settings#tradeForm";
+    return;
+  }
+
+  if (!rewardHasCurrentPrice(reward)) {
+    showMessage("That Steam-linked price is being refreshed. No coins were deducted; try again after the next sync.", "error");
+    await loadRewards();
+    renderRewards();
     return;
   }
 
@@ -2265,6 +2398,12 @@ async function requestRedeem(rewardId, sourceButton = null) {
       );
       if (goDashboard) location.href = "/settings#tradeForm";
       await updateRewardAccountNotice();
+      return;
+    }
+    if (errorText.toLowerCase().includes("steam price") || errorText.toLowerCase().includes("price is refreshing")) {
+      showMessage("The Steam price changed or expired before checkout. No coins were deducted; the listing will return after a fresh sync.", "error");
+      await loadRewards();
+      renderRewards();
       return;
     }
     showMessage(errorText || "Could not create the reward order. Please refresh and try again.", "error");
@@ -4020,11 +4159,12 @@ async function refreshAll() {
   await refreshSettingsPage();
   await initOfferwall();
   if (qs("#rewardsGrid")) {
+    await loadRewards();
     await loadFavoriteRewards(currentUser?.id);
     renderRewards();
     await updateRewardAccountNotice();
   }
-  if (typeof window.initAdminV143 === "function") await window.initAdminV143();
+  if (typeof window.initAdminV145 === "function") await window.initAdminV145();
   else await initAdmin();
 }
 
@@ -4053,10 +4193,11 @@ async function boot() {
 
   if (qs("#rewardsGrid")) {
     try {
+      setActiveRewardSort(getRewardShopPreferences().default_sort);
+      applyRewardSearchFromQuery();
       await loadRewards();
       await loadFavoriteRewards(currentUser?.id);
       renderRewards();
-      applyRewardSearchFromQuery();
       await updateRewardAccountNotice();
     } catch (error) {
       qs("#rewardsGrid").innerHTML = `<div class="empty-state">Could not load rewards right now. Please refresh and try again.</div>`;
@@ -4065,7 +4206,7 @@ async function boot() {
 
   await initDashboard();
   await initSettingsPage();
-  if (typeof window.initAdminV143 === "function") await window.initAdminV143();
+  if (typeof window.initAdminV145 === "function") await window.initAdminV145();
   else await initAdmin();
   finishPageLoad();
 }

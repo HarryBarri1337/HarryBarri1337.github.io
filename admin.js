@@ -1,4 +1,4 @@
-/* SkinQuest v14.4.1 admin operations workspace */
+/* SkinQuest v14.5.0 admin operations workspace */
 (() => {
   "use strict";
 
@@ -30,6 +30,13 @@
     orders: [],
     support: [],
     rewards: [],
+    rewardOffset: 0,
+    rewardTotal: 0,
+    rewardLoading: false,
+    rewardStats: null,
+    pricing: null,
+    catalogSync: null,
+    editingReward: null,
     statuses: [],
     promos: [],
     audit: [],
@@ -362,12 +369,17 @@
     $("#adminSupportStatusFilter")?.addEventListener("change", () => loadSupport({ reset: true }));
     $("#redeemSearch")?.addEventListener("input", debounce(() => loadOrders({ reset: true })));
     $("#supportSearch")?.addEventListener("input", debounce(() => loadSupport({ reset: true })));
-    $("#rewardAdminSearch")?.addEventListener("input", renderRewards);
+    $("#rewardAdminSearch")?.addEventListener("input", debounce(() => loadRewards({ reset: true })));
+    $("#rewardAdminModeFilter")?.addEventListener("change", () => loadRewards({ reset: true }));
     $("#adminAuditSearch")?.addEventListener("input", renderAudit);
     $("#ordersLoadMore")?.addEventListener("click", () => loadOrders({ append: true }));
     $("#supportLoadMore")?.addEventListener("click", () => loadSupport({ append: true }));
+    $("#rewardsLoadMore")?.addEventListener("click", () => loadRewards({ append: true }));
     $("#openRewardCreate")?.addEventListener("click", () => openRewardEditor(null));
     $("#rewardFulfillmentMode")?.addEventListener("change", updateRewardEditorMode);
+    $("#rewardPricingMode")?.addEventListener("change", updateRewardEditorPricing);
+    $("#rewardPricingForm")?.addEventListener("submit", saveRewardPricing);
+    $("#syncSteamCatalog")?.addEventListener("click", syncSteamCatalog);
 
     $("#adminGlobalSearchForm")?.addEventListener("submit", (event) => {
       event.preventDefault();
@@ -403,7 +415,7 @@
     $("#adminCoinForm")?.addEventListener("submit", applyCoinAdjustment);
   }
 
-  async function initAdminV143() {
+  async function initAdminV145() {
     bindShell();
     setGate({
       title: "Verifying admin access",
@@ -512,7 +524,7 @@
       console.error("Admin directory failed", error);
     }
 
-    const tasks = [loadKpis(), loadOrders({ reset: true }), loadSupport({ reset: true }), loadRewards(), loadSystemStatus(), loadPromos(), loadAudit()];
+    const tasks = [loadKpis(), loadOrders({ reset: true }), loadSupport({ reset: true }), loadRewards({ reset: true }), loadPricingDashboard(), loadSystemStatus(), loadPromos(), loadAudit()];
     if (state.owner) tasks.push(loadCoinHistory());
     const results = await Promise.allSettled(tasks);
     if (results.some((item) => item.status === "rejected")) failed = true;
@@ -1048,16 +1060,45 @@
     } catch { notify("The recorded page URL is not a trusted SkinQuest address.", "error"); }
   }
 
-  async function loadRewards() {
+  async function loadRewards(options = {}) {
     const target = $("#adminRewardsList");
-    if (!target) return;
-    target.innerHTML = '<div class="admin-empty">Loading rewards…</div>';
-    const { data, error } = await sb.from("reward_items").select("*").order("active", { ascending: false }).order("sort_order", { ascending: true }).order("points_coins", { ascending: true });
-    if (error) {
-      target.innerHTML = `<div class="admin-empty"><strong>Could not load rewards</strong>${safe(error.message)}</div>`;
-      throw error;
+    if (!target || state.rewardLoading) return;
+    const append = options.append === true;
+    state.rewardLoading = true;
+    if (!append) target.innerHTML = '<div class="admin-empty">Loading rewards…</div>';
+    const loadMore = $("#rewardsLoadMore");
+    if (loadMore) { loadMore.disabled = true; loadMore.textContent = "Loading…"; }
+
+    try {
+      const offset = append ? state.rewards.length : 0;
+      const result = await rpc("sq_admin_search_reward_items", {
+        p_query: textValue($("#rewardAdminSearch")?.value) || null,
+        p_filter: $("#rewardAdminModeFilter")?.value || "all",
+        p_limit: PAGE_SIZE,
+        p_offset: offset
+      });
+      const rows = Array.isArray(result?.items) ? result.items : [];
+      if (append) {
+        const merged = new Map(state.rewards.map((item) => [Number(item.id), item]));
+        rows.forEach((item) => merged.set(Number(item.id), item));
+        state.rewards = Array.from(merged.values());
+      } else {
+        state.rewards = rows;
+      }
+      state.rewardOffset = state.rewards.length;
+      state.rewardTotal = Number(result?.total ?? state.rewards.length);
+    } catch (error) {
+      if (!isMissingRpc(error)) {
+        target.innerHTML = `<div class="admin-empty"><strong>Could not load rewards</strong>${safe(error.message)}</div>`;
+        throw error;
+      }
+      const fallback = await sb.from("reward_items").select("*").order("active", { ascending: false }).order("sort_order", { ascending: true }).order("points_coins", { ascending: true }).limit(PAGE_SIZE);
+      if (fallback.error) throw fallback.error;
+      state.rewards = fallback.data || [];
+      state.rewardTotal = state.rewards.length;
+    } finally {
+      state.rewardLoading = false;
     }
-    state.rewards = data || [];
     renderRewards();
   }
 
@@ -1075,41 +1116,175 @@
     return { total, reserved, available: Math.max(0, total - reserved) };
   }
 
+  function steamPriceIsCurrent(item) {
+    if (item?.pricing_mode !== "steam") return true;
+    const validUntil = new Date(item?.steam_price_valid_until || 0).getTime();
+    return Number(item?.steam_price_minor || 0) > 0 && Number.isFinite(validUntil) && validUntil > Date.now();
+  }
+
+  function formatSteamMoney(item) {
+    const minor = Number(item?.steam_price_minor || 0);
+    if (!Number.isFinite(minor) || minor <= 0) return "No Steam price";
+    try {
+      return new Intl.NumberFormat(undefined, { style: "currency", currency: item?.steam_price_currency || "EUR" }).format(minor / 100);
+    } catch {
+      return `€${(minor / 100).toFixed(2)}`;
+    }
+  }
+
+  function renderRewardStats() {
+    const stats = state.rewardStats || {};
+    const target = $("#adminRewardStats");
+    if (!target) return;
+    target.innerHTML = [
+      [stats.active_listings, "active listings"],
+      [stats.orderable_listings, "order items"],
+      [stats.prepared_units, "prepared units"],
+      [stats.reserved_units, "reserved units"],
+      [stats.steam_linked, "Steam linked"],
+      [stats.stale_prices, "prices to refresh"]
+    ].map(([value, label]) => `<span class="admin-mini-stat"><strong>${formatNumber(value || 0)}</strong>${safe(label)}</span>`).join("");
+  }
+
   function renderRewards() {
     const target = $("#adminRewardsList");
     if (!target) return;
-    const search = textValue($("#rewardAdminSearch")?.value).toLowerCase();
-    const rows = state.rewards.filter((item) => [item.name, item.market_name, item.rarity, item.condition].some((value) => String(value || "").toLowerCase().includes(search)));
-    const totals = state.rewards.reduce((sum, item) => {
-      const stock = rewardStock(item);
-      if (rewardMode(item) === "orderable") sum.orderable += item.active ? 1 : 0;
-      else {
-        sum.available += stock.available;
-        sum.reserved += stock.reserved;
-      }
-      if (item.active) sum.active += 1;
-      return sum;
-    }, { available: 0, reserved: 0, active: 0, orderable: 0 });
-    if ($("#adminRewardStats")) $("#adminRewardStats").innerHTML = `<span class="admin-mini-stat"><strong>${formatNumber(totals.active)}</strong>active listings</span><span class="admin-mini-stat"><strong>${formatNumber(totals.orderable)}</strong>orderable listings</span><span class="admin-mini-stat"><strong>${formatNumber(totals.available)}</strong>prepared units</span><span class="admin-mini-stat"><strong>${formatNumber(totals.reserved)}</strong>reserved units</span>`;
-    if (!rows.length) {
-      target.innerHTML = '<div class="admin-empty"><strong>No rewards found</strong>Try another reward search.</div>';
+    renderRewardStats();
+    if ($("#adminRewardResultCount")) $("#adminRewardResultCount").textContent = state.rewardTotal
+      ? `Showing ${formatNumber(state.rewards.length)} of ${formatNumber(state.rewardTotal)}`
+      : "No matching listings";
+    const loadMore = $("#rewardsLoadMore");
+    if (loadMore) {
+      loadMore.classList.toggle("hidden", state.rewards.length >= state.rewardTotal);
+      loadMore.disabled = false;
+      loadMore.textContent = "Load more listings";
+    }
+    if (!state.rewards.length) {
+      target.innerHTML = '<div class="admin-empty"><strong>No rewards found</strong>Try another catalog filter or Steam market name.</div>';
       return;
     }
-    target.innerHTML = `<div class="admin-reward-header"><span></span><span>Reward</span><span>Price</span><span>Stock</span><span>Visibility</span><span></span></div>${rows.map((item) => {
+    target.innerHTML = `<div class="admin-reward-header"><span></span><span>Reward</span><span>Price</span><span>Stock</span><span>Visibility</span><span></span></div>${state.rewards.map((item) => {
       const stock = rewardStock(item);
       const image = textValue(item.image_url);
+      const linked = item.pricing_mode === "steam";
+      const current = steamPriceIsCurrent(item);
+      const sourceLabel = linked ? (current ? `${formatSteamMoney(item)} · Steam` : "Steam price refresh needed") : "Manual price";
+      const sourceClass = linked ? (current ? "" : "is-stale") : "is-manual";
+      const marketName = textValue(item.market_name);
+      const marketHref = marketName ? `https://steamcommunity.com/market/listings/730/${encodeURIComponent(marketName)}` : "";
       return `<div class="admin-reward-row ${item.active ? "" : "is-inactive"}">
-        <div class="admin-reward-image">${image ? `<img src="${safe(image)}" alt="" loading="lazy" />` : `<span>${safe((item.name || "SQ").slice(0, 3).toUpperCase())}</span>`}</div>
+        <div class="admin-reward-image">${image ? `<img src="${safe(image)}" alt="" loading="lazy" referrerpolicy="no-referrer" />` : `<span>${safe((item.name || "SQ").slice(0, 3).toUpperCase())}</span>`}</div>
         <div><strong>${safe(item.name)}</strong><small>${safe([item.rarity, item.condition].filter(Boolean).join(" · ") || "No rarity or condition")}</small></div>
-        <span class="admin-stock-value"><b>${formatNumber(rewardCost(item))}</b> coins</span>
+        <span class="admin-stock-value"><b>${formatNumber(rewardCost(item))}</b> coins<small class="admin-price-source ${sourceClass}">${safe(sourceLabel)}</small></span>
         <span class="admin-stock-value">${rewardMode(item) === "orderable" ? `<b>Available to order</b><small>ETA ${formatNumber(item.order_eta_days || 8)}+ days</small>` : `<b>${formatNumber(stock.available)}</b> available<small>${formatNumber(stock.reserved)} reserved / ${formatNumber(stock.total)} total</small>`}</span>
         ${statusPill(item.active ? "active" : "inactive")}
-        <div class="admin-row-actions">${state.owner ? `<button class="admin-row-action" type="button" data-edit-reward="${safe(item.id)}">Edit</button><button class="admin-row-action" type="button" data-toggle-reward="${safe(item.id)}">${item.active ? "Hide" : "Activate"}</button>` : ""}</div>
+        <div class="admin-row-actions">${marketHref ? `<a class="admin-row-action admin-market-link" href="${safe(marketHref)}" target="_blank" rel="noopener noreferrer">Steam</a>` : ""}${state.owner ? `<button class="admin-row-action" type="button" data-edit-reward="${safe(item.id)}">Edit</button><button class="admin-row-action" type="button" data-toggle-reward="${safe(item.id)}">${item.active ? "Hide" : "Activate"}</button>` : ""}</div>
       </div>`;
     }).join("")}`;
 
     $$('[data-edit-reward]', target).forEach((button) => button.addEventListener("click", () => openRewardEditor(state.rewards.find((item) => Number(item.id) === Number(button.dataset.editReward)))));
     $$('[data-toggle-reward]', target).forEach((button) => button.addEventListener("click", () => toggleReward(Number(button.dataset.toggleReward))));
+  }
+
+  async function loadPricingDashboard() {
+    try {
+      const data = await rpc("sq_admin_reward_pricing_dashboard");
+      state.pricing = data?.settings || null;
+      state.catalogSync = data?.sync || null;
+      state.rewardStats = data?.stats || null;
+      renderPricingDashboard();
+      renderRewardStats();
+    } catch (error) {
+      const progress = $("#steamCatalogProgress");
+      if (progress) {
+        progress.classList.add("has-error");
+        progress.innerHTML = `<span><strong>Pricing database unavailable.</strong> Run the v14.5.0 upgrade SQL before uploading the website files.</span>`;
+      }
+      if (!isMissingRpc(error)) throw error;
+    }
+  }
+
+  function renderPricingDashboard() {
+    const settings = state.pricing || {};
+    const sync = state.catalogSync || {};
+    const stats = state.rewardStats || {};
+    if ($("#pricingMarkupPercent")) $("#pricingMarkupPercent").value = settings.markup_percent ?? 15;
+    if ($("#pricingCoinsPerEur")) $("#pricingCoinsPerEur").value = settings.coins_per_eur ?? 100;
+    if ($("#pricingMaxAgeHours")) $("#pricingMaxAgeHours").value = settings.max_price_age_hours ?? 48;
+    if ($("#pricingDefaultEtaDays")) $("#pricingDefaultEtaDays").value = settings.catalog_default_eta_days ?? 8;
+    if ($("#pricingMinimumCoins")) $("#pricingMinimumCoins").value = settings.minimum_coin_price ?? 1;
+    if ($("#pricingAutoPublish")) $("#pricingAutoPublish").checked = settings.catalog_auto_publish !== false;
+
+    const stale = Number(stats.stale_prices || 0);
+    const health = $("#steamPricingHealth");
+    if (health) health.innerHTML = `<span class="admin-pricing-health-badge ${stale ? "is-warning" : ""}">${stale ? `${formatNumber(stale)} prices need refresh` : "Prices protected"}</span>`;
+
+    const progress = $("#steamCatalogProgress");
+    if (!progress) return;
+    const total = Number(sync.total_count || 0);
+    const next = Number(sync.next_start || 0);
+    const percent = total > 0 ? Math.min(100, Math.round((next / total) * 100)) : 0;
+    progress.classList.toggle("has-error", Boolean(sync.last_error));
+    if (sync.last_error) {
+      progress.innerHTML = `<span><strong>Last Steam sync failed.</strong> ${safe(sync.last_error)} The cursor was kept so the next run can retry safely.</span>`;
+    } else if (total > 0) {
+      const completed = next === 0 && sync.last_completed_at;
+      progress.innerHTML = `<span><strong>${completed ? "Full market pass complete" : `${percent}% of this market pass scanned`}.</strong> ${formatNumber(stats.catalog_items || 0)} eligible CS2 listings stored · last batch ${safe(relativeTime(sync.last_run_at))}${sync.last_completed_at ? ` · last full pass ${safe(relativeTime(sync.last_completed_at))}` : ""}.</span>`;
+    } else {
+      progress.innerHTML = '<span><strong>No Steam catalog pass yet.</strong> Save the pricing rules, then run the first batch. Scheduled sync can continue from the saved cursor.</span>';
+    }
+  }
+
+  async function saveRewardPricing(event) {
+    event.preventDefault();
+    if (!state.owner) return notify("Owner access is required.", "error");
+    const markup = Number($("#pricingMarkupPercent")?.value);
+    const coinsPerEur = Number($("#pricingCoinsPerEur")?.value);
+    const maxAge = Number($("#pricingMaxAgeHours")?.value);
+    const eta = Number($("#pricingDefaultEtaDays")?.value);
+    const minimum = Number($("#pricingMinimumCoins")?.value);
+    if (!Number.isFinite(markup) || markup < 0 || markup > 500) return notify("Markup must be between 0% and 500%.", "error");
+    if (!Number.isFinite(coinsPerEur) || coinsPerEur < 0.01 || coinsPerEur > 100000) return notify("Coins per €1 must be between 0.01 and 100,000.", "error");
+    if (!Number.isInteger(maxAge) || maxAge < 1 || maxAge > 168) return notify("Price validity must be between 1 and 168 hours.", "error");
+    if (!Number.isInteger(eta) || eta < 7 || eta > 30) return notify("Default ETA must be between 7 and 30 days.", "error");
+    if (!Number.isInteger(minimum) || minimum < 1 || minimum > 1000000) return notify("Minimum price must be between 1 and 1,000,000 coins.", "error");
+    const button = $('button[type="submit"]', event.currentTarget);
+    const restore = buttonBusy(button, "Saving…");
+    try {
+      await rpc("sq_admin_update_reward_pricing_settings", {
+        p_markup_percent: markup,
+        p_coins_per_eur: coinsPerEur,
+        p_minimum_coin_price: minimum,
+        p_max_price_age_hours: maxAge,
+        p_catalog_auto_publish: Boolean($("#pricingAutoPublish")?.checked),
+        p_catalog_default_eta_days: eta
+      });
+      notify("Steam pricing rules saved and linked coin prices recalculated.", "success");
+      await Promise.allSettled([loadPricingDashboard(), loadRewards({ reset: true }), loadAudit()]);
+    } catch (error) {
+      notify(error.message || "Could not save Steam pricing.", "error");
+    } finally {
+      restore();
+    }
+  }
+
+  async function syncSteamCatalog(event) {
+    if (!state.owner) return notify("Owner access is required.", "error");
+    const button = event?.currentTarget || $("#syncSteamCatalog");
+    const restore = buttonBusy(button, "Syncing five pages…");
+    try {
+      const { data, error } = await sb.functions.invoke("steam-market-sync", { body: { action: "catalog", max_pages: 5 } });
+      if (error) throw error;
+      if (!data?.ok) throw new Error(data?.error || "Steam sync did not complete.");
+      notify(`Steam batch synced: ${formatNumber(data.eligible || 0)} eligible listings from ${formatNumber(data.scanned || 0)} market results.`, "success");
+      await Promise.allSettled([loadPricingDashboard(), loadRewards({ reset: true }), loadKpis(), loadAudit()]);
+      renderOverview();
+    } catch (error) {
+      notify(error.message || "Could not sync the Steam market. The saved cursor was not lost.", "error");
+      await loadPricingDashboard();
+    } finally {
+      restore();
+    }
   }
 
   function updateRewardEditorMode() {
@@ -1122,15 +1297,35 @@
     if (eta) eta.disabled = !orderable;
   }
 
+  function updateRewardEditorPricing() {
+    const linked = $("#rewardPricingMode")?.value === "steam";
+    const cost = $("#rewardCost");
+    const marketName = $("#rewardMarketName");
+    const help = $("#rewardPriceHelp");
+    const status = $("#rewardSteamPriceStatus");
+    const item = state.editingReward;
+    if (cost) cost.disabled = linked;
+    if (marketName) marketName.required = linked;
+    if (help) help.textContent = linked ? "Calculated from the latest Steam price and global markup." : "Manual prices are never changed by market sync.";
+    if (!status) return;
+    status.classList.toggle("is-warning", linked && !steamPriceIsCurrent(item));
+    if (!linked) status.textContent = "Manual override enabled. Steam sync can still update item metadata, but not its coin price.";
+    else if (Number(item?.steam_price_minor || 0) > 0) status.textContent = `${formatSteamMoney(item)} on Steam · ${formatNumber(rewardCost(item))} coins · updated ${relativeTime(item.steam_price_updated_at)}${steamPriceIsCurrent(item) ? "" : " · refresh required"}`;
+    else status.textContent = "No Steam price stored. Import this item with Steam sync before enabling it as a linked listing.";
+  }
+
   function openRewardEditor(item) {
     if (!state.owner) return notify("Owner access is required to edit rewards.", "error");
     state.lastFocus = document.activeElement;
-    if ($("#rewardFormTitle")) $("#rewardFormTitle").textContent = item ? "Edit reward" : "Add reward";
+    state.editingReward = item || null;
+    if ($("#rewardFormTitle")) $("#rewardFormTitle").textContent = item ? "Edit reward" : "Add custom reward";
     if ($("#rewardId")) $("#rewardId").value = item?.id || "";
     if ($("#rewardName")) $("#rewardName").value = item?.name || "";
+    if ($("#rewardMarketName")) $("#rewardMarketName").value = item?.market_name || "";
+    if ($("#rewardPricingMode")) $("#rewardPricingMode").value = item?.pricing_mode === "steam" ? "steam" : "manual";
     if ($("#rewardCost")) $("#rewardCost").value = item ? rewardCost(item) : "";
     if ($("#rewardFulfillmentMode")) $("#rewardFulfillmentMode").value = rewardMode(item);
-    if ($("#rewardOrderEtaDays")) $("#rewardOrderEtaDays").value = item?.order_eta_days ?? 8;
+    if ($("#rewardOrderEtaDays")) $("#rewardOrderEtaDays").value = item?.order_eta_days ?? state.pricing?.catalog_default_eta_days ?? 8;
     if ($("#rewardTotal")) $("#rewardTotal").value = item?.quantity_total ?? 1;
     if ($("#rewardReserved")) $("#rewardReserved").value = item?.quantity_reserved ?? 0;
     if ($("#rewardRarity")) $("#rewardRarity").value = item?.rarity || "";
@@ -1141,6 +1336,7 @@
     if ($("#rewardDescription")) $("#rewardDescription").value = item?.description || "";
     if ($("#rewardActive")) $("#rewardActive").checked = item?.active ?? true;
     updateRewardEditorMode();
+    updateRewardEditorPricing();
     const backdrop = $("#rewardEditorBackdrop");
     backdrop?.classList.remove("hidden");
     backdrop?.setAttribute("aria-hidden", "false");
@@ -1154,6 +1350,7 @@
     backdrop.classList.add("hidden");
     backdrop.setAttribute("aria-hidden", "true");
     document.body.style.overflow = "";
+    state.editingReward = null;
     state.lastFocus?.focus?.();
   }
 
@@ -1164,14 +1361,19 @@
     const button = $('button[type="submit"]', form);
     const id = textValue($("#rewardId")?.value);
     const maxPerUser = textValue($("#rewardMaxPerUser")?.value);
+    const pricingMode = $("#rewardPricingMode")?.value === "steam" ? "steam" : "manual";
+    const fulfillmentMode = $("#rewardFulfillmentMode")?.value === "orderable" ? "orderable" : "stocked";
     const payload = {
       name: textValue($("#rewardName")?.value),
+      market_name: textValue($("#rewardMarketName")?.value) || null,
+      pricing_mode: pricingMode,
+      manual_price_override: pricingMode === "manual",
       points_coins: Number($("#rewardCost")?.value || 0),
       points_cost: Number($("#rewardCost")?.value || 0),
-      fulfillment_mode: $("#rewardFulfillmentMode")?.value === "orderable" ? "orderable" : "stocked",
-      order_eta_days: Number($("#rewardOrderEtaDays")?.value || 8),
-      quantity_total: Number($("#rewardTotal")?.value || 0),
-      quantity_reserved: Number($("#rewardReserved")?.value || 0),
+      fulfillment_mode: fulfillmentMode,
+      order_eta_days: Number($("#rewardOrderEtaDays")?.value || state.pricing?.catalog_default_eta_days || 8),
+      quantity_total: fulfillmentMode === "orderable" ? 0 : Number($("#rewardTotal")?.value || 0),
+      quantity_reserved: fulfillmentMode === "orderable" ? 0 : Number($("#rewardReserved")?.value || 0),
       rarity: textValue($("#rewardRarity")?.value) || null,
       condition: textValue($("#rewardCondition")?.value) || null,
       sort_order: Number($("#rewardSort")?.value || 0),
@@ -1181,6 +1383,8 @@
       active: Boolean($("#rewardActive")?.checked)
     };
     if (!payload.name) return notify("Reward name is required.", "error");
+    if (pricingMode === "steam" && !payload.market_name) return notify("Steam-linked pricing requires the exact Steam market name.", "error");
+    if (pricingMode === "steam" && Number(state.editingReward?.steam_price_minor || 0) <= 0) return notify("Run Steam sync and edit the imported listing instead of creating an unpriced Steam item.", "error");
     if (!Number.isInteger(payload.points_coins) || payload.points_coins < 1) return notify("Coin price must be a whole number of at least 1.", "error");
     if (![payload.quantity_total, payload.quantity_reserved, payload.sort_order, payload.order_eta_days].every(Number.isInteger)) return notify("Stock, ETA and sort values must be whole numbers.", "error");
     if (payload.quantity_total < 0 || payload.quantity_reserved < 0 || payload.quantity_reserved > payload.quantity_total) return notify("Reserved stock must be between 0 and total stock.", "error");
@@ -1192,9 +1396,9 @@
       const request = id ? sb.from("reward_items").update(payload).eq("id", id) : sb.from("reward_items").insert(payload);
       const { error } = await request;
       if (error) throw error;
-      notify(id ? "Reward updated." : "Reward created.", "success");
+      notify(id ? "Reward updated." : "Custom reward created.", "success");
       closeRewardEditor();
-      await Promise.allSettled([loadRewards(), loadKpis(), loadAudit()]);
+      await Promise.allSettled([loadRewards({ reset: true }), loadPricingDashboard(), loadKpis(), loadAudit()]);
       renderOverview();
     } catch (error) {
       notify(error.message || "Could not save the reward.", "error");
@@ -1213,7 +1417,7 @@
     const { error } = await sb.from("reward_items").update({ active: !item.active }).eq("id", id);
     if (error) return notify(error.message, "error");
     notify(`Reward ${item.active ? "hidden" : "activated"}.`, "success");
-    await Promise.allSettled([loadRewards(), loadKpis(), loadAudit()]);
+    await Promise.allSettled([loadRewards({ reset: true }), loadPricingDashboard(), loadKpis(), loadAudit()]);
     renderOverview();
   }
 
@@ -1349,6 +1553,7 @@
       promo_create: "Promo code created",
       admin_role_update: "Admin access changed",
       coin_adjustment: "Coin balance adjusted",
+      reward_pricing_settings_update: "Steam pricing updated",
       insert: "Reward created",
       update: "Reward updated",
       delete: "Reward deleted"
@@ -1368,6 +1573,7 @@
     if (row.action === "admin_role_update") return `${details.previous_role || "No access"} → ${details.role || "No access"}`;
     if (row.action === "system_status_update") return statusLabel(details.status);
     if (row.action === "promo_create") return `${formatNumber(details.coins)} coins${details.max ? ` · ${formatNumber(details.max)} uses` : ""}`;
+    if (row.action === "reward_pricing_settings_update") return `${details.markup_percent ?? "?"}% markup · ${details.coins_per_eur ?? "?"} coins/€`;
     if (row.entity_type === "reward_item") return details.active_before === details.active_after ? "Inventory details changed" : `${details.active_before ? "Visible" : "Hidden"} → ${details.active_after ? "Visible" : "Hidden"}`;
     return "Change recorded";
   }
@@ -1464,5 +1670,5 @@
     target.innerHTML = state.coinHistory.length ? state.coinHistory.map((item) => `<div class="admin-audit-row"><span class="admin-audit-icon">$</span><div><strong>${item.amount > 0 ? "+" : ""}${formatNumber(item.amount)} coins</strong><small>${safe(item.reason || "Manual adjustment")}</small></div><div><strong>${safe(profileLabel(item.user_id))}</strong><small>By ${safe(adminLabel(item.created_by))}</small></div><time class="admin-audit-time">${safe(formatDateTime(item.created_at))}</time></div>`).join("") : '<div class="admin-empty">No manual coin adjustments yet.</div>';
   }
 
-  window.initAdminV143 = initAdminV143;
+  window.initAdminV145 = initAdminV145;
 })();
