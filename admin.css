@@ -1,4 +1,4 @@
-/* SkinQuest v14.3.0 admin operations workspace */
+/* SkinQuest v14.4.1 admin operations workspace */
 :root {
   --ops-bg: #080b10;
   --ops-sidebar: #0b0f15;
@@ -541,6 +541,9 @@ body.admin-ops-body {
 .admin-status-pill.status-new { color: #f5c96f; border-color: rgba(232,179,77,.25); background: rgba(232,179,77,.07); }
 .admin-status-pill.status-reviewing,
 .admin-status-pill.status-open { color: #83b8ff; border-color: rgba(100,165,255,.25); background: rgba(100,165,255,.07); }
+.admin-status-pill.status-ordered { color: #f5c96f; border-color: rgba(232,179,77,.25); background: rgba(232,179,77,.07); }
+.admin-status-pill.status-trade_locked { color: #f4b765; border-color: rgba(243,166,74,.25); background: rgba(243,166,74,.07); }
+.admin-status-pill.status-ready_to_trade { color: #70dea1; border-color: rgba(85,214,146,.25); background: rgba(85,214,146,.07); }
 .admin-status-pill.status-trade_sent { color: #b59bff; border-color: rgba(162,133,255,.25); background: rgba(162,133,255,.07); }
 .admin-status-pill.status-completed,
 .admin-status-pill.status-resolved,

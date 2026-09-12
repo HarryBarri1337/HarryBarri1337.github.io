@@ -1,0 +1,4 @@
+# v14.4.1: this one scheduled function authenticates with ORDER_CRON_SECRET.
+# All other Edge Functions keep Supabase JWT verification at the default.
+[functions.reward-order-ready-sweep]
+verify_jwt = false

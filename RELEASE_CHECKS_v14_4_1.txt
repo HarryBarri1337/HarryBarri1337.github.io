@@ -1,0 +1,64 @@
+SkinQuest v14.4.1 release checks
+================================
+
+DEPLOYMENT
+[ ] Back up Supabase.
+[ ] Run skinquest_upgrade_existing_to_v14_4_1.sql once.
+[ ] Deploy/redeploy reward-order-notify.
+[ ] Deploy/redeploy reward-order-status-notify.
+[ ] Redeploy delete-account.
+[ ] Optional/recommended: deploy reward-order-ready-sweep with JWT verification disabled.
+[ ] Optional/recommended: set ORDER_CRON_SECRET and create a 5-minute Cron job.
+[ ] Upload website files.
+[ ] Hard-refresh and confirm cache name is skinquest-cache-v1441.
+
+PREPARED REWARD
+[ ] Prepared stock 1/reserved 0 -> redeem -> reserved becomes 1.
+[ ] Order starts Ready to trade.
+[ ] UI does NOT allow Trade locked for this reward.
+[ ] UI/server reject Ready to trade -> Completed directly.
+[ ] Add valid /tradeoffer/<numeric id>/ URL and mark Trade sent.
+[ ] Complete from Trade sent -> reserved -1 and total -1.
+[ ] Completed cannot reopen.
+
+ORDERABLE REWARD
+[ ] Physical stock 0 still shows Available to order.
+[ ] Order -> coins deducted once, stock unchanged, status Ordered.
+[ ] Ordered only offers Trade locked (plus terminal refund states).
+[ ] Trade locked requires a future exact Steam unlock time.
+[ ] Dashboard shows countdown + exact unlock time.
+[ ] Expired lock becomes Ready to trade.
+[ ] With Cron enabled, this happens without opening Admin.
+[ ] ADMIN_REWARD_EMAIL gets Ready to trade notification.
+[ ] Customer gets Ready to trade email if a valid email exists.
+[ ] Ready to trade -> Trade sent requires a valid numeric Steam trade-offer URL.
+[ ] Trade sent -> Completed works.
+[ ] Trade sent -> Refunded/Cancelled/Rejected is rejected.
+[ ] Trade sent -> Ready to trade works for declined/expired offer retry.
+
+REFUND / ACCOUNTING
+[ ] Cancel/reject/refund before Trade sent returns coins exactly once.
+[ ] Prepared refund releases exactly one reserved unit.
+[ ] Orderable refund never changes prepared stock.
+[ ] Saving a terminal status again does not duplicate refund/stock work.
+
+INVENTORY GUARDS
+[ ] Negative total stock is rejected.
+[ ] Negative reserved stock is rejected.
+[ ] Reserved > total is rejected.
+[ ] Stocked reward with reserved > 0 cannot switch to Available to order.
+
+ADMIN / SECURITY
+[ ] Non-admin cannot call sq_admin_update_order.
+[ ] Non-admin cannot call sq_refresh_expired_trade_locks.
+[ ] Normal users only see their own orders via RLS.
+[ ] Every real order state change appears in audit trail.
+[ ] Old cached admin_update_redemption_status still routes through new safety rules.
+
+REGRESSION
+[ ] Login / Steam auth / contact-email verification work.
+[ ] Forgot-password cooldown works.
+[ ] Reward filters/favourites render.
+[ ] Dashboard order history renders.
+[ ] Support inbox works.
+[ ] Account deletion blocks all open v14.4 order statuses.

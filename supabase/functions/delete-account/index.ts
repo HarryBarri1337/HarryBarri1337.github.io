@@ -31,11 +31,11 @@ Deno.serve(async (req) => {
       .from("redemption_requests")
       .select("id", { head: true, count: "exact" })
       .eq("user_id", user.id)
-      .in("status", ["pending", "reviewing", "trade_sent"]);
+      .in("status", ["pending", "reviewing", "ordered", "trade_locked", "ready_to_trade", "trade_sent"]);
     if ((count || 0) > 0)
       return reply(
         {
-          error: "Resolve pending reward requests before deleting the account.",
+          error: "Resolve open reward orders before deleting the account.",
         },
         409,
       );

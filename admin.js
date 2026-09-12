@@ -1,4 +1,4 @@
-/* SkinQuest v14.3.0 admin operations workspace */
+/* SkinQuest v14.4.1 admin operations workspace */
 (() => {
   "use strict";
 
@@ -6,7 +6,7 @@
   const VIEW_TITLES = {
     overview: "Overview",
     search: "Search results",
-    orders: "Redeem orders",
+    orders: "Reward orders",
     support: "Support inbox",
     rewards: "Rewards & stock",
     status: "System status",
@@ -16,7 +16,7 @@
     team: "Team access"
   };
   const OWNER_VIEWS = new Set(["coins", "team"]);
-  const ORDER_STATUSES = ["pending", "reviewing", "trade_sent", "completed", "rejected", "refunded", "cancelled"];
+  const ORDER_STATUSES = ["pending", "reviewing", "ordered", "trade_locked", "ready_to_trade", "trade_sent", "completed", "rejected", "refunded", "cancelled"];
   const SUPPORT_STATUSES = ["new", "open", "resolved"];
 
   const state = {
@@ -80,6 +80,25 @@
     return date.toLocaleDateString([], options);
   }
 
+  function toLocalDateTimeInput(value) {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  }
+
+  function tradeLockRemaining(value) {
+    const end = new Date(value).getTime();
+    if (!Number.isFinite(end)) return "Not set";
+    let seconds = Math.max(0, Math.ceil((end - Date.now()) / 1000));
+    if (seconds <= 0) return "Ready now";
+    const days = Math.floor(seconds / 86400); seconds %= 86400;
+    const hours = Math.floor(seconds / 3600); seconds %= 3600;
+    const minutes = Math.floor(seconds / 60);
+    return days > 0 ? `${days}d ${hours}h` : hours > 0 ? `${hours}h ${minutes}m` : `${Math.max(1, minutes)}m`;
+  }
+
   function relativeTime(value) {
     const timestamp = new Date(value || 0).getTime();
     if (!timestamp) return "Unknown time";
@@ -110,6 +129,9 @@
     const labels = {
       pending: "Pending",
       reviewing: "Reviewing",
+      ordered: "Ordered",
+      trade_locked: "Trade locked",
+      ready_to_trade: "Ready to trade",
       trade_sent: "Trade sent",
       completed: "Completed",
       rejected: "Rejected",
@@ -131,6 +153,31 @@
   function statusPill(status) {
     const key = textValue(status).toLowerCase() || "unknown";
     return `<span class="admin-status-pill status-${safe(key)}">${safe(statusLabel(key))}</span>`;
+  }
+
+  function allowedOrderStatuses(item) {
+    const current = textValue(item?.status).toLowerCase() || "pending";
+    const mode = item?.fulfillment_mode === "orderable" ? "orderable" : "stocked";
+    if (["completed", "rejected", "refunded", "cancelled"].includes(current)) return [current];
+    if (current === "trade_sent") return [current, "ready_to_trade", "completed"];
+
+    const terminal = ["rejected", "refunded", "cancelled"];
+    const next = mode === "orderable"
+      ? {
+          pending: ["reviewing", "ordered"],
+          reviewing: ["pending", "ordered"],
+          ordered: ["trade_locked"],
+          trade_locked: ["ready_to_trade"],
+          ready_to_trade: ["trade_sent"]
+        }
+      : {
+          pending: ["reviewing", "ready_to_trade"],
+          reviewing: ["pending", "ready_to_trade"],
+          ordered: ["ready_to_trade"],
+          trade_locked: ["ready_to_trade"],
+          ready_to_trade: ["trade_sent"]
+        };
+    return [...new Set([current, ...(next[current] || []), ...terminal])];
   }
 
   function notify(message, type = "info") {
@@ -239,7 +286,7 @@
   }
 
   function updateNavCounts() {
-    const openOrders = Number(state.kpis?.open_rewards ?? state.orders.filter((item) => ["pending", "reviewing", "trade_sent"].includes(item.status)).length);
+    const openOrders = Number(state.kpis?.open_rewards ?? state.orders.filter((item) => ["pending", "reviewing", "ordered", "trade_locked", "ready_to_trade", "trade_sent"].includes(item.status)).length);
     const openSupport = Number(state.kpis?.open_support ?? state.support.filter((item) => ["new", "open", null].includes(item.status)).length);
     [["orders", openOrders], ["support", openSupport]].forEach(([key, value]) => {
       const badge = $(`[data-nav-count="${key}"]`);
@@ -320,6 +367,7 @@
     $("#ordersLoadMore")?.addEventListener("click", () => loadOrders({ append: true }));
     $("#supportLoadMore")?.addEventListener("click", () => loadSupport({ append: true }));
     $("#openRewardCreate")?.addEventListener("click", () => openRewardEditor(null));
+    $("#rewardFulfillmentMode")?.addEventListener("change", updateRewardEditorMode);
 
     $("#adminGlobalSearchForm")?.addEventListener("submit", (event) => {
       event.preventDefault();
@@ -414,6 +462,39 @@
     }
   }
 
+  function notifyOrderStatus(requestId) {
+    sb.functions.invoke("reward-order-status-notify", { body: { request_id: requestId } })
+      .then(({ error }) => { if (error) console.warn("Order status email delayed", error); })
+      .catch((error) => console.warn("Order status email delayed", error));
+  }
+
+  function retryPendingOrderNotifications(rows) {
+    (rows || []).forEach((item) => {
+      if (!item?.admin_notified_at || !item?.user_notified_at) {
+        sb.functions.invoke("reward-order-notify", { body: { request_id: item.id } })
+          .then(({ error }) => { if (error) console.warn("Initial order notification retry delayed", error); })
+          .catch((error) => console.warn("Initial order notification retry delayed", error));
+      }
+      const status = textValue(item?.status);
+      const retryable = ["trade_locked", "trade_sent", "completed", "rejected", "refunded", "cancelled"].includes(status)
+        || (status === "ready_to_trade" && item?.fulfillment_mode === "orderable");
+      const needsUserStatus = item?.last_user_notified_status !== status;
+      const needsReadyAdmin = status === "ready_to_trade" && item?.fulfillment_mode === "orderable" && !item?.ready_admin_notified_at;
+      if (retryable && (needsUserStatus || needsReadyAdmin)) notifyOrderStatus(item.id);
+    });
+  }
+
+  async function refreshExpiredTradeLocks() {
+    try {
+      const changed = await rpc("sq_admin_refresh_trade_locks");
+      (changed || []).forEach((item) => notifyOrderStatus(item.request_id));
+      return changed || [];
+    } catch (error) {
+      if (!isMissingRpc(error)) console.warn("Trade-lock refresh failed", error);
+      return [];
+    }
+  }
+
   async function loadAll({ trigger = null } = {}) {
     if (state.loading) return;
     state.loading = true;
@@ -423,6 +504,7 @@
     setSyncState("loading", "Refreshing…");
 
     let failed = false;
+    await refreshExpiredTradeLocks();
     try {
       await loadAdminDirectory();
     } catch (error) {
@@ -512,7 +594,7 @@
 
   async function fallbackOrderSearch(queryText, status, limit, offset) {
     let query = sb.from("redemption_requests").select("*").order("created_at", { ascending: false });
-    if (status === "open") query = query.in("status", ["pending", "reviewing", "trade_sent"]);
+    if (status === "open") query = query.in("status", ["pending", "reviewing", "ordered", "trade_locked", "ready_to_trade", "trade_sent"]);
     else if (status && status !== "all") query = query.eq("status", status);
     const search = textValue(queryText).toLowerCase();
     if (!search) query = query.range(offset, offset + limit - 1);
@@ -540,6 +622,7 @@
       await hydrateProfiles(state.orders.flatMap((item) => [item.user_id, item.completed_by, item.last_handled_by]));
       renderOrders();
       updateNavCounts();
+      retryPendingOrderNotifications(state.orders);
     } catch (error) {
       target.innerHTML = `<div class="admin-empty"><strong>Could not load orders</strong>${safe(error.message)}</div>`;
       throw error;
@@ -670,7 +753,7 @@
         return;
       }
       target.innerHTML = `
-        ${state.globalOrders.length ? '<section class="admin-search-group"><h2>Redeem orders</h2><div class="admin-card admin-table-card" data-global-order-results></div></section>' : ""}
+        ${state.globalOrders.length ? '<section class="admin-search-group"><h2>Reward orders</h2><div class="admin-card admin-table-card" data-global-order-results></div></section>' : ""}
         ${state.globalSupport.length ? '<section class="admin-search-group"><h2>Support tickets</h2><div class="admin-card admin-table-card" data-global-support-results></div></section>' : ""}`;
       if (state.globalOrders.length) renderCaseTable($("[data-global-order-results]", target), state.globalOrders, "order");
       if (state.globalSupport.length) renderCaseTable($("[data-global-support-results]", target), state.globalSupport, "support");
@@ -688,7 +771,7 @@
   function renderPriorityQueue() {
     const target = $("#adminPriorityQueue");
     if (!target) return;
-    const orderRows = state.orders.filter((item) => ["pending", "reviewing", "trade_sent"].includes(item.status)).map((item) => ({ ...item, caseType: "order", number: orderNumber(item), title: item.reward_name, customer: profileLabel(item.user_id) }));
+    const orderRows = state.orders.filter((item) => ["pending", "reviewing", "ordered", "trade_locked", "ready_to_trade", "trade_sent"].includes(item.status)).map((item) => ({ ...item, caseType: "order", number: orderNumber(item), title: item.reward_name, customer: profileLabel(item.user_id) }));
     const supportRows = state.support.filter((item) => ["new", "open", null].includes(item.status)).map((item) => ({ ...item, caseType: "support", number: ticketNumber(item), title: item.topic, customer: item.account_email || profileLabel(item.user_id) }));
     const rows = [...orderRows, ...supportRows].sort((a, b) => new Date(a.created_at) - new Date(b.created_at)).slice(0, 7);
     if (!rows.length) {
@@ -770,19 +853,21 @@
       const number = orderNumber(item);
       const isTerminal = ["completed", "rejected", "refunded", "cancelled"].includes(item.status);
       openDrawer(`
-        <div class="admin-drawer-head"><p class="admin-eyebrow">Redeem order</p><h2 id="adminDrawerTitle">${safe(number)}</h2><p>${safe(item.reward_name || "Reward order")}</p></div>
+        <div class="admin-drawer-head"><p class="admin-eyebrow">Reward order</p><h2 id="adminDrawerTitle">${safe(number)}</h2><p>${safe(item.reward_name || "Reward order")}</p></div>
         <div class="admin-drawer-meta">
           <div><span>Status</span>${statusPill(item.status)}</div><div><span>Customer</span><strong>${safe(profileLabel(item.user_id))}</strong></div>
           <div><span>Created</span><strong>${safe(formatDateTime(item.created_at))}</strong></div><div><span>Value</span><strong>${formatNumber(item.points_coins || item.points_cost)} coins</strong></div>
+          <div><span>Fulfilment</span><strong>${item.fulfillment_mode === "orderable" ? "Available to order" : "In stock / prepared"}</strong></div><div><span>Trade lock</span><strong>${item.trade_locked_until ? `${safe(tradeLockRemaining(item.trade_locked_until))} · ${safe(formatDateTime(item.trade_locked_until))}` : "Not set"}</strong></div>
           <div><span>Last handled by</span><strong>${safe(item.last_handled_by ? adminLabel(item.last_handled_by) : "Not handled")}</strong></div><div><span>Completed by</span><strong>${safe(item.completed_by ? adminLabel(item.completed_by) : "Not completed")}</strong></div>
         </div>
         <section class="admin-drawer-section"><h3>Customer Steam trade URL</h3><div class="admin-copy-block"><code title="${safe(item.steam_trade_url || "")}">${safe(item.steam_trade_url || "No trade URL saved")}</code><button class="admin-row-action" type="button" data-copy-drawer="trade">Copy</button><button class="admin-row-action" type="button" data-open-trade ${item.steam_trade_url ? "" : "disabled"}>Open</button></div></section>
         <section class="admin-drawer-section"><h3>Update fulfilment</h3><form class="admin-drawer-form" id="adminOrderUpdateForm">
           ${isTerminal ? '<div class="admin-terminal-notice">This order is final. Notes and proof can still be documented, but its status cannot be reopened.</div>' : ""}
-          <label>Status<select id="drawerOrderStatus" ${isTerminal ? "disabled" : ""}>${ORDER_STATUSES.map((status) => `<option value="${status}" ${status === item.status ? "selected" : ""}>${safe(statusLabel(status))}</option>`).join("")}</select></label>
-          <label>Trade offer URL / proof<input id="drawerOrderTrade" maxlength="500" value="${safe(item.trade_offer_url || "")}" placeholder="https://steamcommunity.com/tradeoffer/…" /></label>
+          <label>Status<select id="drawerOrderStatus" ${isTerminal ? "disabled" : ""}>${allowedOrderStatuses(item).map((status) => `<option value="${status}" ${status === item.status ? "selected" : ""}>${safe(statusLabel(status))}</option>`).join("")}</select><small>Only safe next steps are shown. Sent trades cannot be refunded from the normal workflow.</small></label>
+          <label>Trade lock ends<input id="drawerOrderLockUntil" type="datetime-local" value="${safe(toLocalDateTimeInput(item.trade_locked_until))}" ${(isTerminal || item.fulfillment_mode !== "orderable") ? "disabled" : ""} /><small>${item.fulfillment_mode === "orderable" ? "After purchase, enter Steam's exact tradable time. The customer sees a live countdown." : "Prepared rewards do not use the purchase trade-lock stage."}</small></label>
+          <label>Trade offer URL / proof<input id="drawerOrderTrade" maxlength="500" value="${safe(item.trade_offer_url || "")}" placeholder="https://steamcommunity.com/tradeoffer/123456789/" /></label>
           <label>Admin note<textarea id="drawerOrderNote" maxlength="2000" placeholder="Internal context or a customer-visible update">${safe(item.admin_note || "")}</textarea></label>
-          <div class="admin-quick-actions"><button class="admin-secondary-button" type="button" data-order-quick="reviewing" ${isTerminal ? "disabled" : ""}>Start review</button><button class="admin-secondary-button" type="button" data-order-quick="trade_sent" ${isTerminal ? "disabled" : ""}>Trade sent</button><button class="admin-secondary-button" type="button" data-order-quick="completed" ${isTerminal ? "disabled" : ""}>Complete</button></div>
+          <div class="admin-quick-actions">${allowedOrderStatuses(item).filter((status) => status !== item.status && !["rejected","refunded","cancelled"].includes(status)).map((status) => `<button class="admin-secondary-button" type="button" data-order-quick="${safe(status)}">${safe(status === "trade_locked" ? "Purchased / trade locked" : statusLabel(status))}</button>`).join("")}</div>
           <div class="admin-drawer-actions"><button class="admin-secondary-button" type="button" data-copy-order-message>Copy customer update</button><button class="admin-primary-button" type="submit">Save order</button></div>
         </form></section>
         <section class="admin-drawer-section"><h3>Case history</h3><div class="admin-timeline" id="adminCaseTimeline"><div class="admin-empty">Loading history…</div></div></section>
@@ -813,23 +898,38 @@
     const status = $("#drawerOrderStatus")?.value;
     const note = textValue($("#drawerOrderNote")?.value);
     const trade = textValue($("#drawerOrderTrade")?.value);
+    const lockInput = textValue($("#drawerOrderLockUntil")?.value);
+    const lockUntil = lockInput ? new Date(lockInput) : null;
     if (!ORDER_STATUSES.includes(status)) return notify("Choose a valid order status.", "error");
-    if (trade && !isValidTradeProof(trade)) return notify("Use a valid HTTPS Steam Community trade offer URL.", "error");
-    if (status === "trade_sent" && !trade) return notify("Add the Steam trade-offer URL before marking the order as Trade sent.", "error");
+    if (!allowedOrderStatuses(item).includes(status)) return notify(`You cannot move this order from ${statusLabel(item.status)} to ${statusLabel(status)}.`, "error");
+    if (trade && !isValidTradeProof(trade)) return notify("Use a Steam trade-offer URL like https://steamcommunity.com/tradeoffer/123456789/.", "error");
+    if (status === "trade_locked" && item.fulfillment_mode !== "orderable") return notify("Prepared rewards do not use Trade locked.", "error");
+    if (status === "trade_locked" && (!lockUntil || Number.isNaN(lockUntil.getTime()) || lockUntil.getTime() <= Date.now())) return notify("Set a future Steam trade-lock end time first.", "error");
+    if (["trade_sent", "completed"].includes(status) && !trade) return notify("Add the Steam trade-offer URL before marking this order as sent/completed.", "error");
+    if (status === "completed" && item.status !== "trade_sent") return notify("Mark the Steam trade as sent before completing the order.", "error");
 
     if (["rejected", "refunded", "cancelled"].includes(status) && status !== item.status) {
-      const confirmed = await confirmAction("This terminal status refunds the customer's coins and releases reserved stock. It cannot be reopened afterward.", { title: `Mark ${statusLabel(status)}?`, confirmText: "Confirm refund", cancelText: "Cancel", danger: true, icon: "↩" });
+      const stockEffect = item.fulfillment_mode === "orderable" ? " Prepared stock will not be changed." : " The reserved prepared unit will be released.";
+      const confirmed = await confirmAction(`This terminal status refunds the customer's coins once.${stockEffect} It cannot be reopened afterward.`, { title: `Mark ${statusLabel(status)}?`, confirmText: "Confirm refund", cancelText: "Cancel", danger: true, icon: "↩" });
       if (!confirmed) return;
     }
     if (status === "completed" && item.status !== "completed") {
-      const confirmed = await confirmAction("This finalizes the order and removes one unit from stock. The completed order cannot be reopened afterward.", { title: "Complete order?", confirmText: "Mark completed", cancelText: "Cancel", icon: "✓" });
+      const stockEffect = item.fulfillment_mode === "orderable" ? " Prepared stock will not be changed." : " One reserved prepared unit will be consumed.";
+      const confirmed = await confirmAction(`This finalizes the order.${stockEffect} The completed order cannot be reopened afterward.`, { title: "Complete order?", confirmText: "Mark completed", cancelText: "Cancel", icon: "✓" });
       if (!confirmed) return;
     }
 
     const restore = buttonBusy(button, "Saving…");
     try {
-      await rpc("admin_update_redemption_status", { p_request_id: item.id, p_status: status, p_admin_note: note || null, p_trade_offer_url: trade || null });
+      await rpc("sq_admin_update_order", {
+        p_request_id: item.id,
+        p_status: status,
+        p_admin_note: note || null,
+        p_trade_offer_url: trade || null,
+        p_trade_locked_until: lockUntil ? lockUntil.toISOString() : null
+      });
       notify(`${orderNumber(item)} updated.`, "success");
+      notifyOrderStatus(item.id);
       closeDrawer();
       await Promise.allSettled([loadOrders({ reset: true }), loadKpis(), loadRewards(), loadAudit()]);
       renderOverview();
@@ -930,7 +1030,8 @@
   function isValidTradeProof(value) {
     try {
       const url = new URL(value);
-      return url.protocol === "https:" && ["steamcommunity.com", "www.steamcommunity.com"].includes(url.hostname.toLowerCase()) && url.pathname.startsWith("/tradeoffer/");
+      const hostOk = ["steamcommunity.com", "www.steamcommunity.com"].includes(url.hostname.toLowerCase());
+      return url.protocol === "https:" && hostOk && /^\/tradeoffer\/\d+\/?$/.test(url.pathname);
     } catch { return false; }
   }
 
@@ -964,6 +1065,10 @@
     return Number(item?.points_coins || item?.points_cost || 0);
   }
 
+  function rewardMode(item) {
+    return item?.fulfillment_mode === "orderable" ? "orderable" : "stocked";
+  }
+
   function rewardStock(item) {
     const total = Number(item?.quantity_total || 0);
     const reserved = Number(item?.quantity_reserved || 0);
@@ -977,12 +1082,15 @@
     const rows = state.rewards.filter((item) => [item.name, item.market_name, item.rarity, item.condition].some((value) => String(value || "").toLowerCase().includes(search)));
     const totals = state.rewards.reduce((sum, item) => {
       const stock = rewardStock(item);
-      sum.available += stock.available;
-      sum.reserved += stock.reserved;
+      if (rewardMode(item) === "orderable") sum.orderable += item.active ? 1 : 0;
+      else {
+        sum.available += stock.available;
+        sum.reserved += stock.reserved;
+      }
       if (item.active) sum.active += 1;
       return sum;
-    }, { available: 0, reserved: 0, active: 0 });
-    if ($("#adminRewardStats")) $("#adminRewardStats").innerHTML = `<span class="admin-mini-stat"><strong>${formatNumber(totals.active)}</strong>active listings</span><span class="admin-mini-stat"><strong>${formatNumber(totals.available)}</strong>available units</span><span class="admin-mini-stat"><strong>${formatNumber(totals.reserved)}</strong>reserved units</span>`;
+    }, { available: 0, reserved: 0, active: 0, orderable: 0 });
+    if ($("#adminRewardStats")) $("#adminRewardStats").innerHTML = `<span class="admin-mini-stat"><strong>${formatNumber(totals.active)}</strong>active listings</span><span class="admin-mini-stat"><strong>${formatNumber(totals.orderable)}</strong>orderable listings</span><span class="admin-mini-stat"><strong>${formatNumber(totals.available)}</strong>prepared units</span><span class="admin-mini-stat"><strong>${formatNumber(totals.reserved)}</strong>reserved units</span>`;
     if (!rows.length) {
       target.innerHTML = '<div class="admin-empty"><strong>No rewards found</strong>Try another reward search.</div>';
       return;
@@ -994,7 +1102,7 @@
         <div class="admin-reward-image">${image ? `<img src="${safe(image)}" alt="" loading="lazy" />` : `<span>${safe((item.name || "SQ").slice(0, 3).toUpperCase())}</span>`}</div>
         <div><strong>${safe(item.name)}</strong><small>${safe([item.rarity, item.condition].filter(Boolean).join(" · ") || "No rarity or condition")}</small></div>
         <span class="admin-stock-value"><b>${formatNumber(rewardCost(item))}</b> coins</span>
-        <span class="admin-stock-value"><b>${formatNumber(stock.available)}</b> available<small>${formatNumber(stock.reserved)} reserved / ${formatNumber(stock.total)} total</small></span>
+        <span class="admin-stock-value">${rewardMode(item) === "orderable" ? `<b>Available to order</b><small>ETA ${formatNumber(item.order_eta_days || 8)}+ days</small>` : `<b>${formatNumber(stock.available)}</b> available<small>${formatNumber(stock.reserved)} reserved / ${formatNumber(stock.total)} total</small>`}</span>
         ${statusPill(item.active ? "active" : "inactive")}
         <div class="admin-row-actions">${state.owner ? `<button class="admin-row-action" type="button" data-edit-reward="${safe(item.id)}">Edit</button><button class="admin-row-action" type="button" data-toggle-reward="${safe(item.id)}">${item.active ? "Hide" : "Activate"}</button>` : ""}</div>
       </div>`;
@@ -1004,6 +1112,16 @@
     $$('[data-toggle-reward]', target).forEach((button) => button.addEventListener("click", () => toggleReward(Number(button.dataset.toggleReward))));
   }
 
+  function updateRewardEditorMode() {
+    const orderable = $("#rewardFulfillmentMode")?.value === "orderable";
+    const total = $("#rewardTotal");
+    const reserved = $("#rewardReserved");
+    const eta = $("#rewardOrderEtaDays");
+    if (total) { total.disabled = orderable; total.title = orderable ? "Physical prepared stock is not used for Available to order rewards." : ""; }
+    if (reserved) { reserved.disabled = orderable; reserved.title = orderable ? "Orderable rewards never reserve prepared stock." : ""; }
+    if (eta) eta.disabled = !orderable;
+  }
+
   function openRewardEditor(item) {
     if (!state.owner) return notify("Owner access is required to edit rewards.", "error");
     state.lastFocus = document.activeElement;
@@ -1011,6 +1129,8 @@
     if ($("#rewardId")) $("#rewardId").value = item?.id || "";
     if ($("#rewardName")) $("#rewardName").value = item?.name || "";
     if ($("#rewardCost")) $("#rewardCost").value = item ? rewardCost(item) : "";
+    if ($("#rewardFulfillmentMode")) $("#rewardFulfillmentMode").value = rewardMode(item);
+    if ($("#rewardOrderEtaDays")) $("#rewardOrderEtaDays").value = item?.order_eta_days ?? 8;
     if ($("#rewardTotal")) $("#rewardTotal").value = item?.quantity_total ?? 1;
     if ($("#rewardReserved")) $("#rewardReserved").value = item?.quantity_reserved ?? 0;
     if ($("#rewardRarity")) $("#rewardRarity").value = item?.rarity || "";
@@ -1020,6 +1140,7 @@
     if ($("#rewardImage")) $("#rewardImage").value = item?.image_url || "";
     if ($("#rewardDescription")) $("#rewardDescription").value = item?.description || "";
     if ($("#rewardActive")) $("#rewardActive").checked = item?.active ?? true;
+    updateRewardEditorMode();
     const backdrop = $("#rewardEditorBackdrop");
     backdrop?.classList.remove("hidden");
     backdrop?.setAttribute("aria-hidden", "false");
@@ -1047,6 +1168,8 @@
       name: textValue($("#rewardName")?.value),
       points_coins: Number($("#rewardCost")?.value || 0),
       points_cost: Number($("#rewardCost")?.value || 0),
+      fulfillment_mode: $("#rewardFulfillmentMode")?.value === "orderable" ? "orderable" : "stocked",
+      order_eta_days: Number($("#rewardOrderEtaDays")?.value || 8),
       quantity_total: Number($("#rewardTotal")?.value || 0),
       quantity_reserved: Number($("#rewardReserved")?.value || 0),
       rarity: textValue($("#rewardRarity")?.value) || null,
@@ -1059,8 +1182,9 @@
     };
     if (!payload.name) return notify("Reward name is required.", "error");
     if (!Number.isInteger(payload.points_coins) || payload.points_coins < 1) return notify("Coin price must be a whole number of at least 1.", "error");
-    if (![payload.quantity_total, payload.quantity_reserved, payload.sort_order].every(Number.isInteger)) return notify("Stock and sort values must be whole numbers.", "error");
+    if (![payload.quantity_total, payload.quantity_reserved, payload.sort_order, payload.order_eta_days].every(Number.isInteger)) return notify("Stock, ETA and sort values must be whole numbers.", "error");
     if (payload.quantity_total < 0 || payload.quantity_reserved < 0 || payload.quantity_reserved > payload.quantity_total) return notify("Reserved stock must be between 0 and total stock.", "error");
+    if (payload.order_eta_days < 7 || payload.order_eta_days > 30) return notify("Order ETA must be between 7 and 30 days.", "error");
     if (payload.max_per_user !== null && (!Number.isInteger(payload.max_per_user) || payload.max_per_user < 1)) return notify("The user limit must be a whole number above 0.", "error");
 
     const restore = buttonBusy(button, "Saving…");

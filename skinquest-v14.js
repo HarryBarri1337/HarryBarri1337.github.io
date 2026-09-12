@@ -1,13 +1,13 @@
-/* SkinQuest v14.3.0 product upgrade layer.
+/* SkinQuest v14.4.1 product upgrade layer.
    Loaded after app.js. The full setup includes the v14 database layer;
-   v14.3.0 adds the dedicated admin operations workspace and traceable case workflow.
+   v14.4.1 adds stocked vs orderable rewards, trade-lock countdowns, and the fulfilment lifecycle.
    This layer extends the secure SkinQuest core without replacing reward authority.
 */
 
 (() => {
   "use strict";
 
-  const VERSION = "14.3.0";
+  const VERSION = "14.4.1";
   const GA_ID = "G-DFRR03C4BP";
   const ATTRIBUTION_KEY = "skinquest.firstTouch.v14";
   const CONSENT_KEY = "skinquest.cookieConsent.v1";
@@ -931,7 +931,7 @@
           const remaining = Math.max(0, cost - balance);
           const pct = Math.min(100, (balance / cost) * 100);
           const progress = create("div", "sq-reward-progress", `
-            <div class="sq-reward-progress-copy"><span>${balance > 0 ? `${formatNumber(balance)} / ${formatNumber(cost)} coins` : `${formatNumber(cost)} coins`}</span><strong>${remaining === 0 ? "Ready to redeem" : `${formatNumber(remaining)} remaining`}</strong></div>
+            <div class="sq-reward-progress-copy"><span>${balance > 0 ? `${formatNumber(balance)} / ${formatNumber(cost)} coins` : `${formatNumber(cost)} coins`}</span><strong>${remaining === 0 ? (text.includes("available to order") ? "Ready to order" : "Ready to redeem") : `${formatNumber(remaining)} remaining`}</strong></div>
             <div class="sq-mini-progress"><span style="width:${pct}%"></span></div>
           `);
           const actions = $(".reward-actions", card);
@@ -1006,7 +1006,7 @@
           <h2 id="sqRewardDetailTitle">${safeText(title)}</h2>
           <p>${safeText(description)}</p>
           <div class="sq-detail-meta"><strong>${safeText(price)}</strong><span>${safeText(stock || "Stock shown in the reward store")}</span></div>
-          <div class="sq-detail-safety"><strong>How delivery works</strong><span>Redeem at a fixed coin price. SkinQuest reviews the request and sends approved rewards using the Steam trade URL saved to your account.</span></div>
+          <div class="sq-detail-safety"><strong>How delivery works</strong><span>${stock.toLowerCase().includes("available to order") ? "Order at a fixed coin price. SkinQuest buys the item, then your dashboard shows Steam's exact trade-lock countdown before it can be sent." : "Redeem at a fixed coin price. This item is prepared stock and is usually sent within 1–2 days using the Steam trade URL saved to your account."}</span></div>
           <div class="hero-actions"><button class="button button-primary" type="button" data-sq-detail-redeem>Use reward action</button><button class="button button-ghost" type="button" data-sq-detail-close>Close</button></div>
         </div>
       </article>`);

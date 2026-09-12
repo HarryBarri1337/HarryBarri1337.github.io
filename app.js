@@ -1,4 +1,4 @@
-// SkinQuest v14.3.0 core - secure base; enhanced by skinquest-v14.js
+// SkinQuest v14.4.1 core - secure base; enhanced by skinquest-v14.js
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -1261,7 +1261,7 @@ async function updateHomeAuthState() {
     setHomeStats(
       Number(profile.points_balance || 0).toLocaleString(),
       String(homeProgress.level),
-      String((redemptions || []).filter((item) => ["pending", "reviewing", "trade_sent"].includes(item.status)).length),
+      String((redemptions || []).filter((item) => ["pending", "reviewing", "ordered", "trade_locked", "ready_to_trade", "trade_sent"].includes(item.status)).length),
       homeProgress.title
     );
   } catch {
@@ -1707,9 +1707,23 @@ function getRewardAvailableStock(item) {
   return Math.max(0, total - getRewardReservedStock(item));
 }
 
+function getRewardFulfillmentMode(item) {
+  return item?.fulfillment_mode === "orderable" ? "orderable" : "stocked";
+}
+
+function rewardIsOrderable(item) {
+  return getRewardFulfillmentMode(item) === "orderable";
+}
+
 function rewardIsOutOfStock(item) {
+  if (rewardIsOrderable(item)) return false;
   const available = getRewardAvailableStock(item);
   return available !== null && available <= 0;
+}
+
+function getRewardOrderEtaDays(item) {
+  const days = Number(item?.order_eta_days || 8);
+  return Number.isFinite(days) ? Math.max(7, Math.min(30, Math.round(days))) : 8;
 }
 
 function renderRewardArt(item) {
@@ -1816,7 +1830,7 @@ function getRewardActionState(item, profile) {
   const hasTrade = !!tradeUrl && isValidSteamTradeUrl(tradeUrl) && (!profile?.steam_id || tradeUrlMatchesConnectedSteam(tradeUrl, profile.steam_id));
 
   if (rewardIsOutOfStock(item)) {
-    return { disabled: true, label: "Out of stock", note: "This reward is currently unavailable.", action: "out" };
+    return { disabled: true, label: "Out of stock", note: "This prepared reward is currently unavailable.", action: "out" };
   }
   if (!hasUser) {
     return { disabled: false, label: "Sign in to redeem", note: "Create an account before redeeming.", action: "login" };
@@ -1831,7 +1845,10 @@ function getRewardActionState(item, profile) {
     const missing = Math.max(0, cost - balance);
     return { disabled: false, label: "Complete surveys", note: `Need ${missing.toLocaleString()} more coins`, action: "earn" };
   }
-  return { disabled: false, label: "Redeem", note: "Manual review after request.", action: "redeem" };
+  if (rewardIsOrderable(item)) {
+    return { disabled: false, label: "Order reward", note: `Available to order · at least ${getRewardOrderEtaDays(item)} days before fulfilment`, action: "redeem" };
+  }
+  return { disabled: false, label: "Redeem", note: "In stock · usually sent within 1–2 days", action: "redeem" };
 }
 
 const REWARD_SHOP_PREFS_KEY = "skinquest_reward_shop_preferences";
@@ -1972,6 +1989,7 @@ function renderRewards() {
       const haystack = [item.name, item.description, item.rarity, item.condition, item.market_name].filter(Boolean).join(" ").toLowerCase();
       const cost = getRewardCost(item);
       const available = !rewardIsOutOfStock(item);
+      const physicallyInStock = !rewardIsOrderable(item) && getRewardAvailableStock(item) > 0;
       const matchesSearch = !query || haystack.includes(query);
       const matchesMin = !hasMin || cost >= minValue;
       const matchesMax = !hasMax || cost <= maxValue;
@@ -1979,7 +1997,7 @@ function renderRewards() {
       const matchesAfford =
         affordValue === "all" ||
         (affordValue === "affordable" && signedIn && available && cost <= balance) ||
-        (affordValue === "in-stock" && available);
+        (affordValue === "in-stock" && physicallyInStock);
 
       return matchesSearch && matchesMin && matchesMax && matchesVisibility && matchesAfford;
     });
@@ -2020,8 +2038,9 @@ function renderRewards() {
       const reserved = getRewardReservedStock(item);
       const available = getRewardAvailableStock(item);
       const outOfStock = rewardIsOutOfStock(item);
-      const stockText = available === null ? "In stock" : `${available} available`;
-      const description = item.description || item.market_name || "Manual Steam trade after review";
+      const orderable = rewardIsOrderable(item);
+      const stockText = orderable ? "Available to order" : (available === null ? "In stock" : `${available} available`);
+      const description = item.description || item.market_name || (orderable ? "Ordered by SkinQuest after checkout" : "Prepared for manual Steam delivery");
       const action = getRewardActionState(item, currentProfile);
 
       const isFavorited = favoriteRewardIds.has(Number(item.id));
@@ -2041,8 +2060,8 @@ function renderRewards() {
             <p class="muted reward-description">${escapeHtml(description)}</p>
             <div class="reward-meta">
               <span class="price">${coinIcon("coin-icon-small")} ${formatCoins(getRewardCost(item))}</span>
-              <span class="stock-pill ${outOfStock ? "stock-out" : ""}">${outOfStock ? "Out of stock" : escapeHtml(stockText)}</span>
-              ${total !== null && reserved > 0 ? `<span class="stock-pill reserved-stock">${reserved} reserved</span>` : ""}
+              <span class="stock-pill ${outOfStock ? "stock-out" : ""} ${orderable ? "stock-order" : ""}">${outOfStock ? "Out of stock" : escapeHtml(stockText)}</span>
+              ${!orderable && total !== null && reserved > 0 ? `<span class="stock-pill reserved-stock">${reserved} reserved</span>` : ""}
             </div>
             <div class="reward-actions reward-actions-smart">
               <button class="button ${action.action === "redeem" ? "button-primary" : "button-ghost"}" type="button" data-reward-action="${escapeHtml(action.action)}" data-redeem="${item.id}" ${action.disabled ? "disabled" : ""}>
@@ -2178,19 +2197,23 @@ async function requestRedeem(rewardId, sourceButton = null) {
   }
 
   if (rewardIsOutOfStock(reward)) {
-    showMessage("That reward is out of stock.");
+    showMessage("That prepared reward is out of stock.");
     await loadRewards();
     renderRewards();
     return;
   }
 
+  const orderable = rewardIsOrderable(reward);
   const available = getRewardAvailableStock(reward);
-  const stockLine = available === null ? "" : ` Available after this request: ${Math.max(0, available - 1)}.`;
+  const stockLine = !orderable && available !== null ? ` Available after this request: ${Math.max(0, available - 1)}.` : "";
+  const etaLine = orderable
+    ? ` SkinQuest will buy the item after your order. Expect at least ${getRewardOrderEtaDays(reward)} days before fulfilment; once purchased, the exact Steam trade-lock countdown will appear in your dashboard.`
+    : " This item is already prepared and is usually sent within 1–2 days.";
   const confirmed = await showConfirm(
-    `Redeem ${reward.name} for ${getRewardCost(reward).toLocaleString()} coins? Coins are deducted now and held while your request is pending.${stockLine}`,
+    `${orderable ? "Order" : "Redeem"} ${reward.name} for ${getRewardCost(reward).toLocaleString()} coins? Coins are deducted now.${etaLine}${stockLine}`,
     {
-      title: "Redeem reward",
-      confirmText: "Redeem",
+      title: orderable ? "Order reward" : "Redeem reward",
+      confirmText: orderable ? "Place order" : "Redeem",
       cancelText: "Not yet",
       icon: coinIcon("coin-icon-confirm")
     }
@@ -2200,23 +2223,26 @@ async function requestRedeem(rewardId, sourceButton = null) {
   if (sourceButton) {
     sourceButton.disabled = true;
     sourceButton.dataset.originalText = sourceButton.textContent;
-    sourceButton.textContent = "Redeeming...";
+    sourceButton.textContent = rewardIsOrderable(reward) ? "Ordering..." : "Redeeming...";
   }
 
   try {
     const { data, error } = await withTimeout(
       sb.rpc("redeem_reward", { p_reward_id: rewardId }),
       15000,
-      "The redeem request timed out. Please check your connection and try again."
+      "The reward order timed out. Please check your connection and try again."
     );
 
     if (error) throw error;
     if (!data || data.ok !== true || !data.request_id) {
-      throw new Error("The reward server returned an invalid response. No redeem request was confirmed.");
+      throw new Error("The reward server returned an invalid response. No reward order was confirmed.");
     }
 
     const orderNumber = data.order_number || `SQ-R-${String(data.request_id).padStart(6, "0")}`;
-    showMessage(`Redeem request ${orderNumber} created. Coins were deducted and stock was reserved for manual review.`, "success");
+    const createdMode = data.fulfillment_mode || getRewardFulfillmentMode(reward);
+    showMessage(createdMode === "orderable"
+      ? `Order ${orderNumber} placed. Coins were deducted. We will purchase the item and show the Steam trade-lock countdown once it is bought.`
+      : `Order ${orderNumber} created. Your item is already in stock and reserved for delivery.`, "success");
     sb.functions.invoke("reward-order-notify", { body: { request_id: data.request_id } })
       .then(({ error: notifyError }) => { if (notifyError) console.warn("Order notification delayed", notifyError); })
       .catch((notifyError) => console.warn("Order notification delayed", notifyError));
@@ -2234,14 +2260,14 @@ async function requestRedeem(rewardId, sourceButton = null) {
     }
     if (errorText.toLowerCase().includes("trade url") || errorText.toLowerCase().includes("trade link")) {
       const goDashboard = await showConfirm(
-        "Your reward request was not created because your Steam trade URL is missing or was not saved correctly. Add it in Settings, save it, then try redeeming again.",
+        "Your reward order was not created because your Steam trade URL is missing or was not saved correctly. Add it in Settings, save it, then try redeeming again.",
         { title: "Steam trade link required", confirmText: "Open Settings", cancelText: "Stay on rewards", icon: "↗" }
       );
       if (goDashboard) location.href = "/settings#tradeForm";
       await updateRewardAccountNotice();
       return;
     }
-    showMessage(errorText || "Could not create the redeem request. Please refresh and try again.", "error");
+    showMessage(errorText || "Could not create the reward order. Please refresh and try again.", "error");
   } finally {
     if (sourceButton) {
       sourceButton.disabled = false;
@@ -2702,7 +2728,7 @@ async function initSettingsPage() {
 
   qs("#deleteAccountButton")?.addEventListener("click", async () => {
     const confirmed = await showConfirm(
-      "This permanently deletes your SkinQuest account and personal profile. It cannot be undone. Pending reward requests must be resolved first.",
+      "This permanently deletes your SkinQuest account and personal profile. It cannot be undone. Open reward orders must be resolved first.",
       { title: "Delete account permanently?", confirmText: "Continue", cancelText: "Keep account", icon: "!" }
     );
     if (!confirmed) return;
@@ -2857,7 +2883,7 @@ function initSupportWidget() {
         <label>Topic
           <select data-support-topic>
             <option>Coins did not arrive</option>
-            <option>Reward request</option>
+            <option>Reward order</option>
             <option>Trade URL problem</option>
             <option>Account issue</option>
             <option>Other</option>
@@ -3043,7 +3069,7 @@ async function refreshDashboard({ background = false } = {}) {
 
     if (redemptionsResult.status === "fulfilled" && !redemptionsResult.value.error) {
       const userRedemptions = redemptionsResult.value.data || [];
-      const pending = userRedemptions.filter((item) => ["pending", "reviewing", "trade_sent"].includes(item.status)).length;
+      const pending = userRedemptions.filter((item) => ["pending", "reviewing", "ordered", "trade_locked", "ready_to_trade", "trade_sent"].includes(item.status)).length;
       const pendingDisplay = qs("#pendingDisplay");
       if (pendingDisplay) pendingDisplay.textContent = pending;
       renderRedeemHistory(userRedemptions);
@@ -3155,6 +3181,67 @@ async function renderGoalRewards(user, profile) {
   });
 }
 
+function getEffectiveOrderStatus(item) {
+  if (item?.status === "trade_locked" && item?.trade_locked_until) {
+    const unlock = new Date(item.trade_locked_until).getTime();
+    if (Number.isFinite(unlock) && unlock <= Date.now()) return "ready_to_trade";
+  }
+  return item?.status || "pending";
+}
+
+function formatTradeLockRemaining(value) {
+  const end = new Date(value).getTime();
+  if (!Number.isFinite(end)) return "";
+  let seconds = Math.max(0, Math.ceil((end - Date.now()) / 1000));
+  if (seconds <= 0) return "Ready now";
+  const days = Math.floor(seconds / 86400); seconds %= 86400;
+  const hours = Math.floor(seconds / 3600); seconds %= 3600;
+  const minutes = Math.floor(seconds / 60);
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${Math.max(1, minutes)}m`;
+}
+
+function renderOrderProgress(item) {
+  const status = getEffectiveOrderStatus(item);
+  if (status === "ordered") {
+    const eta = item?.estimated_ready_at ? ` Initial estimate: ${formatDate(item.estimated_ready_at)}.` : "";
+    return `<p class="muted order-progress-line"><strong>Available to order</strong> · Waiting for SkinQuest to purchase the item.${escapeHtml(eta)}</p>`;
+  }
+  if (item?.status === "trade_locked" && item?.trade_locked_until && status === "trade_locked") {
+    return `<p class="muted order-progress-line" data-trade-lock-until="${escapeHtml(item.trade_locked_until)}"><strong>Trade locked</strong> · <span data-trade-lock-countdown>${escapeHtml(formatTradeLockRemaining(item.trade_locked_until))}</span> remaining · unlocks ${escapeHtml(formatDate(item.trade_locked_until))}</p>`;
+  }
+  if (status === "ready_to_trade") {
+    return `<p class="muted order-progress-line"><strong>Ready to trade</strong> · The item is unlocked and queued for SkinQuest to send.</p>`;
+  }
+  if (status === "trade_sent") {
+    return `<p class="muted order-progress-line"><strong>Trade sent</strong> · Accept the Steam trade offer. If it expires or is declined, SkinQuest can return the order to Ready to trade without refunding it.</p>`;
+  }
+  if (["rejected", "refunded", "cancelled"].includes(status)) {
+    return `<p class="muted order-progress-line"><strong>${escapeHtml(formatStatus(status))}</strong> · This order is closed and its coin refund is handled once by the server.</p>`;
+  }
+  return "";
+}
+
+function refreshTradeLockCountdowns() {
+  qsa("[data-trade-lock-until]").forEach((row) => {
+    const value = row.dataset.tradeLockUntil;
+    const target = row.querySelector("[data-trade-lock-countdown]");
+    if (!target) return;
+    const remaining = formatTradeLockRemaining(value);
+    target.textContent = remaining;
+    if (remaining === "Ready now") {
+      row.innerHTML = "<strong>Ready to trade</strong> · The Steam trade lock has ended.";
+      const orderRow = row.closest(".redeem-row");
+      const pill = orderRow?.querySelector(".status-pill");
+      if (pill) {
+        pill.className = "status-pill status-ready_to_trade";
+        pill.textContent = "Ready to trade";
+      }
+    }
+  });
+}
+
 function renderRedeemHistory(redemptions) {
   const redeemHistory = qs("#redeemHistory");
   if (!redeemHistory) return;
@@ -3162,25 +3249,28 @@ function renderRedeemHistory(redemptions) {
   if (!redemptions || redemptions.length === 0) {
     redeemHistory.className = "empty-state empty-action-state";
     redeemHistory.innerHTML = `
-      <strong>No redeem requests yet.</strong>
-      <span>Once you redeem a reward, your request status appears here.</span>
+      <strong>No reward orders yet.</strong>
+      <span>Once you redeem or order a reward, its fulfilment status appears here.</span>
       <a class="button button-primary" href="/rewards">Browse rewards</a>
     `;
     scrollToRequestedRedemption();
     return;
   }
 
-  const rows = redemptions.map((item, index) => `
+  const rows = redemptions.map((item, index) => {
+    const effectiveStatus = getEffectiveOrderStatus(item);
+    return `
     <div class="redeem-row ${index >= 5 ? "redeem-extra hidden" : ""}" id="redeem-request-${escapeHtml(item.id)}" data-redeem-request-id="${escapeHtml(item.id)}">
       <div>
         <strong>${escapeHtml(item.reward_name)}</strong>
         <p class="muted">${escapeHtml(item.order_number || `SQ-R-${String(item.id).padStart(6, "0")}`)} · ${formatDate(item.created_at)} · ${formatCoins(getRequestCost(item))}</p>
+        ${renderOrderProgress(item)}
         ${isValidSteamTradeOfferUrl(item.trade_offer_url) ? `<a class="mini-link" target="_blank" rel="noopener" href="${escapeHtml(item.trade_offer_url)}">Open trade offer</a>` : ""}
         ${item.admin_note ? `<p class="muted admin-note-view">${escapeHtml(item.admin_note)}</p>` : ""}
       </div>
-      <span class="status-pill status-${escapeHtml(item.status)}">${escapeHtml(formatStatus(item.status))}</span>
-    </div>
-  `).join("");
+      <span class="status-pill status-${escapeHtml(effectiveStatus)}">${escapeHtml(formatStatus(effectiveStatus))}</span>
+    </div>`;
+  }).join("");
 
   const showMore = redemptions.length > 5 ? `
     <button class="button button-ghost history-show-more" type="button" data-show-more-redeems>
@@ -3190,6 +3280,11 @@ function renderRedeemHistory(redemptions) {
 
   redeemHistory.className = "redeem-list";
   redeemHistory.innerHTML = `${rows}${showMore}`;
+  refreshTradeLockCountdowns();
+  if (!redeemHistory.dataset.tradeLockTimer) {
+    redeemHistory.dataset.tradeLockTimer = "true";
+    window.setInterval(refreshTradeLockCountdowns, 30000);
+  }
   scrollToRequestedRedemption();
   redeemHistory.querySelector("[data-show-more-redeems]")?.addEventListener("click", (event) => {
     redeemHistory.querySelectorAll(".redeem-extra").forEach((row) => row.classList.remove("hidden"));
@@ -3275,6 +3370,9 @@ function formatStatus(status) {
   const labels = {
     pending: "Pending",
     reviewing: "Reviewing",
+    ordered: "Ordered",
+    trade_locked: "Trade locked",
+    ready_to_trade: "Ready to trade",
     trade_sent: "Trade sent",
     completed: "Completed",
     rejected: "Rejected",
@@ -3535,7 +3633,7 @@ async function loadAdminSystemStatus() {
   let activeRewards = "—";
 
   try {
-    const { count } = await sb.from("redemption_requests").select("id", { count: "exact", head: true }).in("status", ["pending", "reviewing", "trade_sent"]);
+    const { count } = await sb.from("redemption_requests").select("id", { count: "exact", head: true }).in("status", ["pending", "reviewing", "ordered", "trade_locked", "ready_to_trade", "trade_sent"]);
     openRequests = Number(count || 0).toLocaleString();
   } catch {}
 
@@ -3647,7 +3745,7 @@ async function loadAdminRequests() {
   let query = sb.from("redemption_requests").select("*").order("created_at", { ascending: false }).limit(100);
 
   if (statusFilter === "open") {
-    query = query.in("status", ["pending", "reviewing", "trade_sent"]);
+    query = query.in("status", ["pending", "reviewing", "ordered", "trade_locked", "ready_to_trade", "trade_sent"]);
   } else if (statusFilter !== "all") {
     query = query.eq("status", statusFilter);
   }
@@ -3662,7 +3760,7 @@ async function loadAdminRequests() {
 
   if (!data || data.length === 0) {
     list.className = "empty-state";
-    list.textContent = "No redeem requests found.";
+    list.textContent = "No reward orders found.";
     return;
   }
 
@@ -3687,7 +3785,7 @@ async function loadAdminRequests() {
         <div class="admin-grid-form compact">
           <label>Status
             <select data-request-status="${item.id}">
-              ${["pending", "reviewing", "trade_sent", "completed", "rejected", "refunded", "cancelled"].map((status) => `
+              ${["pending", "reviewing", "ordered", "trade_locked", "ready_to_trade", "trade_sent", "completed", "rejected", "refunded", "cancelled"].map((status) => `
                 <option value="${status}" ${status === item.status ? "selected" : ""}>${formatStatus(status)}</option>
               `).join("")}
             </select>
@@ -3703,7 +3801,7 @@ async function loadAdminRequests() {
       <div class="admin-actions vertical">
         <button class="button button-primary" type="button" data-admin-save="${item.id}">Save status</button>
         <button class="button button-ghost" type="button" data-admin-quick="trade_sent" data-request-id="${item.id}">Trade sent</button>
-        <button class="button button-ghost" type="button" data-copy="Your SkinQuest reward request for ${escapeHtml(item.reward_name)} has been updated to ${escapeHtml(formatStatus(item.status))}. Please check your SkinQuest dashboard for details." data-copy-label="user update message">Copy user message</button>
+        <button class="button button-ghost" type="button" data-copy="Your SkinQuest reward order for ${escapeHtml(item.reward_name)} has been updated to ${escapeHtml(formatStatus(item.status))}. Please check your SkinQuest dashboard for details." data-copy-label="user update message">Copy user message</button>
         <button class="button button-ghost" type="button" data-admin-quick="completed" data-request-id="${item.id}">Completed</button>
         <button class="button button-danger" type="button" data-admin-quick="rejected" data-request-id="${item.id}">Reject + refund</button>
       </div>
