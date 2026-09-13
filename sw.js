@@ -4,14 +4,15 @@
 // when offline. Supabase/API calls and any cross-origin requests are
 // always left alone and go straight to network.
 
-const CACHE_NAME = "skinquest-cache-v1457";
+const CACHE_NAME = "skinquest-cache-v1460";
 const APP_SHELL = [
-  "skinquest-v14.css?v=1457",
-  "skinquest-v14.js?v=1457",
+  "skinquest-v14.css?v=1460",
+  "skinquest-v14.js?v=1460",
+  "/skinquest-v146.css?v=1460", "/skinquest-v146.js?v=1460",
   "offline.html",
-  "/", "/surveys", "/rewards", "/how-it-works", "/install", "/admin",
-  "/styles.css?v=1457", "/app.js?v=1457", "/manifest.json",
-  "/admin.css?v=1457", "/admin.js?v=1457",
+  "/", "/surveys", "/rewards", "/how-it-works", "/install",
+  "/styles.css?v=1460", "/app.js?v=1460", "/manifest.json",
+  "/admin.css?v=1460", "/admin.js?v=1460",
   "/assets/vendor/supabase-js-2.45.4.js",
   "/assets/interface/skinquestlogo.png", "/assets/interface/coin_logo.png",
   "/assets/providers/cpx-research-logo.png",
@@ -43,6 +44,8 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
+  // Never retain private account HTML, even under a nested order route.
+  if (/^\/(orders(?:\/|$)|order\.html$|dashboard(?:\.html)?\/?$|settings(?:\.html)?\/?$|support(?:\.html)?\/?$|admin(?:\.html)?\/?$)/.test(url.pathname)) return;
 
   event.respondWith(
     fetch(request)

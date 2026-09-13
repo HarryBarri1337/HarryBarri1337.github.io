@@ -18,7 +18,7 @@
       }
     }());
   </script>
-  <link rel="stylesheet" href="styles.css?v=1457" />
+  <link rel="stylesheet" href="styles.css?v=1460" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#0b0f16" />
   <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png" />
@@ -28,7 +28,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="SkinQuest" />
   <meta property="og:site_name" content="SkinQuest" />
-  <link rel="stylesheet" href="skinquest-v14.css?v=1457" />
+  <link rel="stylesheet" href="skinquest-v14.css?v=1460" />
+  <link rel="stylesheet" href="skinquest-v146.css?v=1460" />
 </head>
 <body>
 <div id="pageLoader" class="page-loader">
@@ -69,7 +70,8 @@
   <section class="shop-toolbar reward-toolbar reward-toolbar-v118" aria-label="Reward filters">
     <div class="filter-control filter-search">
       <label for="skinSearch">Search</label>
-      <input id="skinSearch" type="search" placeholder="Search rewards..." autocomplete="off" />
+      <input id="skinSearch" type="search" placeholder="Search rewards..." autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="rewardSearchSuggestions" aria-expanded="false" />
+      <div class="sq146-suggestions hidden" id="rewardSearchSuggestions" role="listbox" aria-label="Matching reward suggestions"></div>
     </div>
 
     <div class="filter-control filter-price-range">
@@ -94,12 +96,13 @@
     <div class="filter-control filter-sort">
       <span class="filter-label">Sort</span>
       <div class="custom-select" data-sort-dropdown>
-        <button id="sortFilter" class="custom-select-trigger" type="button" data-value="price-desc" aria-haspopup="listbox" aria-expanded="false">
-          <span data-sort-label>Price: high to low</span>
+        <button id="sortFilter" class="custom-select-trigger" type="button" data-value="starter" aria-haspopup="listbox" aria-expanded="false">
+          <span data-sort-label>First reward: stock + low price</span>
           <span class="select-chevron" aria-hidden="true">⌄</span>
         </button>
         <div class="custom-select-menu" role="listbox" aria-label="Sort rewards">
-          <button class="custom-select-option active" type="button" role="option" aria-selected="true" data-sort-value="price-desc">Price: high to low</button>
+          <button class="custom-select-option active" type="button" role="option" aria-selected="true" data-sort-value="starter">First reward: stock + low price</button>
+          <button class="custom-select-option" type="button" role="option" aria-selected="false" data-sort-value="price-desc">Price: high to low</button>
           <button class="custom-select-option" type="button" role="option" aria-selected="false" data-sort-value="price-asc">Price: low to high</button>
           <button class="custom-select-option" type="button" role="option" aria-selected="false" data-sort-value="featured">Featured</button>
           <button class="custom-select-option" type="button" role="option" aria-selected="false" data-sort-value="stock-desc">Most stock first</button>
@@ -108,6 +111,9 @@
       </div>
     </div>
   </section>
+
+  <div class="sq146-quickbar" aria-label="Quick catalogue filters"><button class="filter-chip" type="button" data-reward-quick="starter">First rewards</button><button class="filter-chip" type="button" data-reward-quick="affordable">Within my balance</button><button class="filter-chip" type="button" data-reward-quick="case">Cases</button><button class="filter-chip" type="button" data-reward-quick="ak47">AK-47</button><label class="sq146-group-control"><input type="checkbox" id="groupRewardVariants" checked /> Group wear &amp; StatTrak variants</label></div>
+  <p class="sq146-search-hint">Search words in any order: “black lotus ft”, “ak47 slate”, “factory new”. Common wear abbreviations and small spelling mistakes are supported. A grouped price belongs to the pictured variant; open it to choose the exact item.</p>
 
   <section class="reward-shop-status" aria-live="polite">
     <span id="rewardResultCount">Loading rewards...</span>
@@ -129,9 +135,9 @@
     <a href="/privacy">Privacy</a>
     <a href="/how-it-works">Help</a>
     <a href="/install">Install app</a>
-    <a href="mailto:support@skinquestcs.com">Support</a>
+    <a href="/support">Support</a>
   </div>
-  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v14.5.7</a></p>
+  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v14.6.0</a></p>
 </footer>
 <div class="modal-backdrop hidden" id="authModal">
   <div class="auth-modal" role="dialog" aria-modal="true">
@@ -173,7 +179,8 @@
   </div>
 </div>
 <script src="assets/vendor/supabase-js-2.45.4.js"></script>
-<script src="app.js?v=1457"></script>
-<script src="skinquest-v14.js?v=1457"></script>
+<script src="skinquest-v146.js?v=1460"></script>
+<script src="app.js?v=1460"></script>
+<script src="skinquest-v14.js?v=1460"></script>
 </body>
 </html>

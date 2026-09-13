@@ -18,7 +18,7 @@
       }
     }());
   </script>
-  <link rel="stylesheet" href="styles.css?v=1457" />
+  <link rel="stylesheet" href="styles.css?v=1460" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#0b0f16" />
   <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png" />
@@ -30,7 +30,8 @@
   <meta property="og:site_name" content="SkinQuest" />
   <meta property="og:description" content="SkinQuest version history and recent platform updates." />
   <meta property="og:image" content="https://skinquestcs.com/assets/interface/skinquestlogo.png" />
-  <link rel="stylesheet" href="skinquest-v14.css?v=1457" />
+  <link rel="stylesheet" href="skinquest-v14.css?v=1460" />
+  <link rel="stylesheet" href="skinquest-v146.css?v=1460" />
 </head>
 <body>
 <div id="pageLoader" class="page-loader">
@@ -66,6 +67,21 @@
   <section class="panel changelog-list">
     <article class="changelog-entry current">
       <span class="pill">Current</span>
+      <h2>v14.6.0 - Clear reward journeys and owner finance</h2>
+      <ul>
+        <li>Low-cost first reward examples from the live catalogue and clearer homepage delivery explanations.</li>
+        <li>Grouped wear, StatTrak and Souvenir variants with permanent item pages and exact-variant checkout.</li>
+        <li>Server-side multi-word search, wear/weapon aliases, one-character typo matching and keyboard-accessible suggestions.</li>
+        <li>Private order pages with the saved coin price, recorded milestones, trade-lock countdown and customer updates.</li>
+        <li>Coin history source filters, older-entry pagination, order links and linked support requests.</li>
+        <li>Personal dashboard next action based on setup, current orders, goals and coin balance.</li>
+        <li>Owner-only manual EUR income, expected payments, costs and funding records with audited corrections.</li>
+        <li>Separate empty, connection-error and unconfirmed-availability survey states.</li>
+        <li>Includes second-provider application guidance; no unapproved provider is activated.</li>
+        <li>Requires the v14.6.0 SQL delta. Existing Edge Functions, secrets and Steam Cron are unchanged.</li>
+      </ul>
+    </article>
+    <article class="changelog-entry">
       <h2>v14.5.7 - User account interface correction</h2>
       <ul>
         <li>Entire user rows open the account with mouse, touch or keyboard; removed View user buttons.</li>
@@ -501,9 +517,9 @@
     <a href="/privacy">Privacy</a>
     <a href="/how-it-works">Help</a>
     <a href="/install">Install app</a>
-    <a href="mailto:support@skinquestcs.com">Support</a>
+    <a href="/support">Support</a>
   </div>
-  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v14.5.7</a></p>
+  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v14.6.0</a></p>
 </footer>
 <div class="modal-backdrop hidden" id="authModal">
   <div class="auth-modal" role="dialog" aria-modal="true">
@@ -545,7 +561,8 @@
   </div>
 </div>
 <script src="assets/vendor/supabase-js-2.45.4.js"></script>
-<script src="app.js?v=1457"></script>
-<script src="skinquest-v14.js?v=1457"></script>
+<script src="skinquest-v146.js?v=1460"></script>
+<script src="app.js?v=1460"></script>
+<script src="skinquest-v14.js?v=1460"></script>
 </body>
 </html>

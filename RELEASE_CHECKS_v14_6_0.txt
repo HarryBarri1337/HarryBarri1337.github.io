@@ -1,0 +1,75 @@
+SkinQuest v14.6.0 release checks — 13 September 2026
+===================================================
+
+VERIFIED LOCALLY
+[PASS] Existing v14.5.7 full schema + v14.6.0 delta twice, using embedded
+       PostgreSQL/PGlite with Supabase auth functions and roles stubbed.
+[PASS] Fresh v14.6.0 full setup + repeat delta; its final delta is identical
+       to skinquest_upgrade_existing_to_v14_6_0.sql.
+[PASS] Catalogue grouping, exact variants, hidden-item exclusion, weapon/wear
+       aliases, reordered words, typo tolerance and pagination bounds.
+[PASS] Real database redeem RPC creates the order and one coin deduction;
+       private order and ledger projections return only the caller's records.
+[PASS] Customer projection excludes admin_note and raw provider payloads.
+[PASS] Linked support validates order ownership and verified contact;
+       repeating a request identifier does not create a second ticket.
+[PASS] Anonymous/customers/admins cannot use owner finance RPCs. Direct
+       customer finance reads are RLS-filtered; direct writes are denied.
+[PASS] Duplicate finance identifiers/references, settlement retry, audited
+       void correction and unknown purchase estimates exercised in PostgreSQL.
+[PASS] JavaScript syntax checks for app/admin/enhancement/service-worker files.
+[PASS] Chromium full-page boots with local mock APIs, desktop and 390px mobile:
+       grouped catalogue, keyboard search, server extra filters/reset, exact
+       variant confirmation/cancel/redeem, stale-price block, private orders,
+       paginated/filterable coin history, linked support, CPX states and finance.
+[PASS] Second redemption flow is ignored while a confirmation or redeem
+       request is already pending. Cancel does not call redeem RPC.
+[PASS] Existing Users UI regression: whole-row click, Enter/Space, separated
+       identity/totals/history, styled tabs and switching-user isolation.
+[PASS] No horizontal page overflow or page JavaScript errors in these tests.
+[PASS] Complete supabase/ directory is byte-identical to v14.5.7, including
+       steam-market-sync. No live deploy, database write, application or Cron
+       change was performed while building this release.
+
+LIMITS OF LOCAL CHECKS
+Mock API results are not proof of production behavior. Embedded PostgreSQL
+uses stubbed auth and cannot reproduce every Supabase gateway/webhook setting.
+Chromium checks do not verify real CPX availability, provider callbacks,
+Steam responses, production CORS, email delivery or your host's Apache config.
+The catalogue only contains items already imported or manually added; this
+release neither completes nor speeds up the current Steam import.
+
+AFTER DEPLOYMENT — REQUIRED LIVE CHECKS
+[ ] Take a database backup; run ONLY the new existing-installation delta.
+[ ] Upload web files and .htaccess; keep production Supabase configuration.
+[ ] Hard-refresh. Visit /rewards/AN_EXISTING_ID directly and refresh it:
+    images/scripts must resolve and the selected exact variant must persist.
+[ ] Grouping on/off and search/filter work across pages, not just loaded cards.
+[ ] Adding prepared quantity to an existing imported item keeps one exact
+    listing; available stock is used before its orderable fallback.
+[ ] One real low-value redeem, after explicit confirmation, creates exactly
+    one order/deduction. Check status before retrying any timed-out request.
+[ ] /orders/ID shows saved coins/item, actual dates and customer update.
+[ ] Another account and a signed-out session cannot read that order/ledger.
+[ ] Mark a real trade sent with the existing admin workflow. The customer
+    sees the expected Steam link; no password/API key/proof-secret is requested.
+[ ] Set Customer order-page update in Admin and verify it on the order page.
+    Legacy Admin note may still appear in existing notification emails.
+[ ] Verify first-reward, setup, active-order and sent-trade dashboard prompts.
+[ ] Coin filters and Load older movements show actual credits/debits/refunds.
+[ ] Submit one linked support ticket; Admin receives its immutable context.
+    Existing support INSERT webhook/support-notify is needed for email alerts.
+[ ] Steam-only account without a verified contact email is blocked from
+    submitting linked support until a real contact address is verified.
+[ ] Owner Finance: enter a unique test expected receipt, mark it received,
+    record an expense and void a correction with a reason. Expected amounts
+    must not be counted as received cash; records must not alter user coins.
+[ ] Non-owner admin and ordinary user cannot access owner finance data.
+[ ] Compare money records to actual provider statements/purchase receipts:
+    no revenue is imported automatically, and this is not formal accounting.
+[ ] Test real CPX loading, empty and connection-error states on mobile/desktop.
+    Browser callbacks never credit coins; real verified postbacks still do.
+[ ] Confirm old cache is replaced and private pages are not retained offline.
+[ ] Existing Steam import percentage still advances under the SAME Cron job.
+[ ] Read SECOND_PROVIDER_v14_6_0.md; obtain provider approval and exact payout,
+    free-offer, age/country and callback terms before requesting integration.

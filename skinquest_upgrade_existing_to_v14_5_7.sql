@@ -1,2 +1,0 @@
--- SkinQuest v14.5.6 -> v14.5.7: frontend-only release.
--- No database changes. Do not run earlier migrations again.

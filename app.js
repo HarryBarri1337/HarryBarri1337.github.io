@@ -1,4 +1,4 @@
-// SkinQuest v14.5.7 core - secure base; enhanced by skinquest-v14.js
+// SkinQuest v14.6.0 core - secure base; enhanced by skinquest-v14.js
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -1505,6 +1505,10 @@ function isValidCpxWidgetPayload(widget, userId) {
 }
 
 function setCpxWidgetState(state, title, detail, canRetry = false) {
+  if (state !== "loading") {
+    window.clearTimeout(window.__skinquestCpxReadyTimer);
+    window.__skinquestCpxReadyTimer = null;
+  }
   const stage = qs("#cpxWidgetStage");
   const stateBox = qs("#cpxWidgetState");
   const stateTitle = qs("#cpxWidgetStateTitle");
@@ -1538,15 +1542,15 @@ function setCpxWidgetState(state, title, detail, canRetry = false) {
   }
 }
 
-function setCpxAvailabilityCount(value) {
+function setCpxAvailabilityCount(value, label = "available") {
   const count = qs("#cpxWidgetCount");
   const status = qs("#cpxWidgetStatus");
   const liveStatus = qs("#cpxLiveStatus");
   const safeCount = Math.max(0, Number(value) || 0);
-  const availableCount = Math.max(Number(window.__skinquestCpxAvailableCount || 0), safeCount);
+  const availableCount = safeCount;
   window.__skinquestCpxAvailableCount = availableCount;
   if (count) count.textContent = availableCount.toLocaleString();
-  if (status) status.textContent = "available";
+  if (status) status.textContent = label;
   if (liveStatus) {
     liveStatus.textContent = "Live";
     liveStatus.dataset.state = "ready";
@@ -1592,19 +1596,24 @@ function buildCpxConfig(widget) {
         );
       },
       count_new_surveys: (count) => {
+        if (count === null || count === undefined || !Number.isFinite(Number(count))) return;
         const surveyCount = Math.max(0, Number(count) || 0);
         if (surveyCount > 0) {
           window.__skinquestCpxAvailabilityState = "ready";
           setCpxWidgetState("ready", "Surveys are ready", "Choose an available CPX survey below.");
-          setCpxAvailabilityCount(surveyCount);
+          setCpxAvailabilityCount(surveyCount, "new");
         }
       },
       get_all_surveys: (surveys) => {
+        if (!Array.isArray(surveys)) return;
         const count = Array.isArray(surveys) ? surveys.length : 0;
         if (count > 0) {
           window.__skinquestCpxAvailabilityState = "ready";
           setCpxWidgetState("ready", "Surveys are ready", "Choose an available CPX survey below.");
           setCpxAvailabilityCount(count);
+        } else {
+          window.__skinquestCpxAvailabilityState = "empty";
+          setCpxWidgetState("empty", "No surveys match right now", "CPX has no matches right now. Availability changes; you have not lost any saved coins.", true);
         }
       },
       get_transaction: () => {}
@@ -1613,6 +1622,7 @@ function buildCpxConfig(widget) {
 }
 
 function resetCpxWidget() {
+  window.clearTimeout(window.__skinquestCpxReadyTimer);
   document.querySelector('script[data-skinquest-cpx="true"]')?.remove();
   const container = qs("#cpxFullscreen");
   if (container) container.replaceChildren();
@@ -1624,16 +1634,24 @@ function resetCpxWidget() {
   delete window.config;
 }
 
+function markCpxConnectionLoaded() {
+  if (window.__skinquestCpxAvailabilityState !== "loading") return;
+  setCpxWidgetState("loading", "Checking survey availability", "The CPX connection loaded. Waiting for availability; this does not mean there are no surveys.");
+  if (window.__skinquestCpxReadyTimer) return;
+  window.__skinquestCpxReadyTimer = window.setTimeout(() => {
+    if (window.__skinquestCpxAvailabilityState !== "loading") return;
+    window.__skinquestCpxAvailabilityState = "error";
+    setCpxWidgetState("error", "We could not confirm survey availability", "Try again, or open the signed CPX wall. A blocked connection is not the same as no matching surveys.", true);
+  }, 20000);
+}
+
 async function loadCpxWidget(widget, userId) {
   const container = qs("#cpxFullscreen");
   if (!container) return;
 
   if (window.__skinquestCpxWidgetUserId === userId && window.__skinquestCpxScriptPromise) {
     await window.__skinquestCpxScriptPromise;
-    if (window.__skinquestCpxAvailabilityState === "loading") {
-      window.__skinquestCpxAvailabilityState = "ready";
-      setCpxWidgetState("ready", "Surveys are ready", "Choose an available CPX survey below.");
-    }
+    markCpxConnectionLoaded();
     return;
   }
 
@@ -1654,10 +1672,7 @@ async function loadCpxWidget(widget, userId) {
 
   try {
     await window.__skinquestCpxScriptPromise;
-    if (window.__skinquestCpxAvailabilityState === "loading") {
-      window.__skinquestCpxAvailabilityState = "ready";
-      setCpxWidgetState("ready", "Surveys are ready", "Choose an available CPX survey below.");
-    }
+    markCpxConnectionLoaded();
   } catch (error) {
     resetCpxWidget();
     throw error;
@@ -1675,7 +1690,7 @@ function getRewardCatalogRequest() {
   const min = minInput ? Number(minInput) : null;
   const max = maxInput ? Number(maxInput) : null;
   return {
-    p_query: (qs("#skinSearch")?.value || "").trim() || null,
+    p_query: [(qs("#skinSearch")?.value || "").trim(), window.SQ146?.extraQuery() || ""].filter(Boolean).join(" ") || null,
     p_min_coins: Number.isFinite(min) ? Math.max(0, Math.trunc(min)) : null,
     p_max_coins: Number.isFinite(max) ? Math.max(0, Math.trunc(max)) : null,
     p_availability: getActiveAvailabilityFilter(),
@@ -1707,7 +1722,8 @@ async function loadRewards(options = {}) {
   };
 
   try {
-    const { data, error } = await sb.rpc("sq_search_rewards", request);
+    const grouped = qs("#groupRewardVariants")?.checked !== false;
+    const { data, error } = await sb.rpc(grouped ? "sq_browse_reward_families" : "sq_search_rewards", request);
     if (error) throw error;
     if (requestId !== rewardCatalogState.requestId) return;
 
@@ -1721,6 +1737,7 @@ async function loadRewards(options = {}) {
     }
     rewardCatalogState.total = Number(data?.total ?? rewardItems.length);
     rewardCatalogState.serverBacked = true;
+    rewardCatalogState.grouped = data?.grouped === true;
   } catch (error) {
     if (!isMissingRewardCatalogRpc(error)) throw error;
 
@@ -1908,7 +1925,7 @@ function rewardUsesSteamPricing(item) {
 
 function rewardHasCurrentPrice(item) {
   if (!rewardUsesSteamPricing(item)) return true;
-  if (typeof item?.price_is_current === "boolean") return item.price_is_current;
+  if (item?.price_is_current === false) return false;
   const price = Number(item?.steam_price_minor || 0);
   const validUntil = new Date(item?.steam_price_valid_until || 0).getTime();
   return price > 0 && Number.isFinite(validUntil) && validUntil > Date.now();
@@ -2062,6 +2079,7 @@ function getRewardActionState(item, profile) {
 
 const REWARD_SHOP_PREFS_KEY = "skinquest_reward_shop_preferences";
 const REWARD_SORT_LABELS = {
+  starter: "First reward: stock + low price",
   "price-desc": "Price: high to low",
   "price-asc": "Price: low to high",
   featured: "Featured",
@@ -2071,7 +2089,7 @@ const REWARD_SORT_LABELS = {
 
 function getRewardShopPreferences() {
   const defaults = {
-    default_sort: "price-desc",
+    default_sort: "starter",
     show_out_of_stock: true,
     compact_cards: false
   };
@@ -2149,6 +2167,8 @@ function clearRewardFilterControls() {
   if (minPrice) minPrice.value = "";
   if (maxPrice) maxPrice.value = "";
   setActiveAvailabilityFilter("all");
+  window.SQ146?.resetExtraQuery();
+  window.clearSkinQuestExtraFilters?.();
 }
 
 function cleanCoinRangeInput(input) {
@@ -2171,7 +2191,7 @@ function renderRewards() {
   applyRewardShopVisualPreferences(prefs);
 
   if (!grid.dataset.rewardPrefsHydrated) {
-    setActiveRewardSort(prefs.default_sort);
+    setActiveRewardSort(new URLSearchParams(location.search).get("starter") === "1" ? "starter" : prefs.default_sort);
     grid.dataset.rewardPrefsHydrated = "true";
   }
 
@@ -2199,7 +2219,7 @@ function renderRewards() {
       const cost = getRewardCost(item);
       const available = !rewardIsOutOfStock(item);
       const physicallyInStock = !rewardIsOrderable(item) && getRewardAvailableStock(item) > 0;
-      const matchesSearch = !query || haystack.includes(query);
+      const matchesSearch = rewardCatalogState.serverBacked || !query || query.split(/\s+/).every((word) => haystack.includes(word));
       const matchesMin = !hasMin || cost >= minValue;
       const matchesMax = !hasMax || cost <= maxValue;
       const matchesVisibility = activePrefs.show_out_of_stock || available;
@@ -2212,14 +2232,14 @@ function renderRewards() {
       return matchesSearch && matchesMin && matchesMax && matchesVisibility && matchesAfford;
     });
 
-    const sorted = sortRewardsForShop(filtered, sortValue);
+    const sorted = rewardCatalogState.serverBacked ? filtered : sortRewardsForShop(filtered, sortValue);
     if (resultCount) {
       const total = rewardCatalogState.serverBacked ? Number(rewardCatalogState.total || 0) : rewardItems.length;
       resultCount.textContent = total === 0
         ? "No rewards loaded yet"
         : rewardItems.length >= total
-          ? `Showing ${total.toLocaleString()} rewards`
-          : `Showing ${rewardItems.length.toLocaleString()} of ${total.toLocaleString()} rewards`;
+          ? `Showing ${total.toLocaleString()} ${rewardCatalogState.grouped ? "reward families" : "rewards"}`
+          : `Showing ${rewardItems.length.toLocaleString()} of ${total.toLocaleString()} ${rewardCatalogState.grouped ? "reward families" : "rewards"}`;
     }
     updateRewardLoadMoreButton();
     clearFilters?.classList.toggle("hidden", !hasActiveRewardFilters());
@@ -2235,8 +2255,9 @@ function renderRewards() {
           </div>
         </div>`;
       settleGrid();
-      qs("[data-clear-reward-filters]")?.addEventListener("click", () => {
+      qs("[data-clear-reward-filters]")?.addEventListener("click", async () => {
         clearRewardFilterControls();
+        await loadRewards();
         window.__skinquestRewardApply?.(true);
       });
       return;
@@ -2257,10 +2278,11 @@ function renderRewards() {
       const action = getRewardActionState(item, currentProfile);
 
       const isFavorited = favoriteRewardIds.has(Number(item.id));
+      const family = rewardCatalogState.grouped && Number(item.variant_count) > 1;
 
       return `
         <article class="reward-card steam-item ${rarityClass(item)} ${outOfStock ? "is-out" : ""} ${steamPriced && !currentPrice ? "is-price-stale" : ""}">
-          ${renderRewardArt(item)}
+          <a class="sq-reward-art-link" href="/rewards/${item.id}" aria-label="View ${escapeHtml(family ? item.family_name : item.name)}">${renderRewardArt(item)}</a>
           <button class="favorite-star ${isFavorited ? "is-favorited" : ""}" type="button" data-favorite-star="${item.id}" aria-pressed="${isFavorited}" aria-label="${isFavorited ? "Remove goal star" : "Set as goal"}">
             <svg class="star-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.95 6.53 7.15.66-5.4 4.73 1.63 7-6.33-3.8-6.33 3.8 1.63-7-5.4-4.73 7.15-.66L12 2.6z"/></svg>
           </button>
@@ -2270,17 +2292,16 @@ function renderRewards() {
               ${condition ? `<span class="condition-badge">${escapeHtml(condition)}</span>` : ""}
               ${steamPriced ? `<span class="price-source-badge ${currentPrice ? "" : "is-stale"}" title="${escapeHtml(currentPrice ? `${formatSteamPrice(item)} on Steam · converted with the SkinQuest markup` : "The stored Steam price needs to be refreshed")}">${currentPrice ? "Steam linked" : "Price updating"}</span>` : ""}
             </div>
-            <h2>${escapeHtml(item.name)}</h2>
+            <h2><a href="/rewards/${item.id}">${escapeHtml(family ? item.family_name : item.name)}</a></h2>
+            ${family ? `<p class="sq-variant-hint">${Number(item.variant_count)} matching variants · choose wear &amp; type</p>` : ""}
             <p class="muted reward-description">${escapeHtml(description)}</p>
             <div class="reward-meta">
-              <span class="price">${coinIcon("coin-icon-small")} ${formatCoins(getRewardCost(item))}</span>
+              <span class="price">${family ? "From " : ""}${coinIcon("coin-icon-small")} ${formatCoins(getRewardCost(item))}</span>
               <span class="stock-pill ${outOfStock ? "stock-out" : ""} ${orderable ? "stock-order" : ""}">${outOfStock ? "Out of stock" : escapeHtml(stockText)}</span>
               ${!orderable && total !== null && reserved > 0 ? `<span class="stock-pill reserved-stock">${reserved} reserved</span>` : ""}
             </div>
             <div class="reward-actions reward-actions-smart">
-              <button class="button ${action.action === "redeem" ? "button-primary" : "button-ghost"}" type="button" data-reward-action="${escapeHtml(action.action)}" data-redeem="${item.id}" ${action.disabled ? "disabled" : ""}>
-                ${escapeHtml(action.label)}
-              </button>
+              <a class="button ${action.action === "redeem" || family ? "button-primary" : "button-ghost"}" href="/rewards/${item.id}">${family ? "Choose variant" : "View reward"}</a>
               <small>${escapeHtml(action.note)}</small>
             </div>
           </div>
@@ -2332,6 +2353,7 @@ function renderRewards() {
     };
 
     search?.addEventListener("input", scheduleSearchApply);
+    qs("#groupRewardVariants")?.addEventListener("change", scheduleApply);
     minPrice?.addEventListener("input", () => { cleanCoinRangeInput(minPrice); scheduleSearchApply(); });
     maxPrice?.addEventListener("input", () => { cleanCoinRangeInput(maxPrice); scheduleSearchApply(); });
     clearFilters?.addEventListener("click", () => {
@@ -2384,7 +2406,18 @@ function renderRewards() {
   apply(false);
 }
 
+let redeemFlowBusy = false;
 async function requestRedeem(rewardId, sourceButton = null) {
+  if (redeemFlowBusy) return;
+  redeemFlowBusy = true;
+  try {
+    return await performRequestRedeem(rewardId, sourceButton);
+  } finally {
+    redeemFlowBusy = false;
+  }
+}
+
+async function performRequestRedeem(rewardId, sourceButton = null) {
   const user = await getSessionUser();
   if (!user) {
     openAuthModal("signup");
@@ -2471,7 +2504,7 @@ async function requestRedeem(rewardId, sourceButton = null) {
     const { data, error } = await withTimeout(
       sb.rpc("redeem_reward", { p_reward_id: rewardId }),
       15000,
-      "The reward order timed out. Please check your connection and try again."
+      "The reward order timed out. Check your Reward orders before trying again; the order may already have been saved."
     );
 
     if (error) throw error;
@@ -2487,6 +2520,10 @@ async function requestRedeem(rewardId, sourceButton = null) {
     sb.functions.invoke("reward-order-notify", { body: { request_id: data.request_id } })
       .then(({ error: notifyError }) => { if (notifyError) console.warn("Order notification delayed", notifyError); })
       .catch((notifyError) => console.warn("Order notification delayed", notifyError));
+    if (qs("#rewardDetail")) {
+      location.href = `/orders/${data.request_id}`;
+      return;
+    }
     await loadRewards();
     renderRewards();
     await updateRewardAccountNotice();
@@ -2510,6 +2547,7 @@ async function requestRedeem(rewardId, sourceButton = null) {
     }
     if (errorText.toLowerCase().includes("steam price") || errorText.toLowerCase().includes("price is refreshing")) {
       showMessage("The Steam price changed or expired before checkout. No coins were deducted; the listing will return after a fresh sync.", "error");
+      if (qs("#rewardDetail")) { await window.SQ146?.init(); return; }
       await loadRewards();
       renderRewards();
       return;
@@ -3320,6 +3358,7 @@ async function refreshDashboard({ background = false } = {}) {
       const pendingDisplay = qs("#pendingDisplay");
       if (pendingDisplay) pendingDisplay.textContent = pending;
       renderRedeemHistory(userRedemptions);
+      window.SQ146?.nextAction(profile, userRedemptions);
     } else {
       const pendingDisplay = qs("#pendingDisplay");
       if (pendingDisplay) pendingDisplay.textContent = "—";
@@ -3392,7 +3431,7 @@ async function renderGoalRewards(user, profile) {
   list.innerHTML = data.map((item) => {
     const cost = getRewardCost(item);
     const pct = cost > 0 ? Math.max(0, Math.min(100, (balance / cost) * 100)) : 100;
-    const canClaim = balance >= cost && !rewardIsOutOfStock(item);
+    const canClaim = balance >= cost && !rewardIsOutOfStock(item) && rewardHasCurrentPrice(item) && item.active !== false;
 
     return `
       <div class="goal-reward-card">
@@ -3406,7 +3445,7 @@ async function renderGoalRewards(user, profile) {
           </div>
           <p class="muted goal-reward-coins">${coinIcon("coin-icon-small")} ${balance.toLocaleString()} / ${cost.toLocaleString()} coins</p>
           ${canClaim
-            ? `<button class="button button-primary goal-claim-button" type="button" data-claim-reward="${escapeHtml(item.name)}">Claim reward</button>`
+            ? `<a class="button button-primary goal-claim-button" href="/rewards/${item.id}">View reward</a>`
             : `<div class="goal-progress-bar" role="progressbar" aria-valuenow="${Math.round(pct)}" aria-valuemin="0" aria-valuemax="100"><span style="width:${pct}%"></span></div>`}
         </div>
       </div>
@@ -3509,11 +3548,11 @@ function renderRedeemHistory(redemptions) {
     return `
     <div class="redeem-row ${index >= 5 ? "redeem-extra hidden" : ""}" id="redeem-request-${escapeHtml(item.id)}" data-redeem-request-id="${escapeHtml(item.id)}">
       <div>
-        <strong>${item.reward_id == null ? "Deleted item · " : ""}${escapeHtml(item.reward_name)}</strong>
+        <strong><a class="sq-order-link" href="/orders/${item.id}">${item.reward_id == null ? "Deleted item · " : ""}${escapeHtml(item.reward_name)}</a></strong>
         <p class="muted">${escapeHtml(item.order_number || `SQ-R-${String(item.id).padStart(6, "0")}`)} · ${formatDate(item.created_at)} · ${formatCoins(getRequestCost(item))}</p>
         ${renderOrderProgress(item)}
         ${isValidSteamTradeOfferUrl(item.trade_offer_url) ? `<a class="mini-link" target="_blank" rel="noopener" href="${escapeHtml(item.trade_offer_url)}">Open trade offer</a>` : ""}
-        ${item.admin_note ? `<p class="muted admin-note-view">${escapeHtml(item.admin_note)}</p>` : ""}
+        ${item.customer_note ? `<p class="muted admin-note-view">${escapeHtml(item.customer_note)}</p>` : ""}
       </div>
       <span class="status-pill status-${escapeHtml(effectiveStatus)}">${escapeHtml(formatStatus(effectiveStatus))}</span>
     </div>`;
@@ -3563,6 +3602,7 @@ function scrollToRequestedRedemption() {
 async function renderCoinHistory(userId) {
   const coinHistory = qs("#coinHistory");
   if (!coinHistory) return;
+  if (window.SQ146) return window.SQ146.coinHistory(userId);
 
   const { data, error } = await sb
     .from("coin_adjustments")
@@ -4274,6 +4314,7 @@ async function refreshAll() {
   }
   if (typeof window.initAdminV145 === "function") await window.initAdminV145();
   else await initAdmin();
+  await window.SQ146?.init();
 }
 
 function initActivityTracking() {
@@ -4316,6 +4357,7 @@ function applyRewardSearchFromQuery() {
 }
 
 async function boot() {
+  window.SQ146?.prepare();
   initSkinQuestSelects();
   initActivityTracking();
   initThemeControls();
@@ -4332,7 +4374,7 @@ async function boot() {
 
   if (qs("#rewardsGrid")) {
     try {
-      setActiveRewardSort(getRewardShopPreferences().default_sort);
+      setActiveRewardSort(new URLSearchParams(location.search).get("starter") === "1" ? "starter" : getRewardShopPreferences().default_sort);
       applyRewardSearchFromQuery();
       await loadRewards();
       await loadFavoriteRewards(currentUser?.id);
@@ -4347,6 +4389,7 @@ async function boot() {
   await initSettingsPage();
   if (typeof window.initAdminV145 === "function") await window.initAdminV145();
   else await initAdmin();
+  await window.SQ146?.init();
   finishPageLoad();
 }
 

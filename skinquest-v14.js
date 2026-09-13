@@ -1,13 +1,13 @@
-/* SkinQuest v14.5.7 product upgrade layer.
+/* SkinQuest v14.6.0 product upgrade layer.
    Loaded after app.js. The full setup includes the v14 database layer;
-   v14.5.7 refines account navigation and layout without database changes.
+   v14.6.0 adds journeys, catalogue search and owner money records via its delta.
    This layer extends the secure SkinQuest core without replacing reward authority.
 */
 
 (() => {
   "use strict";
 
-  const VERSION = "14.5.6";
+  const VERSION = "14.6.0";
   const GA_ID = "G-DFRR03C4BP";
   const ATTRIBUTION_KEY = "skinquest.firstTouch.v14";
   const CONSENT_KEY = "skinquest.cookieConsent.v1";
@@ -553,8 +553,8 @@
     const pill = $(".pill", hero);
 
     if (pill) pill.textContent = "Fixed CS2 rewards";
-    if (h1) h1.textContent = "Earn coins. Redeem real CS2 rewards.";
-    if (p) p.textContent = "Complete verified partner tasks, collect SkinQuest coins, and choose the exact CS2 reward you want. No deposits, no cases, no roulette.";
+    if (h1) h1.textContent = "Your next CS2 skin starts here.";
+    if (p) p.textContent = "Complete available CPX surveys, earn coins after verified completions, and choose a fixed CS2 reward. SkinQuest delivers through reviewed Steam trades. No deposits or random rewards.";
   }
 
   // ---------------------------------------------------------------------------
@@ -566,11 +566,6 @@
     if (!account || $("#sqGrowthHub")) return;
 
     const hub = create("section", "sq-growth-hub", `
-      <section class="panel sq-next-action-panel" data-sq-next-action>
-        <div><span class="pill">Next move</span><h2>Keep your next reward moving</h2><p class="muted">Complete another verified task and move closer to your next reward.</p></div>
-        <a class="button button-primary" href="/surveys">Continue earning</a>
-      </section>
-
       <section class="sq-growth-stats sq-growth-stats-compact" data-sq-growth-stats>
         <article class="stat-card"><span>Current streak</span><strong>—</strong><p>Consecutive active days.</p></article>
         <article class="stat-card"><span>Longest streak</span><strong>—</strong><p>Your personal best.</p></article>
@@ -800,7 +795,8 @@
       });
       closeDropdown(dropdown, true);
       updateResetButton();
-      applyRewardEnhancements();
+      if (window.SQ146) window.SQ146.extraFilters(rewardFilters);
+      else applyRewardEnhancements();
     };
 
     dropdowns.forEach((dropdown) => {
@@ -862,7 +858,7 @@
       }, 0);
     });
 
-    resetButton?.addEventListener("click", () => {
+    const resetExtraFilters = (reload = true) => {
       rewardFilters.weapon = rewardFilters.condition = rewardFilters.rarity = "all";
       dropdowns.forEach((dropdown) => {
         const firstOption = $("[data-sq-filter-option]", dropdown);
@@ -875,8 +871,13 @@
         closeDropdown(dropdown);
       });
       updateResetButton();
-      applyRewardEnhancements();
-    });
+      if (reload) {
+        if (window.SQ146) window.SQ146.extraFilters(rewardFilters);
+        else applyRewardEnhancements();
+      }
+    };
+    window.clearSkinQuestExtraFilters = () => resetExtraFilters(false);
+    resetButton?.addEventListener("click", () => resetExtraFilters());
   }
 
   function conditionMatches(text, filter) {
@@ -923,7 +924,7 @@
       const conditionMatch = conditionMatches(text, rewardFilters.condition);
       const rarityMatch = rewardFilters.rarity === "all" || text.includes(rewardFilters.rarity);
       const star = $("[data-favorite-star]", card);
-      card.classList.toggle("sq-extra-hidden", !(weaponMatch && conditionMatch && rarityMatch));
+      card.classList.toggle("sq-extra-hidden", !window.SQ146 && !(weaponMatch && conditionMatch && rarityMatch));
 
       if (!$(".sq-reward-progress", card)) {
         const cost = parseCardCost(card);
@@ -931,7 +932,7 @@
           const remaining = Math.max(0, cost - balance);
           const pct = Math.min(100, (balance / cost) * 100);
           const progress = create("div", "sq-reward-progress", `
-            <div class="sq-reward-progress-copy"><span>${balance > 0 ? `${formatNumber(balance)} / ${formatNumber(cost)} coins` : `${formatNumber(cost)} coins`}</span><strong>${remaining === 0 ? (text.includes("available to order") ? "Ready to order" : "Ready to redeem") : `${formatNumber(remaining)} remaining`}</strong></div>
+            <div class="sq-reward-progress-copy"><span>${balance > 0 ? `${formatNumber(balance)} / ${formatNumber(cost)} coins` : `${formatNumber(cost)} coins`}</span><strong>${remaining === 0 ? "Within coin balance" : `${formatNumber(remaining)} remaining`}</strong></div>
             <div class="sq-mini-progress"><span style="width:${pct}%"></span></div>
           `);
           const actions = $(".reward-actions", card);
@@ -979,7 +980,7 @@
 
     const visible = cards.filter((card) => !card.classList.contains("sq-extra-hidden")).length;
     const count = $("#rewardResultCount");
-    const extraActive = rewardFilters.weapon !== "all" || rewardFilters.condition !== "all" || rewardFilters.rarity !== "all";
+    const extraActive = !window.SQ146 && (rewardFilters.weapon !== "all" || rewardFilters.condition !== "all" || rewardFilters.rarity !== "all");
     if (count) {
       if (!count.textContent.includes("with extra filters")) count.dataset.sqBaseText = count.textContent;
       count.textContent = extraActive

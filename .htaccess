@@ -45,6 +45,9 @@ RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^ - [L]
 
 # Clean public routes -> existing HTML files internally.
+RewriteRule ^rewards/([0-9]+)/?$ reward.html?id=$1 [L,QSA]
+RewriteRule ^orders/([0-9]+)/?$ order.html?id=$1 [L,QSA]
+RewriteRule ^support/?$ support.html [L]
 RewriteRule ^dashboard/?$ dashboard.html [L]
 RewriteRule ^surveys/?$ earn.html [L]
 RewriteRule ^rewards/?$ rewards.html [L]

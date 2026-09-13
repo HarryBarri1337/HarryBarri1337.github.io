@@ -1,4 +1,4 @@
-/* SkinQuest v14.5.7 admin operations workspace */
+/* SkinQuest v14.6.0 admin operations workspace */
 (() => {
   "use strict";
 
@@ -15,9 +15,10 @@
     promos: "Promo codes",
     audit: "Audit trail",
     coins: "Coin adjustments",
+    finance: "Finance & funding",
     team: "Team access"
   };
-  const OWNER_VIEWS = new Set(["coins", "team"]);
+  const OWNER_VIEWS = new Set(["coins", "team", "finance"]);
   const ORDER_STATUSES = ["pending", "reviewing", "ordered", "trade_locked", "ready_to_trade", "trade_sent", "completed", "rejected", "refunded", "cancelled"];
   const SUPPORT_STATUSES = ["new", "open", "resolved"];
 
@@ -58,6 +59,10 @@
     audit: [],
     admins: [],
     coinHistory: [],
+    finance: null,
+    financeEntries: [],
+    financeLoading: false,
+    financeKey: null,
     profileMap: new Map(),
     globalOrders: [],
     globalSupport: [],
@@ -347,6 +352,7 @@
     if (updateHash) history.replaceState(null, "", `#${next}`);
     closeSidebar();
     window.scrollTo({ top: 0, behavior: "auto" });
+    if (next === "finance" && !state.finance && state.owner) loadFinance().catch(error => notify(error.message, "error"));
   }
 
   function openSidebar() {
@@ -411,6 +417,13 @@
     $("#rewardPricingMode")?.addEventListener("change", updateRewardEditorPricing);
     $("#rewardPricingForm")?.addEventListener("submit", saveRewardPricing);
     $("#syncSteamCatalog")?.addEventListener("click", syncSteamCatalog);
+    $("#financeRecordForm")?.addEventListener("submit", saveFinanceRecord);
+    const financeDraftChanged = () => { if (!$("#financeRecordForm")?.dataset.submitting) state.financeKey = null; };
+    $("#financeRecordForm")?.addEventListener("input", financeDraftChanged);
+    $("#financeRecordForm")?.addEventListener("change", financeDraftChanged);
+    $("#financeMore")?.addEventListener("click", () => loadFinance(true).catch(error => notify(error.message, "error")));
+    $("#financeRefresh")?.addEventListener("click", () => loadFinance().catch(error => notify(error.message, "error")));
+    if ($("#financeDate")) $("#financeDate").value = new Date().toISOString().slice(0,10);
 
     $("#adminGlobalSearchForm")?.addEventListener("submit", (event) => {
       event.preventDefault();
@@ -546,6 +559,93 @@
     }
   }
 
+  const euro = (value) => new Intl.NumberFormat(undefined, { style: "currency", currency: "EUR" }).format(Number(value || 0) / 100);
+
+  async function loadFinance(append = false) {
+    if (!state.owner || state.financeLoading) return;
+    state.financeLoading = true;
+    try {
+      const data = await rpc("sq_owner_finance_dashboard", { p_limit: 50, p_offset: append ? state.financeEntries.length : 0 });
+      state.finance = data;
+      state.financeEntries = append ? [...state.financeEntries, ...(data.entries || [])] : data.entries || [];
+      renderFinance();
+    } catch (error) {
+      if ($("#financeEntries")) $("#financeEntries").innerHTML = `<div class="admin-empty"><strong>Finance data unavailable</strong>${safe(error.message)}<span>Run the v14.6.0 delta before opening this view. No income has been inferred.</span></div>`;
+      throw error;
+    } finally { state.financeLoading = false; }
+  }
+
+  function renderFinance() {
+    const data = state.finance;
+    if (!data || !state.owner) return;
+    const t = data.totals || {};
+    const stats = [
+      ["Received income", euro(t.received), "Only income recorded as paid. Expected provider payments are separate."],
+      ["Paid costs", euro(t.spent), "Recorded item purchases, fees and other expenses."],
+      ["Operating cash difference", euro(Number(t.received)-Number(t.spent)), "Recorded received income minus paid costs, all time. Funding is not revenue."],
+      ["Expected income", euro(t.receivable), "Manually recorded receivables, not yet received or available cash."],
+      ["Expected costs", euro(t.payable), "Manually recorded expected expenses, not yet paid."],
+      ["Funding contributed", euro(t.funding), "Owner funding/opening funds recorded as paid. Excluded from operating income."]
+    ];
+    if ($("#financeStats")) $("#financeStats").innerHTML = stats.map(([label,value,note]) => `<section class="admin-card admin-finance-stat"><span>${safe(label)}</span><strong>${safe(value)}</strong><small>${safe(note)}</small></section>`).join("");
+    const rows = state.financeEntries;
+    if ($("#financeEntries")) $("#financeEntries").innerHTML = rows.length ? rows.map(e => `<article class="admin-finance-row ${e.voided_at ? "is-void" : ""}"><div><strong>${safe(e.reference)}</strong><span>${safe(e.kind)} · ${safe(e.category.replaceAll("_"," "))}${e.provider ? ` · ${safe(e.provider)}` : ""} · ${safe(e.occurred_on)}</span><small>${e.voided_at ? `Voided: ${safe(e.void_reason)}` : e.settlement === "paid" ? "Recorded as paid" : "Expected, not paid"}${e.order_snapshot ? ` · ${safe(e.order_snapshot)}` : ""}</small>${e.note ? `<small>${safe(e.note)}</small>` : ""}</div><strong>${e.kind === "expense" ? "−" : "+"}${safe(euro(e.amount_minor))}</strong>${!e.voided_at ? `<div class="admin-row-actions">${e.settlement === "expected" ? `<button class="admin-row-action" type="button" data-finance-settle="${e.id}">Mark ${e.kind === "expense" ? "paid" : "received"}</button>` : ""}<details class="admin-finance-correction"><summary>Correct / void entry</summary><label>Correction reason<input type="text" maxlength="300" minlength="5" data-finance-reason="${e.id}" placeholder="Why is this entry being voided?" /></label><button class="admin-row-action is-danger" type="button" data-finance-void="${e.id}">Void entry</button></details></div>` : ""}</article>`).join("") : '<div class="admin-empty"><strong>No money records yet</strong>Enter provider statements, actual receipts, purchase costs and owner funding. A coin balance is not cash revenue.</div>';
+    if ($("#financeCount")) $("#financeCount").textContent = `Showing ${rows.length} of ${formatNumber(data.total)} records · EUR · all time`;
+    $("#financeMore")?.classList.toggle("hidden", rows.length >= Number(data.total || 0));
+    if ($("#financeExposure")) $("#financeExposure").innerHTML = `<p><strong>${formatNumber(data.customer_coin_balance)} customer wallet coins</strong> remain unspent. Staff balances are excluded; coins are not cash revenue. Redeeming them still has fulfilment costs.</p><p><strong>${formatNumber(data.open_order_count)} open orders</strong> · ${formatNumber(data.unrecorded_purchase_count)} without a recorded purchase cost.</p><p>Current Steam estimate for unrecorded purchases: <strong>${safe(euro(data.unrecorded_steam_estimate_minor))}</strong> across items with a fresh EUR Steam price. <strong>${formatNumber(data.unknown_estimate_count)} prices are unknown</strong>; they are not treated as free. Prepared stock also has a cost—record it, even if purchased earlier.</p><p>Recorded net money movement, including funding: <strong>${safe(euro(Number(t.received)+Number(t.funding)-Number(t.spent)))}</strong>. This is not your bank balance or accounting profit.</p>`;
+    if ($("#financeOpenOrders")) $("#financeOpenOrders").innerHTML = (data.open_orders || []).map(o => `<div class="admin-finance-row"><div><strong>${safe(o.order_number)} · ${safe(o.reward_name)}</strong><span>${formatNumber(o.points_coins)} saved coins · ${safe(statusLabel(o.status))}</span><small>${o.recorded_purchase_minor != null ? `Purchase cost recorded: ${safe(euro(o.recorded_purchase_minor))}` : o.current_steam_estimate_minor != null ? `Unrecorded purchase · Steam estimate ${safe(euro(o.current_steam_estimate_minor))}` : "Purchase cost and current market estimate unknown"}</small></div><button class="admin-row-action" type="button" data-finance-order="${o.id}">Record cost</button></div>`).join("") || '<div class="admin-empty">No open reward orders.</div>';
+    $$("[data-finance-order]").forEach(b => b.addEventListener("click", () => {
+      $("#financeKind").value = "expense"; $("#financeCategory").value = "item_purchase";
+      $("#financeOrder").value = b.dataset.financeOrder; $("#financeReference").value = `Purchase ${state.finance.open_orders.find(o => String(o.id) === b.dataset.financeOrder)?.order_number || b.dataset.financeOrder}`;
+      state.financeKey = null; window.refreshSkinQuestSelects?.(); $("#financeAmount").focus(); $("#financeRecordForm").scrollIntoView({ block: "center", behavior: "smooth" });
+    }));
+    $$("[data-finance-settle]").forEach(b => b.addEventListener("click", () => updateFinance(b.dataset.financeSettle, "settle", b)));
+    $$("[data-finance-void]").forEach(b => b.addEventListener("click", () => updateFinance(b.dataset.financeVoid, "void", b)));
+  }
+
+  async function saveFinanceRecord(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    if (!state.owner || form.dataset.submitting) return;
+    const value = textValue($("#financeAmount")?.value).replace(",", ".");
+    if (!/^\d{1,9}(\.\d{1,2})?$/.test(value)) return notify("Enter a positive EUR amount, with at most two decimals.", "error");
+    const [whole, fraction=""] = value.split(".");
+    const amount = Number(whole)*100 + Number(fraction.padEnd(2,"0"));
+    if (!Number.isSafeInteger(amount) || amount <= 0) return notify("Enter a positive EUR amount.", "error");
+    const order = textValue($("#financeOrder")?.value);
+    if (order && !/^[1-9][0-9]{0,15}$/.test(order)) return notify("Enter a valid numeric order ID, or leave it blank.", "error");
+    const payload = {
+      p_id: state.financeKey || crypto.randomUUID(), p_kind: $("#financeKind").value,
+      p_category: $("#financeCategory").value, p_amount_minor: amount, p_settlement: $("#financeSettlement").value,
+      p_occurred_on: $("#financeDate").value, p_reference: textValue($("#financeReference").value),
+      p_provider: textValue($("#financeProvider").value) || null, p_order_id: order || null,
+      p_note: textValue($("#financeNote").value) || null
+    };
+    state.financeKey = payload.p_id; form.dataset.submitting = "true";
+    const restore = buttonBusy($("button[type=submit]", form), "Saving…");
+    const fields = $$("input,select,textarea", form).map(field => ({ field, disabled: field.disabled }));
+    fields.forEach(({ field }) => { field.disabled = true; }); window.refreshSkinQuestSelects?.();
+    try {
+      await rpc("sq_owner_finance_record", payload);
+      notify("Finance entry saved. This did not change any customer coins or orders.", "success");
+      form.reset(); $("#financeDate").value = new Date().toISOString().slice(0,10); state.financeKey = null;
+      window.refreshSkinQuestSelects?.(); await loadFinance();
+    } catch(error) { notify(error.message || "Could not save the entry. Check existing records before editing and retrying.", "error"); }
+    finally { fields.forEach(({ field, disabled }) => { field.disabled = disabled; }); window.refreshSkinQuestSelects?.(); restore(); delete form.dataset.submitting; }
+  }
+
+  async function updateFinance(entryId, action, button) {
+    if (!state.owner || button.dataset.busy) return;
+    const reason = action === "void" ? textValue($(`[data-finance-reason="${entryId}"]`)?.value) : null;
+    if (action === "void" && reason.length < 5) return notify("Write a correction reason first.", "error");
+    const confirmed = await confirmAction(action === "void" ? "Void this record? It stays in history and the audit trail, but is excluded from totals. No coins or order statuses change." : "Confirm this amount has actually been paid or received. This only changes the finance record.", { title: action === "void" ? "Void finance record" : "Confirm actual payment", confirmText: "Confirm", cancelText: "Cancel" });
+    if (!confirmed) return;
+    const restore = buttonBusy(button,"Saving…");
+    try { await rpc("sq_owner_finance_update", { p_id: entryId, p_action: action, p_reason: reason }); await loadFinance(); notify("Finance record updated.","success"); }
+    catch(error) { notify(error.message || "Could not update the finance entry.","error"); }
+    finally { restore(); }
+  }
+
   async function loadAll({ trigger = null } = {}) {
     if (state.loading) return;
     state.loading = true;
@@ -564,7 +664,7 @@
     }
 
     const tasks = [loadKpis(), loadOrders({ reset: true }), loadSupport({ reset: true }), loadUsers({ reset: true }), loadRewards({ reset: true }), loadPricingDashboard(), loadSystemStatus(), loadPromos(), loadAudit()];
-    if (state.owner) tasks.push(loadCoinHistory());
+    if (state.owner) tasks.push(loadCoinHistory(), loadFinance());
     const results = await Promise.allSettled(tasks);
     if (results.some((item) => item.status === "rejected")) failed = true;
     renderOverview();
@@ -1137,7 +1237,8 @@
           <label>Status<select id="drawerOrderStatus" ${isTerminal ? "disabled" : ""}>${allowedOrderStatuses(item).map((status) => `<option value="${status}" ${status === item.status ? "selected" : ""}>${safe(statusLabel(status))}</option>`).join("")}</select><small>Only safe next steps are shown. Sent trades cannot be refunded from the normal workflow.</small></label>
           <label>Trade lock ends<input id="drawerOrderLockUntil" type="datetime-local" value="${safe(toLocalDateTimeInput(item.trade_locked_until))}" ${(isTerminal || item.fulfillment_mode !== "orderable") ? "disabled" : ""} /><small>${item.fulfillment_mode === "orderable" ? "After purchase, enter Steam's exact tradable time. The customer sees a live countdown." : "Prepared rewards do not use the purchase trade-lock stage."}</small></label>
           <label>Steam trade offer URL (optional)<input id="drawerOrderTrade" maxlength="500" value="${safe(item.trade_offer_url || "")}" placeholder="https://steamcommunity.com/tradeoffer/123456789/" /><small>Leave blank if Steam does not provide a link. Confirm the offer was actually sent before choosing Trade sent.</small></label>
-          <label>Admin note<textarea id="drawerOrderNote" maxlength="2000" placeholder="Internal context or a customer-visible update">${safe(item.admin_note || "")}</textarea></label>
+          <label>Admin note (legacy email-visible field)<textarea id="drawerOrderNote" maxlength="2000" placeholder="Do not add private information; existing notification emails may include this field">${safe(item.admin_note || "")}</textarea><small>This legacy field can appear in existing notification emails. Use no secrets or sensitive staff notes.</small></label>
+          <label>Customer order-page update<textarea id="drawerCustomerNote" maxlength="2000" placeholder="A clear update for the customer, displayed on their private order page">${safe(item.customer_note || "")}</textarea><small>Shown to the customer on their order page. Saved separately from the legacy note.</small></label>
           <div class="admin-quick-actions">${allowedOrderStatuses(item).filter((status) => status !== item.status && !["rejected","refunded","cancelled"].includes(status)).map((status) => `<button class="admin-secondary-button" type="button" data-order-quick="${safe(status)}">${safe(status === "trade_locked" ? "Purchased / trade locked" : statusLabel(status))}</button>`).join("")}</div>
           <div class="admin-drawer-actions"><button class="admin-secondary-button" type="button" data-copy-order-message>Copy customer update</button><button class="admin-primary-button" type="submit">Save order</button></div>
         </form></section>
@@ -1203,6 +1304,8 @@
         p_trade_offer_url: trade || null,
         p_trade_locked_until: lockUntil ? lockUntil.toISOString() : null
       });
+      try { await rpc("sq_admin_order_customer_note", { p_order_id: item.id, p_note: textValue($("#drawerCustomerNote")?.value) || null }); }
+      catch(noteError) { notify(`Order status saved, but the customer update was not saved: ${noteError.message}`, "error"); }
       notify(`${orderNumber(item)} updated.`, "success");
       notifyOrderStatus(item.id);
       closeDrawer();
@@ -1229,6 +1332,7 @@
           <div><span>Last handled by</span><strong>${safe(item.last_handled_by ? adminLabel(item.last_handled_by) : "Not handled")}</strong></div><div><span>Resolved by</span><strong>${safe(item.resolved_by ? adminLabel(item.resolved_by) : "Not resolved")}</strong></div>
         </div>
         <section class="admin-drawer-section"><h3>Customer message</h3><p class="admin-drawer-copy">${safe(item.message || "No message")}</p></section>
+        ${item.context_snapshot && Object.keys(item.context_snapshot).length ? `<section class="admin-drawer-section"><h3>Linked customer record</h3><p class="admin-drawer-copy">${item.context_snapshot.order_number ? `${safe(item.context_snapshot.order_number)} · ${safe(item.context_snapshot.reward_name)} · ${formatNumber(item.context_snapshot.coins)} saved coins` : ""}${item.context_snapshot.transaction_id ? `<br />Transaction #${safe(item.context_snapshot.transaction_id)} · ${formatNumber(item.context_snapshot.amount)} coins · ${safe(formatDateTime(item.context_snapshot.transaction_date))}` : ""}</p>${item.related_order_id ? `<button class="admin-secondary-button" type="button" data-support-order="${item.related_order_id}">Open linked order</button>` : item.context_snapshot.order_number ? '<p class="admin-drawer-copy">The original record is no longer available. This snapshot is retained.</p>' : ""}${item.user_id ? `<button class="admin-secondary-button" type="button" data-support-user="${safe(item.user_id)}">Open customer account</button>` : ""}</section>` : ""}
         <section class="admin-drawer-section"><h3>Request context</h3><div class="admin-drawer-meta"><div><span>Page</span><strong title="${safe(item.page_url || "")}">${safe(item.page_url || "Unknown")}</strong></div><div><span>Language</span><strong>${safe(item.browser_language || "Unknown")}</strong></div></div><div class="admin-copy-block"><code title="${safe(item.user_agent || "")}">${safe(item.user_agent || "Browser not captured")}</code><button class="admin-row-action" type="button" data-copy-browser>Copy</button><button class="admin-row-action" type="button" data-open-page ${item.page_url ? "" : "disabled"}>Open page</button></div></section>
         <section class="admin-drawer-section"><h3>Handle ticket</h3><form class="admin-drawer-form" id="adminSupportUpdateForm">
           <label>Status<select id="drawerSupportStatus">${SUPPORT_STATUSES.map((status) => `<option value="${status}" ${status === (item.status || "new") ? "selected" : ""}>${safe(statusLabel(status))}</option>`).join("")}</select></label>
@@ -1240,6 +1344,8 @@
       `, { type: "support", id: item.id });
 
       $("[data-copy-browser]")?.addEventListener("click", () => copyToClipboard(item.user_agent || "", "Browser details copied."));
+      $("[data-support-order]")?.addEventListener("click", () => openOrder(Number(item.related_order_id)));
+      $("[data-support-user]")?.addEventListener("click", () => { closeDrawer(); openUserProfile(item.user_id); });
       $("[data-open-page]")?.addEventListener("click", () => openSkinQuestUrl(item.page_url));
       $("[data-copy-support-email]")?.addEventListener("click", () => copyToClipboard(item.account_email || "", "Email copied."));
       $("#adminSupportUpdateForm")?.addEventListener("submit", (event) => saveSupportUpdate(event, item));

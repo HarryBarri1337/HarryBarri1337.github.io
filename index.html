@@ -19,7 +19,7 @@
       }
     }());
   </script>
-  <link rel="stylesheet" href="styles.css?v=1457" />
+  <link rel="stylesheet" href="styles.css?v=1460" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#0b0f16" />
   <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png" />
@@ -30,7 +30,8 @@
   <meta name="apple-mobile-web-app-title" content="SkinQuest" />
   <meta property="og:site_name" content="SkinQuest" />
   <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"Organization","@id":"https://skinquestcs.com/#organization","name":"SkinQuest","url":"https://skinquestcs.com/","logo":"https://skinquestcs.com/assets/interface/skinquestlogo.png","email":"support@skinquestcs.com"},{"@type":"WebSite","@id":"https://skinquestcs.com/#website","url":"https://skinquestcs.com/","name":"SkinQuest","publisher":{"@id":"https://skinquestcs.com/#organization"}}]}</script>
-  <link rel="stylesheet" href="skinquest-v14.css?v=1457" />
+  <link rel="stylesheet" href="skinquest-v14.css?v=1460" />
+  <link rel="stylesheet" href="skinquest-v146.css?v=1460" />
 </head>
 <body>
 <div id="pageLoader" class="page-loader">
@@ -61,9 +62,9 @@
   <section class="hero hero-split">
     <div class="hero-copy">
       <span class="pill">Fixed CS2 rewards</span>
-      <h1>Earn coins. Redeem real CS2 rewards.</h1>
+      <h1>Your next CS2 skin starts here.</h1>
       <p>
-        Complete free partner tasks, collect SkinQuest coins, and redeem fixed rewards through manual Steam trades. No deposits, no cases, no roulette.
+        Complete available CPX surveys, earn coins after verified completions, and choose a fixed CS2 reward. SkinQuest delivers through reviewed Steam trades. No deposits or random rewards.
       </p>
 
       <div class="hero-actions hidden" data-guest-home>
@@ -85,7 +86,7 @@
       </a>
 
       <div class="trust-row">
-        <span>No cases</span>
+        <span>No random rewards</span>
         <span>No roulette</span>
         <span>Fixed rewards</span>
         <span>Manual trade review</span>
@@ -117,20 +118,25 @@
   <section class="feature-grid">
     <article class="feature-card">
       <span class="step-number">01</span>
-      <h2>Open offers</h2>
-      <p>Use the offerwall and complete available tasks from the provider.</p>
+      <h2>Pick your first goal</h2>
+      <p>Browse real catalogue items and choose a low-cost reward. You always choose the exact item, not a random result.</p>
     </article>
     <article class="feature-card">
       <span class="step-number">02</span>
       <h2>Coins arrive</h2>
-      <p>Coins are added after the provider confirms the completion.</p>
+      <p>Complete a matching CPX survey. Coins become spendable when the provider verifies the completion; availability varies.</p>
     </article>
     <article class="feature-card">
       <span class="step-number">03</span>
-      <h2>Choose a reward</h2>
-      <p>Pick a listed reward. No cases, no roulette, no random drops.</p>
+      <h2>Receive a Steam trade</h2>
+      <p>Save a valid trade URL, redeem the exact reward and track your private order. Delivery is reviewed and manual.</p>
     </article>
   </section>
+  <section class="sq146-section" aria-labelledby="firstRewardsTitle">
+    <div class="sq146-section-head"><div><span class="pill">Start small</span><h2 id="firstRewardsTitle">A reachable first reward</h2><p class="muted">Low-cost choices from the live catalogue. Prices and stock are checked before we recommend an item; surveys do not guarantee a fixed earning time.</p></div><a class="button button-ghost" href="/rewards?starter=1">Browse first rewards</a></div>
+    <div class="sq146-starters" id="firstRewardListings" aria-live="polite"><div class="sq146-empty">Loading current reward examples…</div></div>
+  </section>
+  <section class="sq146-section" aria-labelledby="realDeliveryTitle"><div class="sq146-section-head"><div><span class="pill">Know what you get</span><h2 id="realDeliveryTitle">Clear prices. Traceable delivery.</h2></div></div><div class="sq146-proof"><article><h3>Your exact item</h3><p>Reward pages show wear, StatTrak or Souvenir choices, the coin price and whether the selected item is in stock or purchased after request.</p></article><article><h3>Your saved order</h3><p>Once an order is saved, its item and coin price do not change with later market prices. Follow the actual status on your own order page.</p></article><article><h3>Your Steam offer</h3><p>Steam delivery is manual. Check the item before accepting, and attach the order directly if you need support.</p></article></div><p class="sq146-proof-note">Reward examples show current catalogue availability. Orders are reviewed and delivered manually. SkinQuest is not affiliated with Valve or Steam.</p></section>
 </main>
 
 <footer class="site-footer">
@@ -143,9 +149,9 @@
     <a href="/privacy">Privacy</a>
     <a href="/how-it-works">Help</a>
     <a href="/install">Install app</a>
-    <a href="mailto:support@skinquestcs.com">Support</a>
+    <a href="/support">Support</a>
   </div>
-  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v14.5.7</a></p>
+  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v14.6.0</a></p>
 </footer>
 <div class="modal-backdrop hidden" id="authModal">
   <div class="auth-modal" role="dialog" aria-modal="true">
@@ -187,7 +193,8 @@
   </div>
 </div>
 <script src="assets/vendor/supabase-js-2.45.4.js"></script>
-<script src="app.js?v=1457"></script>
-<script src="skinquest-v14.js?v=1457"></script>
+<script src="skinquest-v146.js?v=1460"></script>
+<script src="app.js?v=1460"></script>
+<script src="skinquest-v14.js?v=1460"></script>
 </body>
 </html>
