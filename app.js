@@ -1,4 +1,4 @@
-// SkinQuest v14.5.4 core - secure base; enhanced by skinquest-v14.js
+// SkinQuest v14.5.5 core - secure base; enhanced by skinquest-v14.js
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -1462,7 +1462,19 @@ function bindCpxOfferwallButton(button) {
       openAuthModal("signup");
       return;
     }
-    if (button.getAttribute("aria-disabled") === "true") event.preventDefault();
+    if (button.getAttribute("aria-disabled") === "true") {
+      event.preventDefault();
+      return;
+    }
+    if (!isSafeOfferwallUrl(button.href, currentUser?.id || "")) return;
+    // Count an observable launch click, never a page load or widget render.
+    if (Date.now() - Number(button.dataset.lastTrackedCpxOpen || 0) < 1000) return;
+    button.dataset.lastTrackedCpxOpen = String(Date.now());
+    sb.rpc("sq_track_event", {
+      p_event_name: "cpx_wall_open_requested",
+      p_page_path: location.pathname,
+      p_properties: { provider: "cpx", source: "wall_button" }
+    }).catch(() => {});
   });
 
   const retryButton = qs("#retryCpxWidget");

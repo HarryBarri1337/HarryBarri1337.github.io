@@ -1,13 +1,13 @@
-/* SkinQuest v14.5.4 product upgrade layer.
+/* SkinQuest v14.5.5 product upgrade layer.
    Loaded after app.js. The full setup includes the v14 database layer;
-   v14.5.4 adds user filters and repairs legacy reward deletion links.
+   v14.5.5 adds account creation dates and honest CPX activity metrics.
    This layer extends the secure SkinQuest core without replacing reward authority.
 */
 
 (() => {
   "use strict";
 
-  const VERSION = "14.5.4";
+  const VERSION = "14.5.5";
   const GA_ID = "G-DFRR03C4BP";
   const ATTRIBUTION_KEY = "skinquest.firstTouch.v14";
   const CONSENT_KEY = "skinquest.cookieConsent.v1";

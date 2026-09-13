@@ -18,9 +18,9 @@
       }
     }());
   </script>
-  <link rel="stylesheet" href="styles.css?v=1454" />
-  <link rel="stylesheet" href="skinquest-v14.css?v=1454" />
-  <link rel="stylesheet" href="admin.css?v=1454" />
+  <link rel="stylesheet" href="styles.css?v=1455" />
+  <link rel="stylesheet" href="skinquest-v14.css?v=1455" />
+  <link rel="stylesheet" href="admin.css?v=1455" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#080b10" />
   <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png" />
@@ -86,7 +86,7 @@
       <div><strong id="adminAccountName">Admin</strong><span id="adminAccountRole">Verifying…</span></div>
       <button class="admin-icon-button" id="adminSignOutButton" type="button" aria-label="Sign out" title="Sign out"><svg viewBox="0 0 24 24"><path d="M10 5H5v14h5M14 8l4 4-4 4M18 12H9"/></svg></button>
     </div>
-    <div class="admin-sidebar-footer"><a href="/">Open customer site</a><span>v14.5.4</span></div>
+    <div class="admin-sidebar-footer"><a href="/">Open customer site</a><span>v14.5.5</span></div>
   </aside>
 
   <div class="admin-main-shell">
@@ -128,7 +128,7 @@
       </section>
 
       <section class="admin-view hidden" data-admin-view-panel="users">
-        <div class="admin-page-head"><div><p class="admin-eyebrow">Customer directory</p><h1>Users</h1><p>Search by email, username, Steam name, Steam ID, or SkinQuest user ID.</p></div></div>
+        <div class="admin-page-head"><div><p class="admin-eyebrow">Customer directory</p><h1>Users</h1><p>Search accounts and review creation dates, balances, and CPX activity.</p><p class="admin-user-metrics-note">Verified CPX rewards may include screen-out compensation. CPX opens count tracked launch clicks since v14.5.5, not individual surveys opened inside CPX.</p></div></div>
         <div class="admin-toolbar admin-user-toolbar">
           <label class="admin-filter-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m16 16 4 4"/></svg><input id="adminUserSearch" type="search" maxlength="120" placeholder="Search users" /></label>
           <label><span>Role</span><select id="adminUserRole"><option value="all">All roles</option><option value="user">Customers only</option><option value="staff">Staff only</option><option value="admin">Admins only</option><option value="owner">Owners only</option></select></label>
@@ -221,7 +221,7 @@
 </div>
 
 <script src="assets/vendor/supabase-js-2.45.4.js"></script>
-<script src="admin.js?v=1454"></script>
-<script src="app.js?v=1454"></script>
+<script src="admin.js?v=1455"></script>
+<script src="app.js?v=1455"></script>
 </body>
 </html>

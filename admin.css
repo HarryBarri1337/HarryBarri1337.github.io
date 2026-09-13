@@ -1,4 +1,4 @@
-/* SkinQuest v14.5.4 admin operations workspace */
+/* SkinQuest v14.5.5 admin operations workspace */
 :root {
   --ops-bg: #080b10;
   --ops-sidebar: #0b0f15;
@@ -417,6 +417,9 @@ body.admin-ops-body {
 .admin-reward-toolbar { grid-template-columns: minmax(260px, 1fr) 190px 190px auto; }
 .admin-user-toolbar { grid-template-columns: minmax(220px,1fr) repeat(3,minmax(145px,180px)); }
 .admin-user-toolbar .admin-toolbar-count { grid-column: 1 / -1; }
+.admin-user-metrics-note { max-width: 850px; font-size: .75rem !important; line-height: 1.5; }
+.admin-user-survey-counts { white-space: normal !important; line-height: 1.5 !important; }
+.admin-user-survey-counts b { color: var(--ops-text); }
 .admin-toolbar .sq-select-trigger,
 .admin-form-grid .sq-select-trigger,
 .admin-drawer-form .sq-select-trigger,

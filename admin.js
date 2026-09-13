@@ -1,4 +1,4 @@
-/* SkinQuest v14.5.4 admin operations workspace */
+/* SkinQuest v14.5.5 admin operations workspace */
 (() => {
   "use strict";
 
@@ -738,7 +738,7 @@
   }
 
   async function searchUsers(queryText, limit, offset) {
-    return rpc("sq_admin_search_users", {
+    return rpc("sq_admin_users_activity", {
       p_query: textValue(queryText) || null,
       p_limit: limit,
       p_offset: offset
@@ -756,7 +756,7 @@
     if (more) { more.disabled = true; more.textContent = "Loading…"; }
     try {
       const offset = append ? state.users.length : 0;
-      const result = await rpc("sq_admin_filter_users", {
+      const result = await rpc("sq_admin_users_activity", {
         p_query: textValue($("#adminUserSearch")?.value) || null,
         p_role: $("#adminUserRole")?.value || "all",
         p_login: $("#adminUserLogin")?.value || "all",
@@ -802,7 +802,10 @@
       const completed = Number(item.completed_count || 0);
       return `<div class="admin-user-row">
         <span class="admin-account-avatar">${safe((userDisplayName(item)[0] || "U").toUpperCase())}</span>
-        <div><strong>${safe(userDisplayName(item))}</strong><small>${safe(email)}</small>${item.role ? `<small>${safe(statusLabel(item.role))} · ${item.steam_login ? "Steam sign-in" : "Other sign-in"}</small>` : ""}</div>
+        <div><strong>${safe(userDisplayName(item))}</strong><small>${safe(email)}</small>${item.role ? `<small>${safe(statusLabel(item.role))} · ${item.steam_login ? "Steam sign-in" : "Other sign-in"}</small>` : ""}
+          <small title="${safe(formatDateTime(item.account_created_at))}">Date created: ${safe(item.account_created_at ? new Date(item.account_created_at).toLocaleDateString() : "Unknown")}</small>
+          <small class="admin-user-survey-counts" title="Verified CPX reward results may include screen-out compensation. CPX opens are tracked launch clicks since v14.5.5, not individual surveys or page visits."><b>${formatNumber(item.verified_cpx_rewards)}</b> verified CPX rewards · <b>${formatNumber(item.cpx_opens)}</b> CPX opens</small>
+        </div>
         <div><strong>${safe(steam)}</strong><small>${safe(item.steam_id || shortId(item.user_id))}</small></div>
         <span class="admin-stock-value"><b>${formatNumber(item.points_balance)}</b> coins</span>
         <span class="admin-stock-value"><b>${formatNumber(item.order_count)}</b> orders<small>${formatNumber(completed)} completed · ${formatNumber(item.support_count)} tickets</small></span>
