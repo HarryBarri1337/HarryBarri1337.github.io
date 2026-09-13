@@ -1,6 +1,6 @@
-/* SkinQuest v14.5.6 product upgrade layer.
+/* SkinQuest v14.5.7 product upgrade layer.
    Loaded after app.js. The full setup includes the v14 database layer;
-   v14.5.6 adds unified user accounts, last-active tracking and repaired CPX metrics.
+   v14.5.7 refines account navigation and layout without database changes.
    This layer extends the secure SkinQuest core without replacing reward authority.
 */
 

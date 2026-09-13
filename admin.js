@@ -1,4 +1,4 @@
-/* SkinQuest v14.5.6 admin operations workspace */
+/* SkinQuest v14.5.7 admin operations workspace */
 (() => {
   "use strict";
 
@@ -808,14 +808,14 @@
       return;
     }
     target.innerHTML = `<div class="admin-directory-header"><span></span><span>User / role</span><span>Date created</span><span>Last active</span><span>Coins</span><span></span></div>${rows.map((item) => `
-      <div class="admin-directory-row">
+      <button class="admin-directory-row" type="button" data-view-user="${safe(item.user_id)}" aria-label="Open ${safe(userDisplayName(item))} user account">
         <span class="admin-account-avatar">${safe((userDisplayName(item)[0] || "U").toUpperCase())}</span>
-        <div class="admin-directory-name"><strong>${safe(userDisplayName(item))}</strong><small>${safe(item.contact_email || item.email || "No verified email")}</small><small>${safe(statusLabel(item.role || "user"))} · ${safe(statusLabel(item.account_status))}</small></div>
+        <span class="admin-directory-name"><strong>${safe(userDisplayName(item))}</strong><small>${safe(item.contact_email || item.email || "No verified email")}</small><small>${safe(statusLabel(item.role || "user"))} · ${safe(statusLabel(item.account_status))}</small></span>
         <span data-directory-created title="${safe(formatDateTime(item.account_created_at))}">${safe(item.account_created_at ? new Date(item.account_created_at).toLocaleDateString() : "Unknown")}</span>
         <span data-directory-active title="${safe(formatDateTime(item.last_active_at))}">${safe(item.last_active_at ? relativeTime(item.last_active_at) : "Unknown")}</span>
         <span class="admin-stock-value"><b>${formatNumber(item.points_balance)}</b> coins</span>
-        <button class="admin-row-action" type="button" data-view-user="${safe(item.user_id)}">View user</button>
-      </div>`).join("")}`;
+        <span class="admin-directory-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></svg></span>
+      </button>`).join("")}`;
     $$("[data-view-user]", target).forEach((button) => button.addEventListener("click", () => openUserProfile(button.dataset.viewUser)));
   }
 
@@ -829,6 +829,9 @@
     state.userHistoryItems = [];
     showView("user");
     $("#adminUserProfile").innerHTML = '<div class="admin-empty">Loading user account…</div>';
+    $("#adminUserSummary").innerHTML = "";
+    $("#adminUserCpx").innerHTML = "";
+    $("#adminUserCpx").classList.add("hidden");
     $("#adminUserHistory").innerHTML = "";
     $("#adminUserHistoryCount").textContent = "";
     $("#userHistoryMore")?.classList.add("hidden");
@@ -848,25 +851,26 @@
     const cpx = result.cpx || {};
     const metric = (value) => value == null ? "No records" : formatNumber(value);
     $("#adminUserProfile").innerHTML = `
-      <div class="admin-user-profile-head"><div><p class="admin-eyebrow">User account</p><h2>${safe(userDisplayName(item))}</h2><p>${safe(item.contact_email || item.email || "No verified email")}</p></div>${statusPill(item.account_status || "active")}</div>
+      <div class="admin-user-profile-head"><span class="admin-account-avatar admin-user-profile-avatar" aria-hidden="true">${safe((userDisplayName(item)[0] || "U").toUpperCase())}</span><div class="admin-user-profile-identity"><p class="admin-eyebrow">User account</p><h1 tabindex="-1">${safe(userDisplayName(item))}</h1><p>${safe(item.contact_email || item.email || "No verified email")}</p></div>${statusPill(item.account_status || "active")}</div>
       <div class="admin-user-profile-meta">
         <div><span>Role / sign-in</span><strong>${safe(statusLabel(item.role))} · ${item.steam_login ? "Steam sign-in" : "Other sign-in"}</strong></div>
         <div><span>Date created</span><strong>${safe(formatDateTime(item.account_created_at))}</strong></div>
         <div><span>Last active</span><strong>${safe(item.last_active_at ? formatDateTime(item.last_active_at) : "Unknown")}</strong></div>
         <div><span>Steam account</span><strong>${safe(item.steam_name || "Not connected")}</strong><small>${safe(item.steam_id || "")}</small></div>
-        <div><span>User ID</span><code>${safe(item.user_id)}</code><button class="admin-text-button" type="button" data-copy-profile-id>Copy ID</button></div>
-      </div>
-      <div class="admin-user-profile-stats">
-        <div><strong>${formatNumber(item.points_balance)}</strong><span>Current coins</span></div>
-        <div><strong>${formatNumber(item.order_count)}</strong><span>Orders · ${formatNumber(item.completed_count)} completed</span></div>
-        <div><strong>${formatNumber(item.support_count)}</strong><span>Support tickets</span></div>
-      </div>
-      <details class="admin-user-cpx"><summary>CPX activity &amp; data status</summary><div class="admin-user-profile-stats">
+        <div class="admin-user-id-meta"><span>User ID</span><div><code>${safe(item.user_id)}</code><button class="admin-user-copy" type="button" data-copy-profile-id aria-label="Copy user ID"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V4H4v12h4"/></svg></button></div></div>
+      </div>`;
+    $("#adminUserSummary").innerHTML = `
+        <div class="admin-card admin-user-total"><span>Current coins</span><strong>${formatNumber(item.points_balance)}</strong><small>Available balance</small></div>
+        <div class="admin-card admin-user-total"><span>Orders</span><strong>${formatNumber(item.order_count)}</strong><small>${formatNumber(item.completed_count)} completed</small></div>
+        <div class="admin-card admin-user-total"><span>Support tickets</span><strong>${formatNumber(item.support_count)}</strong><small>Recorded requests</small></div>`;
+    $("#adminUserCpx").innerHTML = `
+      <details><summary>CPX activity &amp; data status</summary><div class="admin-user-profile-stats">
         <div><strong>${metric(cpx.completed_reward_events)}</strong><span>Completed reward postbacks</span></div>
         <div><strong>${metric(cpx.ledger_credit_rows)}</strong><span>CPX-labelled ledger credits</span></div>
         <div><strong>${metric(cpx.logged_opens)}</strong><span>Logged CPX launch clicks</span></div>
       </div><p>${safe(cpx.note)}</p>${!cpx.postback_rows ? '<p>No CPX postbacks are recorded for this account. Check coin history for legacy credits; this does not prove the user completed zero surveys.</p>' : ""}${cpx.logged_opens == null ? '<p>No launch clicks recorded. Individual survey launches inside the CPX widget cannot be counted here.</p>' : ""}</details>`;
     $("[data-copy-profile-id]")?.addEventListener("click", () => copyToClipboard(item.user_id, "User ID copied."));
+    $("#adminUserProfile h1")?.focus({ preventScroll: true });
   }
 
   async function loadUserHistory(section = state.userHistorySection, append = false) {
@@ -875,6 +879,7 @@
     const requestId = ++state.userHistoryRequestId;
     state.userHistoryLoading = true;
     state.userHistorySection = section;
+    $("#adminUserCpx")?.classList.toggle("hidden", section !== "surveys");
     $$("[data-user-history-section]").forEach((button) => {
       const active = button.dataset.userHistorySection === section;
       button.classList.toggle("active", active);
@@ -883,6 +888,7 @@
     const target = $("#adminUserHistory");
     if (!append) {
       state.userHistoryItems = [];
+      $("#adminUserHistoryCount").textContent = "";
       target.innerHTML = '<div class="admin-empty">Loading history…</div>';
     }
     $("#userHistoryMore")?.classList.add("hidden");
@@ -906,7 +912,7 @@
   function renderUserHistory() {
     const section = state.userHistorySection;
     const rows = state.userHistoryItems;
-    $("#adminUserHistoryCount").textContent = `Showing ${formatNumber(rows.length)} of ${formatNumber(state.userHistoryTotal)}`;
+    $("#adminUserHistoryCount").textContent = state.userHistoryTotal ? `${formatNumber(rows.length)} of ${formatNumber(state.userHistoryTotal)} entries` : "";
     $("#userHistoryMore")?.classList.toggle("hidden", rows.length >= state.userHistoryTotal);
     $("#adminUserHistory").innerHTML = rows.length ? rows.map((item) => {
       let title = "", detail = "", value = "", action = "";
@@ -934,7 +940,7 @@
         value = `${formatNumber(item.amount)} coins`;
       }
       return `<div class="admin-user-history-row"><div><strong>${safe(title)}</strong><small>${safe(detail)}</small><small>${safe(formatDateTime(date))}</small></div><span>${safe(value)}</span>${action}</div>`;
-    }).join("") : '<div class="admin-empty"><strong>No recorded entries</strong>No entries exist in this history section; missing provider logs are not proof of zero survey activity.</div>';
+    }).join("") : `<div class="admin-empty admin-user-history-empty"><span class="admin-user-empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 3h8l4 4v14H4V3h4M8 11h8M8 15h5"/></svg></span><strong>${safe(({orders:"No orders yet",coins:"No coin entries",promos:"No promo redemptions",surveys:"No recorded survey results",support:"No support tickets"})[section] || "No entries")}</strong><p>${safe(({orders:"This account has no recorded reward orders.",coins:"There are no recorded coin adjustments for this account.",promos:"This account has no recorded promo-code redemptions.",surveys:"Missing provider logs do not prove zero survey activity. Check CPX data status below.",support:"This account has no recorded support requests."})[section] || "Nothing recorded in this section.")}</p></div>`;
     $$("[data-profile-order]").forEach((button) => button.addEventListener("click", () => openOrder(Number(button.dataset.profileOrder))));
     $$("[data-profile-support]").forEach((button) => button.addEventListener("click", () => openSupport(Number(button.dataset.profileSupport))));
   }

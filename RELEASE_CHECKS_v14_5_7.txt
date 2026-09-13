@@ -1,0 +1,12 @@
+SkinQuest v14.5.7 checks
+========================
+[ ] Upload website files to existing v14.5.6; hard-refresh.
+[ ] Click avatar, name, date or coin cell: whole row opens the correct account.
+[ ] Enter and Space activate a focused user row; keyboard focus stays visible.
+[ ] No View user buttons or browser-default history tabs.
+[ ] Identity, totals and history have distinct spacing on desktop and mobile.
+[ ] Switching accounts clears the previous identity, totals and history.
+[ ] Each history tab fetches correct records; CPX status only under Survey results.
+[ ] Empty sections do not show Showing 0 of 0.
+[ ] Regular accounts still cannot access admin RPCs.
+[ ] No SQL/Edge/Cron changes; no live database changes during preparation.
