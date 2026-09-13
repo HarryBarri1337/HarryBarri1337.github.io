@@ -1,13 +1,13 @@
-/* SkinQuest v14.5.3 product upgrade layer.
+/* SkinQuest v14.5.4 product upgrade layer.
    Loaded after app.js. The full setup includes the v14 database layer;
-   v14.5.3 adds hybrid inventory and history-preserving cleanup controls.
+   v14.5.4 adds user filters and repairs legacy reward deletion links.
    This layer extends the secure SkinQuest core without replacing reward authority.
 */
 
 (() => {
   "use strict";
 
-  const VERSION = "14.5.3";
+  const VERSION = "14.5.4";
   const GA_ID = "G-DFRR03C4BP";
   const ATTRIBUTION_KEY = "skinquest.firstTouch.v14";
   const CONSENT_KEY = "skinquest.cookieConsent.v1";

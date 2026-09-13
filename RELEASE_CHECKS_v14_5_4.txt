@@ -1,0 +1,15 @@
+SkinQuest v14.5.4 deployment checks
+===================================
+[ ] Back up database and run only the v14.5.4 upgrade on v14.5.3.
+[ ] Search fields display a single focus highlight.
+[ ] Desktop reward rows fit Edit/Hide/Delete on one line.
+[ ] Steam marketplace link remains available beside reward details.
+[ ] Users filters hide staff or show only admins/owners as selected.
+[ ] Most/fewest coins sorting works across multiple pages.
+[ ] Steam sign-in filter does not confuse email accounts with linked Steam profiles.
+[ ] Quickly changing filters does not restore an older response.
+[ ] A manual reward with terminal legacy order history can be deleted.
+[ ] Deleted reward orders retain original name and coin amount.
+[ ] Open orders/reserved stock still block deletion.
+[ ] Non-admins cannot use the user search RPC.
+[ ] Edge Functions and Cron settings remain unchanged.

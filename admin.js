@@ -1,4 +1,4 @@
-/* SkinQuest v14.5.3 admin operations workspace */
+/* SkinQuest v14.5.4 admin operations workspace */
 (() => {
   "use strict";
 
@@ -33,6 +33,7 @@
     users: [],
     userTotal: 0,
     userLoading: false,
+    userRequestId: 0,
     rewards: [],
     rewardOffset: 0,
     rewardTotal: 0,
@@ -383,6 +384,7 @@
     $("#redeemSearch")?.addEventListener("input", debounce(() => loadOrders({ reset: true })));
     $("#supportSearch")?.addEventListener("input", debounce(() => loadSupport({ reset: true })));
     $("#adminUserSearch")?.addEventListener("input", debounce(() => loadUsers({ reset: true })));
+    ["adminUserRole", "adminUserLogin", "adminUserSort"].forEach((id) => $("#" + id)?.addEventListener("change", () => loadUsers({ reset: true })));
     $("#rewardAdminSearch")?.addEventListener("input", debounce(() => loadRewards({ reset: true })));
     $("#rewardAdminModeFilter")?.addEventListener("change", () => loadRewards({ reset: true }));
     $("#rewardAdminSort")?.addEventListener("change", () => loadRewards({ reset: true }));
@@ -745,14 +747,23 @@
 
   async function loadUsers({ reset = false, append = false } = {}) {
     const target = $("#adminUserList");
-    if (!target || state.userLoading) return;
+    if (!target) return;
+    if (append && state.userLoading) return;
+    const requestId = ++state.userRequestId;
     state.userLoading = true;
     if (!append) target.innerHTML = '<div class="admin-empty">Loading users…</div>';
     const more = $("#usersLoadMore");
     if (more) { more.disabled = true; more.textContent = "Loading…"; }
     try {
       const offset = append ? state.users.length : 0;
-      const result = await searchUsers($("#adminUserSearch")?.value || "", PAGE_SIZE, offset);
+      const result = await rpc("sq_admin_filter_users", {
+        p_query: textValue($("#adminUserSearch")?.value) || null,
+        p_role: $("#adminUserRole")?.value || "all",
+        p_login: $("#adminUserLogin")?.value || "all",
+        p_sort: $("#adminUserSort")?.value || "newest",
+        p_limit: PAGE_SIZE, p_offset: offset
+      });
+      if (requestId !== state.userRequestId) return;
       const rows = Array.isArray(result?.items) ? result.items : [];
       state.users = append ? [...state.users, ...rows] : rows;
       state.userTotal = Number(result?.total ?? state.users.length);
@@ -767,11 +778,12 @@
       }));
       renderUsers();
     } catch (error) {
+      if (requestId !== state.userRequestId) return;
       target.innerHTML = `<div class="admin-empty"><strong>Could not load users</strong>${safe(error.message)}</div>`;
       throw error;
     } finally {
-      state.userLoading = false;
-      if (more) { more.disabled = false; more.textContent = "Load more users"; }
+      if (requestId === state.userRequestId) state.userLoading = false;
+      if (more && requestId === state.userRequestId) { more.disabled = false; more.textContent = "Load more users"; }
     }
   }
 
@@ -790,7 +802,7 @@
       const completed = Number(item.completed_count || 0);
       return `<div class="admin-user-row">
         <span class="admin-account-avatar">${safe((userDisplayName(item)[0] || "U").toUpperCase())}</span>
-        <div><strong>${safe(userDisplayName(item))}</strong><small>${safe(email)}</small></div>
+        <div><strong>${safe(userDisplayName(item))}</strong><small>${safe(email)}</small>${item.role ? `<small>${safe(statusLabel(item.role))} · ${item.steam_login ? "Steam sign-in" : "Other sign-in"}</small>` : ""}</div>
         <div><strong>${safe(steam)}</strong><small>${safe(item.steam_id || shortId(item.user_id))}</small></div>
         <span class="admin-stock-value"><b>${formatNumber(item.points_balance)}</b> coins</span>
         <span class="admin-stock-value"><b>${formatNumber(item.order_count)}</b> orders<small>${formatNumber(completed)} completed · ${formatNumber(item.support_count)} tickets</small></span>
@@ -1304,11 +1316,11 @@
       const marketHref = marketName ? `https://steamcommunity.com/market/listings/730/${encodeURIComponent(marketName)}` : "";
       return `<div class="admin-reward-row ${item.active ? "" : "is-inactive"}">
         <div class="admin-reward-image">${image ? `<img src="${safe(image)}" alt="" loading="lazy" referrerpolicy="no-referrer" />` : `<span>${safe((item.name || "SQ").slice(0, 3).toUpperCase())}</span>`}</div>
-        <div><strong>${safe(item.name)}</strong><small>${safe([item.rarity, item.condition].filter(Boolean).join(" · ") || "No rarity or condition")}</small></div>
+        <div><strong>${safe(item.name)}</strong><small>${safe([item.rarity, item.condition].filter(Boolean).join(" · ") || "No rarity or condition")}${marketHref ? ` · <a class="admin-market-link" href="${safe(marketHref)}" target="_blank" rel="noopener noreferrer">Steam ↗</a>` : ""}</small></div>
         <span class="admin-stock-value"><b>${formatNumber(rewardCost(item))}</b> coins<small class="admin-price-source ${sourceClass}">${safe(sourceLabel)}</small></span>
         <span class="admin-stock-value">${rewardMode(item) === "orderable" ? `<b>Available to order</b><small>ETA ${formatNumber(item.order_eta_days || 8)}+ days</small>` : `<b>${formatNumber(stock.available)}</b> in stock<small>${formatNumber(stock.reserved)} reserved / ${formatNumber(stock.total)} total${item.fulfillment_mode === "orderable" ? " · order fallback" : ""}</small>`}</span>
         ${statusPill(item.active ? "active" : "inactive")}
-        <div class="admin-row-actions">${marketHref ? `<a class="admin-row-action admin-market-link" href="${safe(marketHref)}" target="_blank" rel="noopener noreferrer">Steam</a>` : ""}${state.owner ? `<button class="admin-row-action" type="button" data-edit-reward="${safe(item.id)}">Edit</button><button class="admin-row-action" type="button" data-toggle-reward="${safe(item.id)}">${item.active ? "Hide" : "Activate"}</button>${item.catalog_managed ? "" : `<button class="admin-row-action is-danger" type="button" data-delete-reward="${safe(item.id)}">Delete</button>`}` : ""}</div>
+        <div class="admin-row-actions">${state.owner ? `<button class="admin-row-action" type="button" data-edit-reward="${safe(item.id)}">Edit</button><button class="admin-row-action" type="button" data-toggle-reward="${safe(item.id)}">${item.active ? "Hide" : "Activate"}</button>${item.catalog_managed ? "" : `<button class="admin-row-action is-danger" type="button" data-delete-reward="${safe(item.id)}">Delete</button>`}` : ""}</div>
       </div>`;
     }).join("")}`;
 

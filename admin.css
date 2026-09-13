@@ -1,4 +1,4 @@
-/* SkinQuest v14.5.3 admin operations workspace */
+/* SkinQuest v14.5.4 admin operations workspace */
 :root {
   --ops-bg: #080b10;
   --ops-sidebar: #0b0f15;
@@ -265,6 +265,12 @@ body.admin-ops-body {
 .admin-global-search svg { width: 18px; color: var(--ops-muted); }
 .admin-global-search input { width: 100%; border: 0; outline: 0; color: var(--ops-text); background: transparent; font-size: .88rem; }
 .admin-global-search input::placeholder { color: var(--ops-muted-2); }
+.admin-global-search input:focus,
+.admin-global-search input:focus-visible,
+.admin-filter-search input:focus,
+.admin-filter-search input:focus-visible { outline: none; box-shadow: none; }
+.admin-global-search:focus-within,
+.admin-filter-search:focus-within { outline: 2px solid var(--ops-gold); outline-offset: 2px; }
 .admin-global-search kbd { padding: 2px 7px; border: 1px solid var(--ops-line-strong); border-radius: 5px; color: var(--ops-muted); background: rgba(0, 0, 0, .18); font-size: .7rem; }
 .admin-topbar-actions { display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
 .admin-sync-state { display: flex; align-items: center; gap: 7px; color: var(--ops-muted); font-size: .75rem; }
@@ -409,6 +415,8 @@ body.admin-ops-body {
   margin-bottom: 14px;
 }
 .admin-reward-toolbar { grid-template-columns: minmax(260px, 1fr) 190px 190px auto; }
+.admin-user-toolbar { grid-template-columns: minmax(220px,1fr) repeat(3,minmax(145px,180px)); }
+.admin-user-toolbar .admin-toolbar-count { grid-column: 1 / -1; }
 .admin-toolbar .sq-select-trigger,
 .admin-form-grid .sq-select-trigger,
 .admin-drawer-form .sq-select-trigger,
@@ -614,6 +622,7 @@ body.admin-ops-body {
 .admin-stock-value { color: var(--ops-muted); font-size: .76rem; }
 .admin-stock-value b { color: var(--ops-text); }
 .admin-row-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.admin-reward-row > .admin-row-actions { display: grid; grid-template-columns: repeat(3,max-content); align-items: center; gap: 6px; }
 .admin-row-action {
   min-height: 34px;
   padding: 6px 10px;
@@ -777,6 +786,8 @@ body.admin-ops-body {
 }
 
 @media (max-width: 760px) {
+  .admin-user-toolbar { grid-template-columns: 1fr 1fr; }
+  .admin-user-toolbar .admin-filter-search { grid-column: 1 / -1; }
   .admin-topbar { height: auto; min-height: 116px; grid-template-columns: 1fr auto; gap: 10px; padding: 12px 14px; }
   .admin-global-search { grid-column: 1 / -1; grid-row: 2; }
   .admin-topbar-actions { grid-column: 2; grid-row: 1; }
@@ -825,6 +836,8 @@ body.admin-ops-body {
 }
 
 @media (max-width: 520px) {
+  .admin-user-toolbar { grid-template-columns: 1fr; }
+  .admin-reward-row > .admin-row-actions { grid-template-columns: max-content; }
   .admin-gate-card { padding: 30px 20px; }
   .admin-gate-brand img { width: 120px; }
   .admin-sidebar { width: min(286px, 88vw); }
