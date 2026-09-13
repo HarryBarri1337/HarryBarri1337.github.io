@@ -1,4 +1,4 @@
-// SkinQuest v14.5.5 core - secure base; enhanced by skinquest-v14.js
+// SkinQuest v14.5.6 core - secure base; enhanced by skinquest-v14.js
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -1470,11 +1470,13 @@ function bindCpxOfferwallButton(button) {
     // Count an observable launch click, never a page load or widget render.
     if (Date.now() - Number(button.dataset.lastTrackedCpxOpen || 0) < 1000) return;
     button.dataset.lastTrackedCpxOpen = String(Date.now());
-    sb.rpc("sq_track_event", {
+    Promise.resolve(sb.rpc("sq_track_event", {
       p_event_name: "cpx_wall_open_requested",
       p_page_path: location.pathname,
       p_properties: { provider: "cpx", source: "wall_button" }
-    }).catch(() => {});
+    })).then(({ data, error }) => {
+      if (error || data !== true) console.warn("CPX launch tracking unavailable.");
+    }).catch(() => console.warn("CPX launch tracking unavailable."));
   });
 
   const retryButton = qs("#retryCpxWidget");
@@ -4274,6 +4276,35 @@ async function refreshAll() {
   else await initAdmin();
 }
 
+function initActivityTracking() {
+  if (window.__skinquestPresenceReady) return;
+  window.__skinquestPresenceReady = true;
+  let lastInteraction = Date.now();
+  let inFlight = false;
+  const interact = () => { lastInteraction = Date.now(); };
+  ["pointerdown", "keydown", "scroll"].forEach((name) => document.addEventListener(name, interact, { passive: true }));
+  const touch = async () => {
+    if (inFlight || document.visibilityState !== "visible" || Date.now() - lastInteraction > 5 * 60000) return;
+    inFlight = true;
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session?.user) return;
+      const { error } = await sb.rpc("sq_touch_activity");
+      if (error) console.warn("Activity tracking unavailable.");
+    } catch {
+      console.warn("Activity tracking unavailable.");
+    } finally { inFlight = false; }
+  };
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") { interact(); touch(); }
+  });
+  sb.auth.onAuthStateChange((event) => {
+    if (event === "SIGNED_IN") window.setTimeout(() => { interact(); touch(); }, 0);
+  });
+  window.setInterval(touch, 60000);
+  touch();
+}
+
 function applyRewardSearchFromQuery() {
   const params = new URLSearchParams(location.search);
   const search = params.get("search");
@@ -4286,6 +4317,7 @@ function applyRewardSearchFromQuery() {
 
 async function boot() {
   initSkinQuestSelects();
+  initActivityTracking();
   initThemeControls();
   applyRewardShopVisualPreferences();
   initNav();

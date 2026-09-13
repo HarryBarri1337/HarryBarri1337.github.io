@@ -1,0 +1,14 @@
+SkinQuest v14.5.6 deployment checks
+==================================
+[ ] Back up, run only v14.5.6 delta on v14.5.5, upload website, hard-refresh.
+[ ] Users retains role/login filters, sorting and pagination.
+[ ] View user shows correct identity, creation date, coins and activity.
+[ ] Each history tab shows only that account; Load more retrieves next 25.
+[ ] Rapidly switching accounts/tabs does not display stale responses.
+[ ] Order/ticket links open the correct existing drawer.
+[ ] CPX button click records launch; page refresh does not.
+[ ] Missing CPX records are distinguished from recorded zero completions.
+[ ] Postback and ledger evidence are separate, never summed.
+[ ] Visible active page updates Last active; hidden/idle pages stop updates.
+[ ] Regular user cannot access admin RPCs or write another user's presence.
+[ ] Edge Functions, Cron and secrets remain unchanged.

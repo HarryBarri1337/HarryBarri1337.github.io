@@ -1,4 +1,4 @@
-/* SkinQuest v14.5.5 admin operations workspace */
+/* SkinQuest v14.5.6 admin operations workspace */
 (() => {
   "use strict";
 
@@ -9,6 +9,7 @@
     orders: "Reward orders",
     support: "Support inbox",
     users: "Users",
+    user: "User account",
     rewards: "Rewards & stock",
     status: "System status",
     promos: "Promo codes",
@@ -34,6 +35,13 @@
     userTotal: 0,
     userLoading: false,
     userRequestId: 0,
+    userProfileId: null,
+    userProfileRequestId: 0,
+    userHistorySection: "orders",
+    userHistoryItems: [],
+    userHistoryTotal: 0,
+    userHistoryRequestId: 0,
+    userHistoryLoading: false,
     rewards: [],
     rewardOffset: 0,
     rewardTotal: 0,
@@ -330,7 +338,7 @@
 
     $$('[data-admin-view-panel]').forEach((panel) => panel.classList.toggle("hidden", panel.dataset.adminViewPanel !== next));
     $$(".admin-nav-item[data-admin-view]").forEach((button) => {
-      const active = button.dataset.adminView === next;
+      const active = button.dataset.adminView === next || (next === "user" && button.dataset.adminView === "users");
       button.classList.toggle("active", active);
       if (active) button.setAttribute("aria-current", "page");
       else button.removeAttribute("aria-current");
@@ -394,6 +402,9 @@
     $("#ordersLoadMore")?.addEventListener("click", () => loadOrders({ append: true }));
     $("#supportLoadMore")?.addEventListener("click", () => loadSupport({ append: true }));
     $("#usersLoadMore")?.addEventListener("click", () => loadUsers({ append: true }));
+    $$("[data-user-history-section]").forEach((button) => button.addEventListener("click", () => loadUserHistory(button.dataset.userHistorySection)));
+    $("#userHistoryMore")?.addEventListener("click", () => loadUserHistory(state.userHistorySection, true));
+    $("#refreshUserProfile")?.addEventListener("click", () => openUserProfile(state.userProfileId));
     $("#rewardsLoadMore")?.addEventListener("click", () => loadRewards({ append: true }));
     $("#openRewardCreate")?.addEventListener("click", () => openRewardEditor(null));
     $("#rewardFulfillmentMode")?.addEventListener("change", updateRewardEditorMode);
@@ -793,33 +804,139 @@
 
   function renderUserTable(target, rows) {
     if (!rows?.length) {
-      target.innerHTML = '<div class="admin-empty"><strong>No users found</strong>Try another email, Steam name, Steam ID, or user ID.</div>';
+      target.innerHTML = '<div class="admin-empty"><strong>No users found</strong>Try another search or filter.</div>';
       return;
     }
-    target.innerHTML = `<div class="admin-user-header"><span></span><span>User</span><span>Steam / ID</span><span>Coins</span><span>Orders</span><span>Status</span><span></span></div>${rows.map((item) => {
-      const email = textValue(item.contact_email) || textValue(item.email) || "No verified email";
-      const steam = textValue(item.steam_name) || "No Steam name";
-      const completed = Number(item.completed_count || 0);
-      return `<div class="admin-user-row">
+    target.innerHTML = `<div class="admin-directory-header"><span></span><span>User / role</span><span>Date created</span><span>Last active</span><span>Coins</span><span></span></div>${rows.map((item) => `
+      <div class="admin-directory-row">
         <span class="admin-account-avatar">${safe((userDisplayName(item)[0] || "U").toUpperCase())}</span>
-        <div><strong>${safe(userDisplayName(item))}</strong><small>${safe(email)}</small>${item.role ? `<small>${safe(statusLabel(item.role))} · ${item.steam_login ? "Steam sign-in" : "Other sign-in"}</small>` : ""}
-          <small title="${safe(formatDateTime(item.account_created_at))}">Date created: ${safe(item.account_created_at ? new Date(item.account_created_at).toLocaleDateString() : "Unknown")}</small>
-          <small class="admin-user-survey-counts" title="Verified CPX reward results may include screen-out compensation. CPX opens are tracked launch clicks since v14.5.5, not individual surveys or page visits."><b>${formatNumber(item.verified_cpx_rewards)}</b> verified CPX rewards · <b>${formatNumber(item.cpx_opens)}</b> CPX opens</small>
-        </div>
-        <div><strong>${safe(steam)}</strong><small>${safe(item.steam_id || shortId(item.user_id))}</small></div>
+        <div class="admin-directory-name"><strong>${safe(userDisplayName(item))}</strong><small>${safe(item.contact_email || item.email || "No verified email")}</small><small>${safe(statusLabel(item.role || "user"))} · ${safe(statusLabel(item.account_status))}</small></div>
+        <span data-directory-created title="${safe(formatDateTime(item.account_created_at))}">${safe(item.account_created_at ? new Date(item.account_created_at).toLocaleDateString() : "Unknown")}</span>
+        <span data-directory-active title="${safe(formatDateTime(item.last_active_at))}">${safe(item.last_active_at ? relativeTime(item.last_active_at) : "Unknown")}</span>
         <span class="admin-stock-value"><b>${formatNumber(item.points_balance)}</b> coins</span>
-        <span class="admin-stock-value"><b>${formatNumber(item.order_count)}</b> orders<small>${formatNumber(completed)} completed · ${formatNumber(item.support_count)} tickets</small></span>
-        ${statusPill(item.account_status || "active")}
-        <div class="admin-row-actions"><button class="admin-row-action" type="button" data-user-orders="${safe(item.user_id)}">Orders</button><button class="admin-row-action" type="button" data-copy-user-id="${safe(item.user_id)}">Copy ID</button></div>
-      </div>`;
-    }).join("")}`;
-    $$("[data-copy-user-id]", target).forEach((button) => button.addEventListener("click", () => copyToClipboard(button.dataset.copyUserId, "User ID copied.")));
-    $$("[data-user-orders]", target).forEach((button) => button.addEventListener("click", async () => {
-      showView("orders");
-      if ($("#redeemSearch")) $("#redeemSearch").value = button.dataset.userOrders;
-      if ($("#adminStatusFilter")) $("#adminStatusFilter").value = "all";
-      await loadOrders({ reset: true });
-    }));
+        <button class="admin-row-action" type="button" data-view-user="${safe(item.user_id)}">View user</button>
+      </div>`).join("")}`;
+    $$("[data-view-user]", target).forEach((button) => button.addEventListener("click", () => openUserProfile(button.dataset.viewUser)));
+  }
+
+  async function openUserProfile(id) {
+    if (!id) return;
+    const requestId = ++state.userProfileRequestId;
+    ++state.userHistoryRequestId;
+    state.userHistoryLoading = false;
+    state.userProfileId = id;
+    state.userHistorySection = "orders";
+    state.userHistoryItems = [];
+    showView("user");
+    $("#adminUserProfile").innerHTML = '<div class="admin-empty">Loading user account…</div>';
+    $("#adminUserHistory").innerHTML = "";
+    $("#adminUserHistoryCount").textContent = "";
+    $("#userHistoryMore")?.classList.add("hidden");
+    try {
+      const result = await rpc("sq_admin_user_profile", { p_user_id: id });
+      if (requestId !== state.userProfileRequestId) return;
+      renderUserProfile(result);
+      await loadUserHistory("orders");
+    } catch (error) {
+      if (requestId !== state.userProfileRequestId) return;
+      $("#adminUserProfile").innerHTML = `<div class="admin-empty"><strong>User account unavailable</strong>${safe(error.message)}</div>`;
+    }
+  }
+
+  function renderUserProfile(result) {
+    const item = result.user;
+    const cpx = result.cpx || {};
+    const metric = (value) => value == null ? "No records" : formatNumber(value);
+    $("#adminUserProfile").innerHTML = `
+      <div class="admin-user-profile-head"><div><p class="admin-eyebrow">User account</p><h2>${safe(userDisplayName(item))}</h2><p>${safe(item.contact_email || item.email || "No verified email")}</p></div>${statusPill(item.account_status || "active")}</div>
+      <div class="admin-user-profile-meta">
+        <div><span>Role / sign-in</span><strong>${safe(statusLabel(item.role))} · ${item.steam_login ? "Steam sign-in" : "Other sign-in"}</strong></div>
+        <div><span>Date created</span><strong>${safe(formatDateTime(item.account_created_at))}</strong></div>
+        <div><span>Last active</span><strong>${safe(item.last_active_at ? formatDateTime(item.last_active_at) : "Unknown")}</strong></div>
+        <div><span>Steam account</span><strong>${safe(item.steam_name || "Not connected")}</strong><small>${safe(item.steam_id || "")}</small></div>
+        <div><span>User ID</span><code>${safe(item.user_id)}</code><button class="admin-text-button" type="button" data-copy-profile-id>Copy ID</button></div>
+      </div>
+      <div class="admin-user-profile-stats">
+        <div><strong>${formatNumber(item.points_balance)}</strong><span>Current coins</span></div>
+        <div><strong>${formatNumber(item.order_count)}</strong><span>Orders · ${formatNumber(item.completed_count)} completed</span></div>
+        <div><strong>${formatNumber(item.support_count)}</strong><span>Support tickets</span></div>
+      </div>
+      <details class="admin-user-cpx"><summary>CPX activity &amp; data status</summary><div class="admin-user-profile-stats">
+        <div><strong>${metric(cpx.completed_reward_events)}</strong><span>Completed reward postbacks</span></div>
+        <div><strong>${metric(cpx.ledger_credit_rows)}</strong><span>CPX-labelled ledger credits</span></div>
+        <div><strong>${metric(cpx.logged_opens)}</strong><span>Logged CPX launch clicks</span></div>
+      </div><p>${safe(cpx.note)}</p>${!cpx.postback_rows ? '<p>No CPX postbacks are recorded for this account. Check coin history for legacy credits; this does not prove the user completed zero surveys.</p>' : ""}${cpx.logged_opens == null ? '<p>No launch clicks recorded. Individual survey launches inside the CPX widget cannot be counted here.</p>' : ""}</details>`;
+    $("[data-copy-profile-id]")?.addEventListener("click", () => copyToClipboard(item.user_id, "User ID copied."));
+  }
+
+  async function loadUserHistory(section = state.userHistorySection, append = false) {
+    if (!state.userProfileId) return;
+    if (append && state.userHistoryLoading) return;
+    const requestId = ++state.userHistoryRequestId;
+    state.userHistoryLoading = true;
+    state.userHistorySection = section;
+    $$("[data-user-history-section]").forEach((button) => {
+      const active = button.dataset.userHistorySection === section;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", String(active));
+    });
+    const target = $("#adminUserHistory");
+    if (!append) {
+      state.userHistoryItems = [];
+      target.innerHTML = '<div class="admin-empty">Loading history…</div>';
+    }
+    $("#userHistoryMore")?.classList.add("hidden");
+    try {
+      const result = await rpc("sq_admin_user_records", {
+        p_user_id: state.userProfileId, p_section: section, p_limit: 25,
+        p_offset: append ? state.userHistoryItems.length : 0
+      });
+      if (requestId !== state.userHistoryRequestId) return;
+      state.userHistoryItems = append ? [...state.userHistoryItems, ...result.items] : result.items;
+      state.userHistoryTotal = Number(result.total || 0);
+      renderUserHistory();
+    } catch (error) {
+      if (requestId !== state.userHistoryRequestId) return;
+      target.innerHTML = `<div class="admin-empty"><strong>History unavailable</strong>${safe(error.message)}</div>`;
+    } finally {
+      if (requestId === state.userHistoryRequestId) state.userHistoryLoading = false;
+    }
+  }
+
+  function renderUserHistory() {
+    const section = state.userHistorySection;
+    const rows = state.userHistoryItems;
+    $("#adminUserHistoryCount").textContent = `Showing ${formatNumber(rows.length)} of ${formatNumber(state.userHistoryTotal)}`;
+    $("#userHistoryMore")?.classList.toggle("hidden", rows.length >= state.userHistoryTotal);
+    $("#adminUserHistory").innerHTML = rows.length ? rows.map((item) => {
+      let title = "", detail = "", value = "", action = "";
+      const date = item.redeemed_at || item.created_at;
+      if (section === "orders") {
+        title = orderRewardLabel(item);
+        detail = `${orderNumber(item)} · ${statusLabel(item.status)}`;
+        value = `${formatNumber(item.points_coins || item.points_cost)} coins`;
+        action = `<button class="admin-row-action" type="button" data-profile-order="${safe(item.id)}">Open order</button>`;
+      } else if (section === "support") {
+        title = item.topic || "Support request";
+        detail = `${ticketNumber(item)} · ${statusLabel(item.status)}`;
+        action = `<button class="admin-row-action" type="button" data-profile-support="${safe(item.id)}">Open ticket</button>`;
+      } else if (section === "coins") {
+        title = item.reason || "Coin adjustment";
+        detail = item.source_type ? statusLabel(item.source_type) : "Legacy ledger entry";
+        value = `${Number(item.amount)>0 ? "+" : ""}${formatNumber(item.amount)} coins`;
+      } else if (section === "promos") {
+        title = item.code_snapshot || "Unknown legacy code";
+        detail = `${item.campaign_snapshot || "No campaign"}${item.promo_code_id == null ? " · Deleted code" : ""}`;
+        value = `+${formatNumber(item.coins_awarded)} coins`;
+      } else {
+        title = `${String(item.provider || "Provider").toUpperCase()} · ${item.provider_event_id || item.id}`;
+        detail = statusLabel(item.status);
+        value = `${formatNumber(item.amount)} coins`;
+      }
+      return `<div class="admin-user-history-row"><div><strong>${safe(title)}</strong><small>${safe(detail)}</small><small>${safe(formatDateTime(date))}</small></div><span>${safe(value)}</span>${action}</div>`;
+    }).join("") : '<div class="admin-empty"><strong>No recorded entries</strong>No entries exist in this history section; missing provider logs are not proof of zero survey activity.</div>';
+    $$("[data-profile-order]").forEach((button) => button.addEventListener("click", () => openOrder(Number(button.dataset.profileOrder))));
+    $$("[data-profile-support]").forEach((button) => button.addEventListener("click", () => openSupport(Number(button.dataset.profileSupport))));
   }
 
   function renderUsers() {

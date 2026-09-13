@@ -18,9 +18,9 @@
       }
     }());
   </script>
-  <link rel="stylesheet" href="styles.css?v=1455" />
-  <link rel="stylesheet" href="skinquest-v14.css?v=1455" />
-  <link rel="stylesheet" href="admin.css?v=1455" />
+  <link rel="stylesheet" href="styles.css?v=1456" />
+  <link rel="stylesheet" href="skinquest-v14.css?v=1456" />
+  <link rel="stylesheet" href="admin.css?v=1456" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#080b10" />
   <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png" />
@@ -86,7 +86,7 @@
       <div><strong id="adminAccountName">Admin</strong><span id="adminAccountRole">Verifying…</span></div>
       <button class="admin-icon-button" id="adminSignOutButton" type="button" aria-label="Sign out" title="Sign out"><svg viewBox="0 0 24 24"><path d="M10 5H5v14h5M14 8l4 4-4 4M18 12H9"/></svg></button>
     </div>
-    <div class="admin-sidebar-footer"><a href="/">Open customer site</a><span>v14.5.5</span></div>
+    <div class="admin-sidebar-footer"><a href="/">Open customer site</a><span>v14.5.6</span></div>
   </aside>
 
   <div class="admin-main-shell">
@@ -128,7 +128,7 @@
       </section>
 
       <section class="admin-view hidden" data-admin-view-panel="users">
-        <div class="admin-page-head"><div><p class="admin-eyebrow">Customer directory</p><h1>Users</h1><p>Search accounts and review creation dates, balances, and CPX activity.</p><p class="admin-user-metrics-note">Verified CPX rewards may include screen-out compensation. CPX opens count tracked launch clicks since v14.5.5, not individual surveys opened inside CPX.</p></div></div>
+        <div class="admin-page-head"><div><p class="admin-eyebrow">Customer directory</p><h1>Users</h1><p>Find an account, then choose View user for its activity and history.</p></div></div>
         <div class="admin-toolbar admin-user-toolbar">
           <label class="admin-filter-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m16 16 4 4"/></svg><input id="adminUserSearch" type="search" maxlength="120" placeholder="Search users" /></label>
           <label><span>Role</span><select id="adminUserRole"><option value="all">All roles</option><option value="user">Customers only</option><option value="staff">Staff only</option><option value="admin">Admins only</option><option value="owner">Owners only</option></select></label>
@@ -137,6 +137,21 @@
           <div id="adminUserResultCount" class="admin-toolbar-count">Loading…</div>
         </div>
         <section class="admin-card admin-table-card"><div id="adminUserList" class="admin-user-list"><div class="admin-empty">Loading users…</div></div><button id="usersLoadMore" class="admin-load-more hidden" type="button">Load more users</button></section>
+      </section>
+
+      <section class="admin-view hidden" data-admin-view-panel="user">
+        <div class="admin-user-profile-navigation"><button class="admin-secondary-button" type="button" data-admin-view="users">← Back to users</button><button id="refreshUserProfile" class="admin-secondary-button" type="button">Refresh account</button></div>
+        <section id="adminUserProfile" class="admin-card admin-user-profile"><div class="admin-empty">Choose View user from the directory.</div></section>
+        <section class="admin-card admin-user-history">
+          <nav class="admin-user-history-tabs" aria-label="User history sections">
+            <button type="button" data-user-history-section="orders" aria-pressed="true" class="active">Orders</button>
+            <button type="button" data-user-history-section="coins" aria-pressed="false">Coin history</button>
+            <button type="button" data-user-history-section="promos" aria-pressed="false">Promo redemptions</button>
+            <button type="button" data-user-history-section="surveys" aria-pressed="false">Survey results</button>
+            <button type="button" data-user-history-section="support" aria-pressed="false">Support</button>
+          </nav><p id="adminUserHistoryCount" class="admin-user-history-count"></p>
+          <div id="adminUserHistory" aria-live="polite"></div><button id="userHistoryMore" class="admin-load-more hidden" type="button">Load more history</button>
+        </section>
       </section>
 
       <section class="admin-view hidden" data-admin-view-panel="rewards">
@@ -221,7 +236,7 @@
 </div>
 
 <script src="assets/vendor/supabase-js-2.45.4.js"></script>
-<script src="admin.js?v=1455"></script>
-<script src="app.js?v=1455"></script>
+<script src="admin.js?v=1456"></script>
+<script src="app.js?v=1456"></script>
 </body>
 </html>
