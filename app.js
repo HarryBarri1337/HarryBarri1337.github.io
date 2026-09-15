@@ -1,4 +1,4 @@
-// SkinQuest v14.6.1 core - secure base; enhanced by skinquest-v14.js
+// SkinQuest v14.6.2 core - secure base; enhanced by skinquest-v14.js
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -1430,6 +1430,21 @@ async function initOfferwall() {
     if (!isValidCpxWidgetPayload(data?.cpx_widget, user.id)) throw new Error("The secure CPX widget configuration was invalid.");
 
     cpxButton.href = data.wall_url;
+    const timewallFrame = qs("#timewallSurveyFrame");
+    const timewallPanel = qs("#timewallSurveyPanel");
+    const timewallLink = qs("#timewallProviderLink");
+    if (timewallFrame && timewallPanel && timewallLink && typeof data.timewall_wall_url === "string") {
+      try {
+        const url = new URL(data.timewall_wall_url);
+        if (url.protocol === "https:" &&
+            (url.hostname === "timewall.io" || url.hostname.endsWith(".timewall.io")) &&
+            decodeURIComponent(url.toString()).includes(user.id)) {
+          timewallFrame.src = url.toString();
+          timewallPanel.classList.remove("hidden");
+          timewallLink.classList.remove("hidden");
+        }
+      } catch { /* Keep unconfigured TimeWall hidden. */ }
+    }
     cpxButton.target = "_blank";
     cpxButton.rel = "noopener";
     cpxButton.setAttribute("aria-disabled", "false");

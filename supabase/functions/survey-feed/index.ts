@@ -48,8 +48,23 @@ Deno.serve(async (req) => {
   wallUrl.searchParams.set("ext_user_id", user.id);
   wallUrl.searchParams.set("secure_hash", secureHash);
 
+  // Configure the real TimeWall placement URL only after the placement exists.
+  // The {user_id} placeholder must bind each wall visit to this authenticated
+  // SkinQuest account; do not expose a generic wall URL without user binding.
+  let timewallUrl: string | null = null;
+  const template = Deno.env.get("TIMEWALL_IFRAME_URL_TEMPLATE") || "";
+  if (template && template.split("{user_id}").length === 2) {
+    try {
+      const prepared = new URL(template.replace("{user_id}", encodeURIComponent(user.id)));
+      if (prepared.protocol === "https:" &&
+          (prepared.hostname === "timewall.io" || prepared.hostname.endsWith(".timewall.io")))
+        timewallUrl = prepared.toString();
+    } catch { /* Unconfigured TimeWall must never interrupt CPX. */ }
+  }
+
   return reply({
     wall_url: wallUrl.toString(),
+    timewall_wall_url: timewallUrl,
     cpx_widget: {
       app_id: appId,
       ext_user_id: user.id,

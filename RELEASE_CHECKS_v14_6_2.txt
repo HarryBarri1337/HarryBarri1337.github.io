@@ -1,0 +1,9 @@
+Local checks: node --check app.js, static HTML references, SQL delta/full
+function comparison, event limit and duplicate-handler logic review, ZIP
+integrity, original v14.6.1 file preservation except surveys files.
+
+Not locally testable: live Supabase SQL privileges, TimeWall signed revenue
+format, provider iframe template, provider replay handling, TimeWall earnings
+vs actual SkinQuest credits, TimeWall reversals, user login in production.
+Before exposing TimeWall: confirm all of those through the dashboard and a
+legitimate test survey. Do not auto-deliver TimeWall-funded skins.

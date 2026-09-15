@@ -1,4 +1,4 @@
-/* SkinQuest v14.6.1: fixed reward journeys, private order pages and linked support. */
+/* SkinQuest v14.6.2: fixed reward journeys, private order pages and linked support. */
 (() => {
   "use strict";
   const $ = (s, root=document) => root.querySelector(s);

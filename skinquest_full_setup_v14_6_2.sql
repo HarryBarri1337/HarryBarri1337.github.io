@@ -1,4 +1,4 @@
--- SkinQuest full Supabase setup v14.6.1 (new installations only; database state unchanged from v14.6.0)
+-- SkinQuest full Supabase setup v14.6.2 (NEW installations only; includes TimeWall accounting)
 -- Includes the dedicated admin operations workspace, traceable case numbers, handler attribution, and hardened admin workflows.
 -- This full setup remains complete for brand-new Supabase projects.
 -- Run this in Supabase SQL Editor only when setting up a fresh project.
@@ -1071,7 +1071,7 @@ begin
   if auth.role() <> 'service_role' then raise exception 'Service role required.'; end if;
   p_provider := lower(trim(p_provider));
   p_status := lower(trim(p_status));
-  if p_provider not in ('cpx', 'bitlabs', 'lootably') then raise exception 'Unsupported provider.'; end if;
+  if p_provider not in ('cpx', 'bitlabs', 'lootably', 'timewall') then raise exception 'Unsupported provider.'; end if;
   if p_event_id is null or char_length(p_event_id) > 180 then raise exception 'Invalid event id.'; end if;
   if p_amount < 0 or p_amount > 100000 then raise exception 'Invalid coin amount.'; end if;
   if p_status not in ('pending', 'completed', 'reversed', 'rejected') then raise exception 'Invalid status.'; end if;
@@ -1113,6 +1113,30 @@ $$;
 
 revoke all on function public.process_offerwall_postback(text, text, uuid, integer, text, jsonb) from public, anon, authenticated;
 grant execute on function public.process_offerwall_postback(text, text, uuid, integer, text, jsonb) to service_role;
+
+-- TimeWall: atomic per-user daily cap and provider-specific ledger metadata.
+-- Not a substitute for reconciling TimeWall's unsigned transaction ID.
+create or replace function public.sq_process_timewall_postback(
+  p_event_id text, p_user_id uuid, p_amount integer, p_revenue text
+) returns jsonb language plpgsql security definer set search_path=public as $$
+declare v_event public.offerwall_events%rowtype;
+begin
+  if auth.role() <> 'service_role' then raise exception 'Service role required.'; end if;
+  if p_amount < 1 or p_amount > 5000 then raise exception 'Event limit exceeded.'; end if;
+  if p_revenue is null or length(p_revenue) > 40 then raise exception 'Invalid revenue.'; end if;
+  perform pg_advisory_xact_lock(hashtextextended(p_user_id::text, 10452));
+  select * into v_event from public.offerwall_events
+   where provider='timewall' and provider_event_id=p_event_id;
+  if not found and coalesce((select sum(amount) from public.offerwall_events
+      where provider='timewall' and user_id=p_user_id and status='completed'
+      and processed_at > now()-interval '24 hours'), 0) + p_amount > 15000
+    then raise exception 'TimeWall daily limit exceeded.'; end if;
+  return public.process_offerwall_postback('timewall', p_event_id, p_user_id,
+    p_amount, 'completed', jsonb_build_object('revenue_usd',p_revenue,'coins',p_amount));
+end;
+$$;
+revoke all on function public.sq_process_timewall_postback(text,uuid,integer,text) from public,anon,authenticated;
+grant execute on function public.sq_process_timewall_postback(text,uuid,integer,text) to service_role;
 
 create or replace function public.process_bitlabs_callback(
   p_event_id text,
