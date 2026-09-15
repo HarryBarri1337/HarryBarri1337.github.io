@@ -7,11 +7,14 @@ declare definition text;
 begin
   select pg_get_functiondef('public.process_offerwall_postback(text,text,uuid,integer,text,jsonb)'::regprocedure)
     into definition;
-  if position('(''cpx'', ''bitlabs'', ''lootably'')' in definition) = 0 then
+  if position('(''cpx'', ''bitlabs'', ''lootably'')' in definition) = 0 and
+     position('(''cpx'', ''bitlabs'', ''lootably'', ''timewall'')' in definition) = 0 then
     raise exception 'Unexpected existing offerwall function: upgrade requires v14.6.1.';
   end if;
-  execute replace(definition, '(''cpx'', ''bitlabs'', ''lootably'')',
-    '(''cpx'', ''bitlabs'', ''lootably'', ''timewall'')');
+  if position('(''cpx'', ''bitlabs'', ''lootably'')' in definition) > 0 then
+    execute replace(definition, '(''cpx'', ''bitlabs'', ''lootably'')',
+      '(''cpx'', ''bitlabs'', ''lootably'', ''timewall'')');
+  end if;
 end;
 $$;
 
@@ -36,4 +39,21 @@ end;
 $$;
 revoke all on function public.sq_process_timewall_postback(text,uuid,integer,text) from public,anon,authenticated;
 grant execute on function public.sq_process_timewall_postback(text,uuid,integer,text) to service_role;
+
+create or replace function public.sq_reverse_timewall_postback(
+  p_original_txid text, p_user_id uuid
+) returns jsonb language plpgsql security definer set search_path=public as $$
+declare v_event public.offerwall_events%rowtype;
+begin
+  if auth.role() <> 'service_role' then raise exception 'Service role required.'; end if;
+  perform pg_advisory_xact_lock(hashtextextended(p_user_id::text, 10452));
+  select * into v_event from public.offerwall_events
+   where provider='timewall' and provider_event_id=p_original_txid and user_id=p_user_id;
+  if not found then raise exception 'Original TimeWall event not found.'; end if;
+  return public.process_offerwall_postback('timewall', p_original_txid, p_user_id,
+    v_event.amount, 'reversed', jsonb_build_object('original_txid',p_original_txid));
+end;
+$$;
+revoke all on function public.sq_reverse_timewall_postback(text,uuid) from public,anon,authenticated;
+grant execute on function public.sq_reverse_timewall_postback(text,uuid) to service_role;
 commit;
