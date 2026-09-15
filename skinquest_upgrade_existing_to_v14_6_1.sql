@@ -1,0 +1,4 @@
+-- SkinQuest v14.6.1, from existing v14.6.0.
+-- UI-only release. NO DATABASE CHANGES.
+-- Intentionally empty: do not rerun v14.6.0 or the full setup.
+-- Upload website files and hard-refresh. Leave Edge Functions/Cron unchanged.

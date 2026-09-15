@@ -1,4 +1,4 @@
--- SkinQuest full Supabase setup v14.6.0 (new installations only)
+-- SkinQuest full Supabase setup v14.6.1 (new installations only; database state unchanged from v14.6.0)
 -- Includes the dedicated admin operations workspace, traceable case numbers, handler attribution, and hardened admin workflows.
 -- This full setup remains complete for brand-new Supabase projects.
 -- Run this in Supabase SQL Editor only when setting up a fresh project.

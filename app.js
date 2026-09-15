@@ -1,4 +1,4 @@
-// SkinQuest v14.6.0 core - secure base; enhanced by skinquest-v14.js
+// SkinQuest v14.6.1 core - secure base; enhanced by skinquest-v14.js
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -2288,20 +2288,21 @@ function renderRewards() {
           </button>
           <div class="reward-info">
             <div class="reward-title-row">
+              ${window.SQ146?.variantType(item)==='souvenir'?'<span class="sq146-type-badge is-souvenir">Souvenir</span>':window.SQ146?.variantType(item)==='stattrak'?'<span class="sq146-type-badge is-stattrak">StatTrak™</span>':''}
               ${rarity ? `<span class="rarity-badge">${escapeHtml(rarity.label)}</span>` : ""}
               ${condition ? `<span class="condition-badge">${escapeHtml(condition)}</span>` : ""}
               ${steamPriced ? `<span class="price-source-badge ${currentPrice ? "" : "is-stale"}" title="${escapeHtml(currentPrice ? `${formatSteamPrice(item)} on Steam · converted with the SkinQuest markup` : "The stored Steam price needs to be refreshed")}">${currentPrice ? "Steam linked" : "Price updating"}</span>` : ""}
             </div>
             <h2><a href="/rewards/${item.id}">${escapeHtml(family ? item.family_name : item.name)}</a></h2>
-            ${family ? `<p class="sq-variant-hint">${Number(item.variant_count)} matching variants · choose wear &amp; type</p>` : ""}
+            <p class="sq-variant-hint">${family ? `${Number(item.variant_count)} matching variants · choose wear &amp; type` : "Single listing · exact item"}</p>
             <p class="muted reward-description">${escapeHtml(description)}</p>
             <div class="reward-meta">
               <span class="price">${family ? "From " : ""}${coinIcon("coin-icon-small")} ${formatCoins(getRewardCost(item))}</span>
-              <span class="stock-pill ${outOfStock ? "stock-out" : ""} ${orderable ? "stock-order" : ""}">${outOfStock ? "Out of stock" : escapeHtml(stockText)}</span>
-              ${!orderable && total !== null && reserved > 0 ? `<span class="stock-pill reserved-stock">${reserved} reserved</span>` : ""}
+              <div class="sq146-card-stock"><span class="stock-pill ${outOfStock ? "stock-out" : ""} ${orderable ? "stock-order" : ""}">${outOfStock ? "Out of stock" : escapeHtml(stockText)}</span>
+              ${!orderable && total !== null && reserved > 0 ? `<span class="stock-pill reserved-stock">${reserved} reserved</span>` : ""}</div>
             </div>
             <div class="reward-actions reward-actions-smart">
-              <a class="button ${action.action === "redeem" || family ? "button-primary" : "button-ghost"}" href="/rewards/${item.id}">${family ? "Choose variant" : "View reward"}</a>
+              <a class="button ${action.action === "redeem" ? "button-primary" : "button-ghost"}" href="/rewards/${item.id}">${family ? "Choose variant" : "View reward"}</a>
               <small>${escapeHtml(action.note)}</small>
             </div>
           </div>

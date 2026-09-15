@@ -1,4 +1,4 @@
-/* SkinQuest v14.6.0: fixed reward journeys, private order pages and linked support. */
+/* SkinQuest v14.6.1: fixed reward journeys, private order pages and linked support. */
 (() => {
   "use strict";
   const $ = (s, root=document) => root.querySelector(s);
@@ -56,6 +56,33 @@
       renderDetail();
     } catch(e){if(seq===detailSeq)root.innerHTML=errorBox("Could not load this reward",e.message||"Please try again.","reward");}
   }
+  const types=[['normal','Normal'],['souvenir','Souvenir'],['stattrak','StatTrak™']];
+  const wears=[['FN','Factory New'],['MW','Minimal Wear'],['FT','Field-Tested'],['WW','Well-Worn'],['BS','Battle-Scarred']];
+  function variantType(v) {
+    const names=[v.market_name,v.name].filter(Boolean);
+    if(names.some(name=>/^souvenir\s+/i.test(name)))return 'souvenir';
+    if(names.some(name=>/^stattrak(?:™|\s|$)/i.test(name)))return 'stattrak';
+    return 'normal';
+  }
+  function variantWear(v) {
+    const code=String(v.condition||'').trim().toUpperCase();
+    if(wears.some(([c])=>c===code))return code;
+    const name=[v.condition,v.market_name,v.name].filter(Boolean).join(' ');
+    return wears.find(([,label])=>name.toLowerCase().includes(label.toLowerCase()))?.[0]||'STD';
+  }
+  function sortedVariants(kind) {
+    const rank=v=>{const i=wears.findIndex(([c])=>c===variantWear(v));return i<0?5:i;};
+    return detail.variants.filter(v=>variantType(v)===kind).sort((a,b)=>rank(a)-rank(b)||getRewardCost(a)-getRewardCost(b)||Number(a.id)-Number(b.id));
+  }
+  function renderVariantPicker() {
+    const kind=variantType(selected),available=types.filter(([k])=>detail.variants.some(v=>variantType(v)===k));
+    return `<section class="sq146-variant-picker"><h2>Choose your variant</h2><p class="muted">Choose a type, then wear. Every row is an exact item with its own price and stock.</p>
+      <div class="sq146-type-tabs" role="tablist" aria-label="Item type">${available.map(([k,label])=>`<button id="variant-tab-${k}" class="sq146-type-tab is-${k} ${k===kind?'is-active':''}" type="button" role="tab" aria-selected="${k===kind}" aria-controls="variant-wear-panel" tabindex="${k===kind?0:-1}" data-variant-type="${k}">${label}<small>${sortedVariants(k).length}</small></button>`).join('')}</div>
+      <div id="variant-wear-panel" class="sq146-variant-list" role="tabpanel" aria-labelledby="variant-tab-${kind}">${sortedVariants(kind).map(v=>{const code=variantWear(v),label=wears.find(([c])=>c===code)?.[1]||'Standard';return `<button class="sq146-variant is-${kind} ${v.id===selected.id?'is-selected':''}" type="button" data-variant-id="${v.id}" aria-pressed="${v.id===selected.id}"><span class="sq146-wear-badge wear-${code.toLowerCase()}">${code==='STD'?'—':code}</span><span class="sq146-wear-copy"><strong>${label}</strong><small>${!rewardHasCurrentPrice(v)?'Price updating':rewardIsOutOfStock(v)?'Out of stock':getRewardAvailableStock(v)>0?`${n(getRewardAvailableStock(v))} in stock`:'Available to order'}</small></span><span class="sq146-wear-price">${n(getRewardCost(v))}<small>coins</small></span><span class="sq146-wear-check" aria-hidden="true">${v.id===selected.id?'✓':''}</span></button>`;}).join('')}</div></section>`;
+  }
+  function selectVariant(v) {
+    if(!v)return;selected=v;history.replaceState(null,'',`/rewards/${v.id}`);renderDetail();
+  }
   function renderDetail() {
     const root=$("#rewardDetail"),item=selected;if(!root||!item)return;
     const url=`${location.origin}/rewards/${item.id}`;
@@ -66,10 +93,10 @@
     const balance=Number(currentProfile?.points_balance||0),missing=Math.max(0,getRewardCost(item)-balance),pct=Math.min(100,Math.max(0,balance/getRewardCost(item)*100));
     root.innerHTML=`<section class="sq146-detail-layout">
       <div class="panel sq146-detail-art">${renderRewardArt(item)}<span class="stock-pill">${orderable?"Available to order":available>0?`${n(available)} in stock`:"Out of stock"}</span></div>
-      <div class="panel sq146-detail-copy"><span class="pill">Fixed reward · exact variant</span><h1>${safe(item.family_name||item.name)}</h1><p class="muted">${safe(item.name)}</p>
+      <div class="panel sq146-detail-copy"><div class="sq146-detail-badges"><span class="pill">Fixed reward · exact variant</span><span class="sq146-type-badge is-${variantType(item)}">${types.find(([k])=>k===variantType(item))[1]}</span></div><h1>${safe(item.family_name||item.name)}</h1><p class="muted">${safe(item.name)}</p>
       <strong class="sq146-detail-price">${n(getRewardCost(item))}<small> coins</small></strong>
       <p class="muted">${rewardUsesSteamPricing(item)?rewardHasCurrentPrice(item)?`${safe(formatSteamPrice(item))} on Steam · checked ${date(item.steam_price_updated_at)}. Your coin price is locked only when the server saves your order.`:"The stored Steam price is stale. Redeeming is paused until a fresh price is available.":"SkinQuest-set coin price. The exact price is saved with your order."}</p>
-      <div class="sq146-variant-picker"><h2>Choose your variant</h2><p class="muted">Wear, StatTrak and Souvenir are separate items. Each option has its own price and availability.</p><div class="sq146-variant-list" role="group" aria-label="Reward variants">${detail.variants.map(v=>`<button class="sq146-variant ${v.id===item.id?"is-selected":""}" type="button" data-variant-id="${v.id}" aria-pressed="${v.id===item.id}"><strong>${safe(v.condition||getRewardCondition(v)||"Standard")}${/stattrak/i.test(v.name)?" · StatTrak":/souvenir/i.test(v.name)?" · Souvenir":""}</strong><span>${n(getRewardCost(v))} coins</span><small>${!rewardHasCurrentPrice(v)?"Price updating":rewardIsOutOfStock(v)?"Out of stock":getRewardAvailableStock(v)>0?`${n(getRewardAvailableStock(v))} in stock`:"Available to order"}</small></button>`).join("")}</div></div>
+      ${renderVariantPicker()}
       ${currentUser?`<div class="sq146-goal-progress"><p>${n(balance)} / ${n(getRewardCost(item))} coins · ${missing?`${n(missing)} to go`:"Enough coins"}</p><div class="goal-progress-bar" role="progressbar" aria-valuenow="${Math.round(pct)}" aria-valuemin="0" aria-valuemax="100"><span style="width:${pct}%"></span></div></div>`:""}
       <div class="sq146-detail-actions">${action(item)}<button class="button button-ghost" type="button" data-detail-star aria-pressed="${starred}">${starred?"★ Goal saved":"☆ Set as goal"}</button><button class="button button-ghost" type="button" data-copy-reward-link>Copy link</button></div>
       <p class="muted sq146-security-copy">Only accept the expected Steam item. SkinQuest never needs your password, Steam Guard code or API key.</p></div>
@@ -212,7 +239,8 @@
     document.addEventListener('click',async e=>{
       if(e.target.closest('[data-sq146-login]'))return openAuthModal('login');
       const retry=e.target.closest('[data-sq146-retry]');if(retry){const f={starters,reward:rewardDetail,order:orderDetail,ledger:()=>coinHistory(currentUser?.id),support:supportPage}[retry.dataset.sq146Retry];if(f)await f();return;}
-      const variant=e.target.closest('[data-variant-id]');if(variant&&detail){selected=detail.variants.find(v=>String(v.id)===variant.dataset.variantId);if(selected){history.replaceState(null,'',`/rewards/${selected.id}`);renderDetail();}return;}
+      const type=e.target.closest('[data-variant-type]');if(type&&detail){const rows=sortedVariants(type.dataset.variantType),wear=variantWear(selected);selectVariant(rows.find(v=>variantWear(v)===wear)||rows[0]);$(`[data-variant-type="${type.dataset.variantType}"]`)?.focus({preventScroll:true});return;}
+      const variant=e.target.closest('[data-variant-id]');if(variant&&detail){selectVariant(detail.variants.find(v=>String(v.id)===variant.dataset.variantId));$(`[data-variant-id="${variant.dataset.variantId}"]`)?.focus({preventScroll:true});return;}
       const a=e.target.closest('[data-detail-action]');if(a&&selected){switch(a.dataset.detailAction){case'login':return openAuthModal('signup');case'email':return showSteamEmailPrompt(currentUser,currentProfile);case'trade':location.href='/settings#tradeForm';return;case'earn':location.href='/surveys';return;case'redeem':return requestRedeem(Number(selected.id),a);default:return;}}
       const star=e.target.closest('[data-detail-star]');if(star&&selected){await toggleFavoriteReward(selected.id,star);renderDetail();return;}
       if(e.target.closest('[data-copy-reward-link]')){try{await navigator.clipboard.writeText(`${location.origin}/rewards/${selected.id}`);showMessage('Reward link copied.','success');}catch{showMessage('Copy the page address from your browser.','info');}return;}
@@ -224,6 +252,7 @@
     // Changing form contents after an unsuccessful request is a new request, not a replay.
     const newSupportDraft=e=>{if(e.target.closest('#linkedSupportForm')&&!$('#linkedSupportForm')?.dataset.submitting){supportKey=null;const button=$('#linkedSupportForm button[type="submit"]');if(button){button.disabled=false;button.textContent='Send support request';}}};
     document.addEventListener('input',newSupportDraft);document.addEventListener('change',newSupportDraft);
+    document.addEventListener('keydown',e=>{if(!e.target.closest('[data-variant-type]')||!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();const tabs=$$('[data-variant-type]'),i=tabs.indexOf(e.target.closest('[data-variant-type]'));const next=e.key==='Home'?0:e.key==='End'?tabs.length-1:(i+(e.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length;tabs[next]?.click();});
   }
   async function init() {
     prepare();const tasks=[];
@@ -233,5 +262,5 @@
     if($('#linkedSupport'))tasks.push(supportPage());
     await Promise.allSettled(tasks);
   }
-  window.SQ146={prepare,init,coinHistory,nextAction,extraQuery,extraFilters,resetExtraQuery};
+  window.SQ146={prepare,init,coinHistory,nextAction,extraQuery,extraFilters,resetExtraQuery,variantType};
 })();

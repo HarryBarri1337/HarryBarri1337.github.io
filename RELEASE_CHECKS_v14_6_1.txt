@@ -1,0 +1,24 @@
+SkinQuest v14.6.1 checks
+=========================
+Local checks use mock API fixtures; no production mutations or real Steam/CPX calls.
+- JavaScript syntax checks for the changed frontend.
+- Desktop and 390px mobile: grouped and individual cards, long names, large prices,
+  matching price/button baselines and no horizontal page overflow.
+- Shuffled Normal/Souvenir/StatTrak variants: tab order and all five wear codes.
+- Gold Souvenir / orange StatTrak labels; keyboard tab navigation and exact row selection.
+- Exact-variant confirmation, cancel (no RPC), redeem ID and stale-price safety.
+- Existing dashboard/coin history, private orders, linked support and finance UI smoke checks.
+- All Edge Functions and configuration remain byte-identical to v14.6.0.
+- Empty migration; fresh full schema unchanged apart from release header.
+
+After upload:
+[ ] Footer v14.6.1; hard-refresh to discard old CSS/JS.
+[ ] Prices, progress bars and buttons align across each catalogue row.
+[ ] Normal / Souvenir / StatTrak tabs appear only for types that actually exist.
+[ ] Wear order is FN -> MW -> FT -> WW -> BS, not sorted by coin price.
+[ ] Tab/row selection changes the exact item and URL; refresh preserves it.
+[ ] Selected row, full wear name and type are clear without relying on colour.
+[ ] Tab keyboard arrows/Home/End and row Enter/Space work.
+[ ] Check phone layout with a real expensive item and long name.
+[ ] Finance still loads and the SAME Steam Cron still advances.
+No SQL, Edge Function or Cron deployment is needed for existing v14.6.0.
