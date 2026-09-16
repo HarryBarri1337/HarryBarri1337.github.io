@@ -1,13 +1,13 @@
-/* SkinQuest v15.0.0 product upgrade layer.
+/* SkinQuest v15.0.1 product upgrade layer.
    Loaded after app.js. The full setup includes the v14 database layer;
-   v15.0.0 adds journeys, catalogue search and owner money records via its delta.
+   v15.0.1 adds journeys, catalogue search and owner money records via its delta.
    This layer extends the secure SkinQuest core without replacing reward authority.
 */
 
 (() => {
   "use strict";
 
-  const VERSION = "15.0.0";
+  const VERSION = "15.0.1";
   const GA_ID = "G-DFRR03C4BP";
   const ATTRIBUTION_KEY = "skinquest.firstTouch.v14";
   const CONSENT_KEY = "skinquest.cookieConsent.v1";
@@ -933,7 +933,7 @@
           const remaining = Math.max(0, cost - balance);
           const pct = Math.min(100, (balance / cost) * 100);
           const progress = create("div", "sq-reward-progress", `
-            <div class="sq-reward-progress-copy"><span>${balance > 0 ? `${formatNumber(balance)} / ${formatNumber(cost)} coins` : `${formatNumber(cost)} coins`}</span><strong>${remaining === 0 ? "Within coin balance" : `${formatNumber(remaining)} remaining`}</strong></div>
+            <div class="sq-reward-progress-copy"><span>${balance > 0 ? `${Math.round(pct)}% saved` : ""}</span><strong>${remaining === 0 ? "Within your balance" : ""}</strong></div>
             <div class="sq-mini-progress"><span style="width:${pct}%"></span></div>
           `);
           const actions = $(".reward-actions", card);

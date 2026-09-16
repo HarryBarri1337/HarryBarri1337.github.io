@@ -1,4 +1,4 @@
-/* SkinQuest v15.0.0: fixed reward journeys, private order pages and linked support. */
+/* SkinQuest v15.0.1: fixed reward journeys, private order pages and linked support. */
 (() => {
   "use strict";
   const $ = (s, root=document) => root.querySelector(s);
@@ -26,7 +26,7 @@
   }
   function action(item) {
     const a=getRewardActionState(item,currentProfile);
-    return `<button class="button ${a.action==="redeem"?"button-primary":"button-ghost"}" type="button" data-detail-action="${safe(a.action)}" ${a.disabled?"disabled":""}>${safe(a.label)}</button><p class="muted sq146-action-note">${safe(a.note)}</p>`;
+    return `<button class="button button-primary" type="button" data-detail-action="${safe(a.action)}" ${a.disabled?"disabled":""}>${safe(a.label)}</button>${['email','trade','out','price','login'].includes(a.action)?`<p class="muted sq146-action-note">${safe(a.note)}</p>`:''}`;
   }
   function miniReward(item) {
     const missing=Math.max(0,getRewardCost(item)-Number(currentProfile?.points_balance||0));
@@ -75,10 +75,11 @@
     return detail.variants.filter(v=>variantType(v)===kind).sort((a,b)=>rank(a)-rank(b)||getRewardCost(a)-getRewardCost(b)||Number(a.id)-Number(b.id));
   }
   function renderVariantPicker() {
+    if(detail.variants.length<2)return '';
     const kind=variantType(selected),available=types.filter(([k])=>detail.variants.some(v=>variantType(v)===k));
-    return `<section class="sq146-variant-picker"><h2>Choose your variant</h2><p class="muted">Choose a type, then wear. Every row is an exact item with its own price and stock.</p>
-      <div class="sq146-type-tabs" role="tablist" aria-label="Item type">${available.map(([k,label])=>`<button id="variant-tab-${k}" class="sq146-type-tab is-${k} ${k===kind?'is-active':''}" type="button" role="tab" aria-selected="${k===kind}" aria-controls="variant-wear-panel" tabindex="${k===kind?0:-1}" data-variant-type="${k}">${label}<small>${sortedVariants(k).length}</small></button>`).join('')}</div>
-      <div id="variant-wear-panel" class="sq146-variant-list" role="tabpanel" aria-labelledby="variant-tab-${kind}">${sortedVariants(kind).map(v=>{const code=variantWear(v),label=wears.find(([c])=>c===code)?.[1]||'Standard';return `<button class="sq146-variant is-${kind} ${v.id===selected.id?'is-selected':''}" type="button" data-variant-id="${v.id}" aria-pressed="${v.id===selected.id}"><span class="sq146-wear-badge wear-${code.toLowerCase()}">${code==='STD'?'—':code}</span><span class="sq146-wear-copy"><strong>${label}</strong><small>${!rewardHasCurrentPrice(v)?'Price updating':rewardIsOutOfStock(v)?'Out of stock':getRewardAvailableStock(v)>0?`${n(getRewardAvailableStock(v))} in stock`:'Available to order'}</small></span><span class="sq146-wear-price">${n(getRewardCost(v))}<small>coins</small></span><span class="sq146-wear-check" aria-hidden="true">${v.id===selected.id?'✓':''}</span></button>`;}).join('')}</div></section>`;
+    return `<section class="sq146-variant-picker"><h2>Choose condition</h2>
+      <div class="sq146-type-tabs ${available.length===1?'single-type':''}" role="tablist" aria-label="Item type">${available.map(([k,label])=>`<button id="variant-tab-${k}" class="sq146-type-tab is-${k} ${k===kind?'is-active':''}" type="button" role="tab" aria-selected="${k===kind}" aria-controls="variant-wear-panel" tabindex="${k===kind?0:-1}" data-variant-type="${k}">${label}</button>`).join('')}</div>
+      <div id="variant-wear-panel" class="sq146-variant-list" role="tabpanel" aria-labelledby="variant-tab-${kind}">${sortedVariants(kind).map(v=>{const code=variantWear(v),label=wears.find(([c])=>c===code)?.[1]||'Standard';return `<button class="sq146-variant is-${kind} ${v.id===selected.id?'is-selected':''}" type="button" data-variant-id="${v.id}" aria-pressed="${v.id===selected.id}"><span class="sq146-wear-badge wear-${code.toLowerCase()}">${code==='STD'?'—':code}</span><span class="sq146-wear-copy"><strong>${label}</strong><small>${!rewardHasCurrentPrice(v)?'Price updating':rewardIsOutOfStock(v)?'Out of stock':getRewardAvailableStock(v)>0?`${n(getRewardAvailableStock(v))} in stock`:'Available to order'}</small></span><span class="sq146-wear-price">${v.id===selected.id?'Selected':`${n(getRewardCost(v))}<small>coins</small>`}</span><span class="sq146-wear-check" aria-hidden="true">${v.id===selected.id?'✓':''}</span></button>`;}).join('')}</div></section>`;
   }
   function selectVariant(v) {
     if(!v)return;selected=v;history.replaceState(null,'',`/rewards/${v.id}`);renderDetail();
@@ -91,17 +92,19 @@
     const description=$('meta[name="description"]');if(description)description.content=`${item.name}: ${n(getRewardCost(item))} SkinQuest coins. Check the exact variant, stock and Steam delivery details.`;
     const available=getRewardAvailableStock(item),orderable=rewardIsOrderable(item),starred=favoriteRewardIds.has(Number(item.id));
     const balance=Number(currentProfile?.points_balance||0),missing=Math.max(0,getRewardCost(item)-balance),pct=Math.min(100,Math.max(0,balance/getRewardCost(item)*100));
+    const family=item.family_name||item.name;
     root.innerHTML=`<section class="sq146-detail-layout">
-      <div class="panel sq146-detail-art">${renderRewardArt(item)}<span class="stock-pill">${orderable?"Available to order":available>0?`${n(available)} in stock`:"Out of stock"}</span></div>
-      <div class="panel sq146-detail-copy"><div class="sq146-detail-badges"><span class="pill">Fixed reward · exact variant</span><span class="sq146-type-badge is-${variantType(item)}">${types.find(([k])=>k===variantType(item))[1]}</span></div><h1>${safe(item.family_name||item.name)}</h1><p class="muted">${safe(item.name)}</p>
+      <div class="panel sq146-detail-art">${renderRewardArt(item)}</div>
+      <div class="panel sq146-detail-copy"><div class="sq146-detail-badges">${variantWear(item)!=='STD'||variantType(item)!=='normal'?`<span class="sq146-type-badge is-${variantType(item)}">${types.find(([k])=>k===variantType(item))[1]}</span>`:''}<span class="stock-pill">${orderable?'Available to order':available>0?`${n(available)} in stock`:'Out of stock'}</span></div><h1>${safe(family)}</h1>
+      ${item.name!==family?`<p class="muted sq151-selected-name">${safe(item.name)}</p>`:''}
       <strong class="sq146-detail-price">${n(getRewardCost(item))}<small> coins</small></strong>
-      <p class="muted">${rewardUsesSteamPricing(item)?rewardHasCurrentPrice(item)?`${safe(formatSteamPrice(item))} on Steam · checked ${date(item.steam_price_updated_at)}. Your coin price is locked only when the server saves your order.`:"The stored Steam price is stale. Redeeming is paused until a fresh price is available.":"SkinQuest-set coin price. The exact price is saved with your order."}</p>
+      <p class="muted sq151-price-caption">${rewardUsesSteamPricing(item)?rewardHasCurrentPrice(item)?'Steam-linked · price saved at checkout':'Price refreshing · ordering paused':'Price saved at checkout'}</p>
       ${renderVariantPicker()}
-      ${currentUser?`<div class="sq146-goal-progress"><p>${n(balance)} / ${n(getRewardCost(item))} coins · ${missing?`${n(missing)} to go`:"Enough coins"}</p><div class="goal-progress-bar" role="progressbar" aria-valuenow="${Math.round(pct)}" aria-valuemin="0" aria-valuemax="100"><span style="width:${pct}%"></span></div></div>`:""}
-      <aside class="sq15-notice"><strong>${orderable?'Purchase required · not currently prepared':'Prepared stock · reserved after redeeming'}</strong><p>${orderable?`Allow at least ${getRewardOrderEtaDays(item)} days. Purchase happens after review; Steam’s actual unlock time is shown on your order once recorded.`:'Usually sent within 1–2 days after review. Prepared stock does not guarantee it can be traded immediately.'} Delivery is manual. Timing is an estimate, not a guarantee.</p></aside>
-      <div class="sq146-detail-actions">${action(item)}<button class="button button-ghost" type="button" data-detail-star aria-pressed="${starred}">${starred?"★ Goal saved":"☆ Set as goal"}</button><button class="button button-ghost" type="button" data-copy-reward-link>Copy link</button></div>
-      <p class="muted sq146-security-copy">Only accept the expected Steam item. SkinQuest never needs your password, Steam Guard code or API key.</p></div>
-      <section class="panel sq146-delivery-info"><h2>What happens after redeeming?</h2><p>${orderable?`SkinQuest purchases the item after review. Allow at least ${getRewardOrderEtaDays(item)} days before fulfilment; the exact Steam trade-lock end time is recorded after purchase. This is an estimate, not a guaranteed delivery date.`:"This exact variant is in prepared stock. It is reserved when your order is saved and is usually sent within 1–2 days after review; delivery is manual, not instant."}</p><p>Coins are deducted once the server creates your order. You get a private order page with the saved price, delivery state and any customer update.</p><a class="mini-link" href="/how-it-works">Read the delivery guide</a></section></section>`;
+      ${currentUser?`<div class="sq146-goal-progress"><p>${missing?(balance>0?`${n(missing)} coins to go`:'Start earning toward this reward'):'Within your balance'}<small>${Math.round(pct)}% saved</small></p><div class="goal-progress-bar" role="progressbar" aria-label="Reward goal progress" aria-valuenow="${Math.round(pct)}" aria-valuemin="0" aria-valuemax="100"><span style="width:${pct}%"></span></div></div>`:''}
+      <div class="sq151-delivery-summary"><strong>${orderable?`Purchase required · ${getRewardOrderEtaDays(item)}+ days`:'Prepared stock · usually 1–2 days'}</strong><p>${orderable?'Purchased after review. The recorded Steam unlock time appears on your order.':'Reserved when your order is saved, then reviewed before sending.'} Delivery is manual; timing is an estimate.</p></div>
+      <div class="sq146-detail-actions">${action(item)}<button class="button button-ghost" type="button" data-detail-star aria-pressed="${starred}">${starred?'★ Goal saved':'☆ Set as goal'}</button><button class="button button-ghost" type="button" data-copy-reward-link>Copy link</button></div>
+      <p class="muted sq146-security-copy">Never share your Steam password, Guard codes or API key.</p></div>
+      <details class="panel sq146-delivery-info"><summary>How delivery works</summary><p>Coins are deducted only when the server saves your order. Each order keeps its original item and coin price.</p><p>${orderable?`SkinQuest purchases the item after review. Allow at least ${getRewardOrderEtaDays(item)} days; the actual recorded Steam unlock time is shown on your private order page. This is not a guaranteed delivery date.`:'Prepared items are usually sent within 1–2 days after review. Delivery is manual, not instant.'}</p><a class="mini-link" href="/orders">My orders</a> · <a class="mini-link" href="/how-it-works">Delivery guide</a></details></section>`;
   }
   const statusCopy={
     pending:["Waiting for review","Your request is saved. SkinQuest will review the request before fulfilment."],

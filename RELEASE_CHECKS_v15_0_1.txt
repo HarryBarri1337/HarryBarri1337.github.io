@@ -1,0 +1,20 @@
+v15.0.1 lokala kontroller
+
+Browser: mockad Supabase, CPX och TimeWall, inga externa nätverksanrop.
+Kontrollerar desktop/header 1212/1440px och 320/390/430/1024px, nav utan
+överlappning, åtkomliga availability-filter, sortering, statisk rewardbild,
+ensam variant utan picker, flera typer/wears, ett huvudpris, provideretiketter
+och grundflödena My orders, Shared deliveries och owner-statistik från v15.
+Skärmbilder granskas innan leverans. Detta ersätter inte verklig telefon-QA.
+
+Databas: v15.0.0 + delta (inklusive återkörning) och ny full setup i isolerad
+PGlite/PostgreSQL-miljö. Sticker Slabs döljs, kan inte återaktiveras och
+importeras inte av service-batch. Gamla ordrar och priser sparas; vanlig
+sticker/case importeras. Synk-cursor fortsätter utan återställning.
+
+JavaScript-syntax, lokala HTML-referenser, full setup/delta-paritet och
+ZIP-integritet kontrolleras. Samtliga Edge Function-filer och config.toml
+är oförändrade jämfört med v15.0.0.
+
+Återstår hos er: riktig Supabase, browser/provider-sessioner, mobil/PWA på
+fysisk telefon samt normal drift med riktiga beställningar.

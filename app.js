@@ -1,4 +1,4 @@
-// SkinQuest v15.0.0 core - secure base; enhanced by skinquest-v14.js
+// SkinQuest v15.0.1 core - secure base; enhanced by skinquest-v14.js
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -2082,12 +2082,12 @@ function getRewardActionState(item, profile) {
 
 const REWARD_SHOP_PREFS_KEY = "skinquest_reward_shop_preferences";
 const REWARD_SORT_LABELS = {
-  starter: "First reward: stock + low price",
-  "price-desc": "Price: high to low",
-  "price-asc": "Price: low to high",
+  starter: "Recommended",
+  "price-desc": "Highest price",
+  "price-asc": "Lowest price",
   featured: "Featured",
-  "stock-desc": "Most stock first",
-  "name-asc": "Name: A to Z"
+  "stock-desc": "Most stock",
+  "name-asc": "Name (A–Z)"
 };
 
 function getRewardShopPreferences() {
@@ -2297,7 +2297,7 @@ function renderRewards() {
               ${steamPriced ? `<span class="price-source-badge ${currentPrice ? "" : "is-stale"}" title="${escapeHtml(currentPrice ? `${formatSteamPrice(item)} on Steam · converted with the SkinQuest markup` : "The stored Steam price needs to be refreshed")}">${currentPrice ? "Steam linked" : "Price updating"}</span>` : ""}
             </div>
             <h2><a href="/rewards/${item.id}">${escapeHtml(family ? item.family_name : item.name)}</a></h2>
-            <p class="sq-variant-hint">${family ? `${Number(item.variant_count)} matching variants · choose wear &amp; type` : "Single listing · exact item"}</p>
+            <p class="sq-variant-hint">${family ? `${Number(item.variant_count)} variants available` : ""}</p>
             <p class="muted reward-description">${escapeHtml(description)}</p>
             <div class="reward-meta">
               <span class="price">${family ? "From " : ""}${coinIcon("coin-icon-small")} ${formatCoins(getRewardCost(item))}</span>
@@ -2307,7 +2307,6 @@ function renderRewards() {
             <div class="reward-actions reward-actions-smart">
               <span class="sq15-card-eta">${outOfStock ? "Unavailable" : family ? "Delivery depends on selected variant" : orderable ? `Purchase + Steam lock · at least ${getRewardOrderEtaDays(item)} days` : "Prepared stock · usually 1–2 days after review"}</span>
               <a class="button ${action.action === "redeem" ? "button-primary" : "button-ghost"}" href="/rewards/${item.id}">${family ? "Choose variant" : "View reward"}</a>
-              <small>${escapeHtml(action.note)}</small>
             </div>
           </div>
         </article>
