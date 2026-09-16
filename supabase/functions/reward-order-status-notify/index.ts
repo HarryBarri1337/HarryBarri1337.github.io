@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 const cors = {
   "Access-Control-Allow-Origin": "https://skinquestcs.com",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
   status,
@@ -18,6 +19,7 @@ const stockholm = (value: string | null | undefined) => value
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+  if(req.method!=="POST")return json({error:"POST required."},405);
   try {
     const url = Deno.env.get("SUPABASE_URL")!;
     const anon = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -52,14 +54,47 @@ Deno.serve(async (req) => {
     const from = Deno.env.get("EMAIL_FROM") || "SkinQuest <orders@skinquestcs.com>";
     if (!resendKey) return json({ error: "Email secret is not configured." }, 503);
 
-    const send = async (to: string, subject: string, html: string) => {
+    const send = async (to: string, subject: string, html: string, key?: string) => {
       const response = await fetch("https://api.resend.com/emails", {
         method: "POST",
-        headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
+        headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json", ...(key ? {"Idempotency-Key":key} : {}) },
         body: JSON.stringify({ from, to: [to], subject, html }),
       });
       if (!response.ok) throw new Error(`Resend returned ${response.status}`);
     };
+
+    if(order.delivery_id){
+      const {data:delivery,error:deliveryError}=await admin.from("sq_deliveries").select("*").eq("id",order.delivery_id).single();
+      const {data:items,error:itemsError}=await admin.from("redemption_requests")
+        .select("id,order_number,reward_name,points_coins,status,trade_locked_until,trade_offer_url,customer_note,fulfillment_mode,ready_admin_notified_at")
+        .eq("delivery_id",order.delivery_id).eq("user_id",order.user_id).order("id");
+      if(deliveryError||itemsError||!delivery||!items?.length)throw new Error("Could not load delivery notification snapshot.");
+      // Stable content hash plus Resend idempotency protects concurrent retries.
+      const snapshot=JSON.stringify(items.map(i=>[i.id,i.status,i.trade_locked_until,i.trade_offer_url,i.customer_note]));
+      const bytes=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(snapshot));
+      const signature=[...new Uint8Array(bytes)].map(b=>b.toString(16).padStart(2,"0")).join("");
+      const ref=String(order.delivery_id).slice(0,8);
+      const rows=items.map(i=>`<li><strong>${esc(i.reward_name)}</strong> — ${esc(i.order_number)} · ${esc(i.points_coins)} coins<br />Status: ${esc(i.status.replaceAll("_"," "))}${i.status==="trade_locked"?`<br />Recorded unlock: ${esc(stockholm(i.trade_locked_until))}`:""}${i.customer_note?`<p>${esc(i.customer_note)}</p>`:""}<br /><a href="https://skinquestcs.com/orders/${Number(i.id)}">View this order</a></li>`).join("");
+      const html=`<h1>Your SkinQuest delivery update</h1><p>Delivery <strong>#${esc(ref)}</strong> contains ${items.length} orders. Each keeps its original saved coin price.</p><ul>${rows}</ul><p>A trade lock countdown records when an item is expected to become tradable, not a guaranteed sending time. Check the items in a Steam offer before accepting. SkinQuest never needs your Steam password or Guard code.</p><p><a href="https://skinquestcs.com/orders">View all orders and deliveries</a></p>`;
+      const update:Record<string,unknown>={};
+      if(userEmail&&delivery.user_notice_signature!==signature){
+        await send(userEmail,`SkinQuest delivery #${ref} updated`,html,`sq-delivery-user-${order.delivery_id}-${signature}`);
+        update.user_notice_signature=signature;
+        for(const i of items){const {error}=await admin.from("redemption_requests")
+          .update({last_user_notified_status:i.status,user_status_notified_at:new Date().toISOString()}).eq("id",i.id).eq("status",i.status);
+          if(error)throw new Error("Email sent; order marker could not be saved. Retry is idempotent.");}
+        const {error}=await admin.from("sq_deliveries").update(update).eq("id",order.delivery_id);
+        if(error)throw new Error("Email sent; delivery marker could not be saved. Retry is idempotent.");
+      }
+      const ready=items.filter(i=>i.status==="ready_to_trade"&&i.fulfillment_mode==="orderable"&&!i.ready_admin_notified_at);
+      if(ready.length&&adminEmail&&delivery.admin_notice_signature!==signature){
+        const readyCount=items.filter(i=>i.status==="ready_to_trade"&&i.fulfillment_mode==="orderable").length;
+        await send(adminEmail,`READY TO TRADE: delivery #${ref}`,`<h1>Delivery ready for fulfilment</h1><p>${readyCount} items are ready for staff to send.</p><ul>${rows}</ul><p><a href="https://skinquestcs.com/admin#deliveries">Open shared deliveries</a></p>`,`sq-delivery-admin-${order.delivery_id}-${signature}`);
+        for(const i of ready){const {error}=await admin.from("redemption_requests").update({ready_admin_notified_at:new Date().toISOString()}).eq("id",i.id).eq("status","ready_to_trade");if(error)throw new Error("Ready email sent; marker could not be saved.");}
+        const {error}=await admin.from("sq_deliveries").update({admin_notice_signature:signature}).eq("id",order.delivery_id);if(error)throw new Error("Ready email sent; delivery marker could not be saved.");
+      }
+      return json({ok:true,grouped:true,delivery_id:order.delivery_id});
+    }
 
     const orderNumber = order.order_number || `SQ-R-${String(order.id).padStart(6, "0")}`;
     const dashboard = `https://skinquestcs.com/dashboard?request=${encodeURIComponent(String(order.id))}`;

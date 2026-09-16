@@ -1,0 +1,41 @@
+SkinQuest v15.0.0 — lokala kontroller, 2026-09-16
+
+Databas: isolerad PostgreSQL-kompatibel PGlite med pgcrypto och Supabase-
+auth-stubbar. Test av v14.6.2 full setup + nytt delta samt separat nyinstallations-
+fullsetup. Delta körs två gånger för återkörbarhet. Inga live-anslutningar.
+Kontroller omfattar roller/privata orders, grupper från samma kund, exakt
+192-timmarsstandard, egen låstid, stopp för tidig upplåsning, granskad ändrad
+tradelänk, oföränderligt sent-snapshot, återbetalning bara en gång, frigjord
+lagerreservation och rollback av en ogiltig blandad grupp.
+Credits/reversals: dubbla callback-id:n, reverserat event kan inte återkrediteras,
+separat källa för Surveys/Earn, event/ledger-deduplicering, äldre CPX-ledger
+och bara riktiga rapporterade USD-fält. Opens förändrar aldrig wallets.
+Service-rollen har uttryckliga läs-/markeringsrättigheter på nya leveranstabellen;
+vanliga kund-/admin-klienter använder enbart behörighetskontrollerade RPCs.
+
+Webbläsare: headless Chromium med mockad Supabase, CPX och TimeWall, externa
+anrop blockerade. 24 testordrar, grupper, bulkstatus, kundens nedräkning,
+owner-only statistik, guest-gate och kontobunden explicit TimeWall-start.
+320/390/430px samt desktop; ingen horisontell overflow på provade vyer,
+safe-area-emulering och minst 44px på provade primära mobilkontroller.
+
+Edge: faktisk TypeScript-kod körd med mockat SDK, miljö och e-posttransport.
+Verifierar CORS-preflight/x-client-info, inloggning/admin-krav, exakt rawRevenue-
+hash, hold utan coins, negativa chargebacks mot original-id, källseparation,
+TimeWall även om CPX inte är konfigurerat och ett samlat statusmejl per
+leveranssnapshot. Inga verkliga mejl skickades.
+
+Paketkontroll: JavaScript-syntax, filreferenser, route-ordning, överensstämmelse
+mellan delta och fullsetup-slutläge, versions-/cachemarkörer och ZIP-integritet.
+steam-market-sync och survey-postback ska vara byte-identiska med v14.6.2.
+
+ÅTERSTÅR HOS ER: driftsättning i riktig Supabase, verkligt CPX/TimeWall-flöde,
+providerkakor/inloggning/uploads i extern webbläsare, mejlleverans, riktig
+Steam-föremålstid samt verklig iPhone/Android/PWA-kamera och tangentbord.
+Emulering är inte ett test på en fysisk telefon. Läs README innan installation.
+
+Tekniska primärkällor:
+https://supabase.com/docs/guides/functions/cors
+https://www.postgresql.org/docs/current/ddl-rowsecurity.html
+https://publisher.cpx-research.com/documentation/index.php?lang=en
+https://resend.com/docs/dashboard/emails/idempotency-keys

@@ -20,13 +20,16 @@ function compareHex(received: string, expected: string) {
 // The transaction ID is not covered by that hash: the owner must reconcile
 // event totals with the TimeWall dashboard before fulfilling Steam trades.
 Deno.serve(async (request) => {
+  try {
   if (request.method !== "GET") return reply({ error: "GET required." }, 405);
-  const secret = Deno.env.get("TIMEWALL_SECRET_KEY") || "";
+  const query = new URL(request.url).searchParams;
+  const placement = query.get("placement") || "surveys";
+  if (!["surveys", "earn"].includes(placement)) return reply({error:"Invalid placement."},400);
+  const secret = Deno.env.get(placement === "earn" ? "TIMEWALL_EARN_SECRET_KEY" : "TIMEWALL_SECRET_KEY") || "";
   const coinsPerUsd = Number(Deno.env.get("TIMEWALL_COINS_PER_USD") || "");
   if (!secret || !Number.isInteger(coinsPerUsd) || coinsPerUsd < 1 || coinsPerUsd > 100000)
     return reply({ error: "TimeWall not configured." }, 503);
 
-  const query = new URL(request.url).searchParams;
   const userId = query.get("userid") || "";
   const eventId = query.get("txid") || "";
   const revenue = query.get("revenue") || "";
@@ -49,6 +52,11 @@ Deno.serve(async (request) => {
     const original = query.get("original_txid") || "";
     if (!original || original.length > 180)
       return reply({ error: "Missing original transaction ID." }, 400);
+    const { data: originalEvent, error: lookupError } = await admin.from("offerwall_events")
+      .select("raw_payload").eq("provider","timewall").eq("provider_event_id",original).eq("user_id",userId).maybeSingle();
+    if (lookupError || !originalEvent ||
+        (originalEvent.raw_payload?.earning_source || "timewall_surveys") !== `timewall_${placement}`)
+      return reply({error:"Original event not found for this placement."},409);
     const { data, error } = await admin.rpc("sq_reverse_timewall_postback", {
       p_original_txid: original, p_user_id: userId,
     });
@@ -64,12 +72,17 @@ Deno.serve(async (request) => {
   if (!Number.isInteger(coins) || coins < 1 || coins > 5000)
     return reply({ error: "Event exceeds credit limit." }, 400);
 
-  const { data, error } = await admin.rpc("sq_process_timewall_postback", {
+  const { data, error } = await admin.rpc("sq_process_timewall_postback_v15", {
     p_event_id: eventId, p_user_id: userId, p_amount: coins, p_revenue: revenue,
+    p_source: `timewall_${placement}`,
   });
   if (error) {
     console.error("TimeWall postback rejected:", error.message);
     return reply({ error: "Event could not be credited." }, 500);
   }
   return reply(data);
+  } catch(error) {
+    console.error("TimeWall callback failure:",error instanceof Error ? error.message : "Unexpected failure");
+    return reply({error:"TimeWall callback temporarily unavailable."},500);
+  }
 });

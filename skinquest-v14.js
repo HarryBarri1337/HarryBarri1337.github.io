@@ -1,13 +1,13 @@
-/* SkinQuest v14.6.2 product upgrade layer.
+/* SkinQuest v15.0.0 product upgrade layer.
    Loaded after app.js. The full setup includes the v14 database layer;
-   v14.6.2 adds journeys, catalogue search and owner money records via its delta.
+   v15.0.0 adds journeys, catalogue search and owner money records via its delta.
    This layer extends the secure SkinQuest core without replacing reward authority.
 */
 
 (() => {
   "use strict";
 
-  const VERSION = "14.6.2";
+  const VERSION = "15.0.0";
   const GA_ID = "G-DFRR03C4BP";
   const ATTRIBUTION_KEY = "skinquest.firstTouch.v14";
   const CONSENT_KEY = "skinquest.cookieConsent.v1";
@@ -22,7 +22,7 @@
   const path = !routeSegment
     ? "index.html"
     : routeSegment === "surveys"
-      ? "earn.html"
+      ? "surveys.html"
       : routeSegment.endsWith(".html")
         ? routeSegment
         : `${routeSegment}.html`;
@@ -352,7 +352,8 @@
     if ($("#sqMobileNav")) return;
     const nav = create("nav", "sq-mobile-nav", `
       <a href="/" data-page="index.html" aria-label="Home"><span>⌂</span><small>Home</small></a>
-      <a href="/surveys" data-page="earn.html" aria-label="Surveys"><span>✓</span><small>Surveys</small></a>
+      <a href="/surveys" data-page="surveys.html" aria-label="Surveys"><span>✓</span><small>Surveys</small></a>
+      <a href="/earn" data-page="earn.html" aria-label="Earn"><span>+</span><small>Earn</small></a>
       <a href="/rewards" data-page="rewards.html" aria-label="Rewards"><span>◇</span><small>Rewards</small></a>
       <a href="/dashboard" data-page="dashboard.html" aria-label="Dashboard"><span>◎</span><small>Dashboard</small></a>
     `);

@@ -2,5 +2,14 @@
 [functions.reward-order-ready-sweep]
 verify_jwt = false
 
+[functions.survey-feed]
+verify_jwt = false
+
+[functions.timewall-postback]
+verify_jwt = false
+
+[functions.reward-order-status-notify]
+verify_jwt = false
+
 [functions.steam-market-sync]
 verify_jwt = false

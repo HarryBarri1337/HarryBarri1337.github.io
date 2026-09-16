@@ -4,12 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="description" content="Earn SkinQuest coins from verified partner tasks and surveys. Coins are credited after provider confirmation." />
-  <title>Earn - SkinQuest</title>
-  <link rel="canonical" href="https://skinquestcs.com/earn" />
+  <title>Surveys - SkinQuest</title>
+  <link rel="canonical" href="https://skinquestcs.com/surveys" />
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="Earn with partner activities - SkinQuest" />
+  <meta property="og:title" content="Survey providers - SkinQuest" />
   <meta property="og:description" content="Complete verified survey tasks and earn SkinQuest coins." />
-  <meta property="og:url" content="https://skinquestcs.com/earn" />
+  <meta property="og:url" content="https://skinquestcs.com/surveys" />
   <meta property="og:image" content="https://skinquestcs.com/assets/icons/icon-512.png" />
   <meta name="twitter:card" content="summary" />
   <script>
@@ -65,17 +65,78 @@
 </header>
 
 <main class="page earn-page">
-  <section class="page-heading compact-heading"><span class="pill">More ways to earn</span><h1>Earn</h1><p>Tasks and other partner activities belong here. For questionnaires, visit our dedicated Surveys page.</p></section>
-  <nav class="survey-provider-nav" aria-label="Earning pages"><a href="/surveys"><strong>Surveys</strong><span>CPX Research &amp; TimeWall</span></a><a href="/earn" aria-current="page"><strong>Earn</strong><span>Tasks &amp; other activities</span></a></nav>
-  <section class="panel timewall-survey-panel" data-timewall-panel="timewall_earn" aria-labelledby="timewallEarnTitle">
-    <div class="sq15-provider-header"><div><span class="pill">Additional earning partner</span><h2 id="timewallEarnTitle">TimeWall Earn</h2></div><img src="assets/providers/timewall-logo.png" alt="TimeWall" /></div>
-    <p class="sq15-provider-intro">A home for approved tasks and other TimeWall activities, separate from surveys. Available sections and rewards will be shown by the provider when this placement is connected.</p>
-    <div class="sq15-provider-empty" data-timewall-empty="timewall_earn"><strong>Not connected yet</strong><p>We are preparing this earning option. There are no tasks available here yet — use Surveys in the meantime.</p><a class="button button-primary" href="/surveys">Find surveys</a></div>
-    <div class="sq15-provider-controls hidden" data-timewall-controls="timewall_earn"><button class="button button-primary" data-provider-open="timewall_earn" type="button" disabled>Load TimeWall activities</button><a class="button button-ghost" data-provider-open="timewall_earn" target="_blank" rel="noopener noreferrer">Open in browser ↗</a></div>
-    <div class="sq15-provider-stage hidden" data-timewall-stage="timewall_earn"><span data-frame-status role="status">Loading TimeWall…</span><iframe data-timewall-frame="timewall_earn" title="TimeWall earning activities" referrerpolicy="no-referrer" allow="clipboard-write" src="about:blank"></iframe></div>
-    <p class="muted timewall-survey-note">Rewards are added after provider approval. Activities may be held, declined or reversed by the provider. An activity launch does not credit coins.</p>
+  <section class="page-heading compact-heading">
+    <span class="pill">Earn coins</span>
+    <h1>Surveys</h1>
+    <p>
+      Earn coins from verified surveys. Choose a provider below; your account and rewards stay on SkinQuest.
+    </p>
   </section>
-  <section class="sq15-earn-steps" aria-label="How earning works"><article><span>01 · Choose</span><h2>Read the requirements</h2><p>Check eligibility, reward amount and all steps before starting. Avoid VPNs, automation and multiple accounts.</p></article><article><span>02 · Complete</span><h2>Follow the partner's instructions</h2><p>Use your linked SkinQuest session. Keep an activity reference if the provider supplies one.</p></article><article><span>03 · Verify</span><h2>Check your Coin history</h2><p>Only recorded, approved rewards affect your wallet. Contact support with the provider and activity reference if something is missing.</p></article></section>
+
+  <nav class="survey-provider-nav" aria-label="Survey providers">
+    <a href="#cpxSurveyPanel"><strong>CPX Research</strong><span>Live surveys</span></a>
+    <a href="#timewallSurveyPanel" id="timewallProviderLink" class="hidden"><strong>TimeWall</strong><span>Surveys only</span></a>
+  </nav>
+
+  <section class="survey-workspace" aria-label="CPX Research surveys">
+    <aside class="provider-card featured survey-provider-card">
+      <div class="survey-provider-brand">
+        <img src="assets/providers/cpx-research-logo.png" alt="CPX Research" />
+        <p>Live surveys securely connected to your SkinQuest account.</p>
+      </div>
+
+      <span class="cpx-live-badge" id="cpxLiveStatus" data-state="loading">Connecting</span>
+
+      <div class="cpx-availability" aria-live="polite">
+        <strong id="cpxWidgetCount">—</strong>
+        <span id="cpxWidgetStatus">available</span>
+      </div>
+
+      <ul class="cpx-guidelines">
+        <li>
+          <span class="cpx-guideline-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.6-2.8 8.2-7 10-4.2-1.8-7-5.4-7-10V6l7-3z"/><path d="M9 12l2 2 4-5"/></svg></span>
+          <span>Complete surveys honestly</span>
+        </li>
+        <li>
+          <span class="cpx-guideline-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l3 2 3.5.5.5 3.5 2 3-2 3-.5 3.5-3.5.5-3 2-3-2-3.5-.5-.5-3.5-2-3 2-3 .5-3.5 3.5-.5 3-2z"/><path d="M9 12l2 2 4-4"/></svg></span>
+          <span>Rewards are credited after verification</span>
+        </li>
+        <li>
+          <span class="cpx-guideline-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M6 18L18 6"/></svg></span>
+          <span>Avoid VPNs, bots, or fake answers</span>
+        </li>
+      </ul>
+
+      <a class="button button-ghost button-large provider-action" id="openCpxWall" href="#" aria-disabled="true">Preparing secure surveys…</a>
+    </aside>
+
+    <section class="panel cpx-widget-panel" id="cpxSurveyPanel" aria-labelledby="cpxSurveyTitle">
+      <div class="cpx-widget-heading">
+        <h2 id="cpxSurveyTitle">Available surveys</h2>
+        <p class="muted">Choose a survey below. Availability and reward amounts are provided live by CPX Research.</p>
+      </div>
+
+      <div class="cpx-widget-stage" id="cpxWidgetStage" data-state="loading" aria-busy="true">
+        <div class="cpx-widget-state" id="cpxWidgetState" role="status" aria-live="polite">
+          <div class="account-loading-animation" id="cpxWidgetLoader" aria-hidden="true"><span></span><span></span><span></span></div>
+          <strong id="cpxWidgetStateTitle">Loading secure surveys</strong>
+          <span id="cpxWidgetStateDetail">Connecting your SkinQuest account to CPX Research.</span>
+          <button class="button button-ghost hidden" id="retryCpxWidget" type="button">Try again</button>
+          <div class="sq146-survey-actions"><a href="/rewards?starter=1">Choose a first reward</a><a href="/support?topic=survey">Get help with surveys</a></div>
+        </div>
+        <div id="cpxFullscreen" class="cpx-fullscreen-widget" aria-label="CPX Research surveys"></div>
+      </div>
+    </section>
+  </section>
+  <section class="panel timewall-survey-panel" id="timewallSurveyPanel" data-timewall-panel="timewall_surveys" aria-labelledby="timewallSurveyTitle">
+    <div class="sq15-provider-header"><div><span class="pill">Surveys only</span><h2 id="timewallSurveyTitle">TimeWall Surveys</h2></div><img src="assets/providers/timewall-logo.png" alt="TimeWall" /></div>
+    <p class="sq15-provider-intro">Choose TimeWall for another selection of surveys. Your approved rewards are credited to the same SkinQuest wallet.</p>
+    <div class="sq15-provider-empty" data-timewall-empty="timewall_surveys"><strong>Connecting your account…</strong><p>Preparing your personal survey link.</p></div>
+    <div class="sq15-provider-controls hidden" data-timewall-controls="timewall_surveys"><button class="button button-primary" type="button" data-provider-open="timewall_surveys" disabled>Load TimeWall surveys</button><a class="button button-ghost" data-provider-open="timewall_surveys" target="_blank" rel="noopener noreferrer">Open in browser ↗</a></div>
+    <div class="sq15-provider-stage hidden" data-timewall-stage="timewall_surveys"><span data-frame-status role="status">Loading TimeWall…</span><iframe id="timewallSurveyFrame" data-timewall-frame="timewall_surveys" title="TimeWall surveys" referrerpolicy="no-referrer" allow="clipboard-write" src="about:blank"></iframe></div>
+    <div class="sq15-provider-tips"><span>✓ Provider-approved rewards only</span><span>✓ No VPNs or false answers</span><span>App users: choose Open in browser if the embedded wall does not work.</span></div>
+    <p class="muted timewall-survey-note">TimeWall availability, holds and review times are controlled by TimeWall. Coin history records actual credits and reversals.</p>
+  </section>
 </main>
 
 <footer class="site-footer">

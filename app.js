@@ -1,4 +1,4 @@
-// SkinQuest v14.6.2 core - secure base; enhanced by skinquest-v14.js
+// SkinQuest v15.0.0 core - secure base; enhanced by skinquest-v14.js
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -1426,25 +1426,11 @@ async function initOfferwall() {
   try {
     const { data, error } = await sb.functions.invoke("survey-feed");
     if (error) throw error;
+    window.SQ15?.configureProviders(data,user.id);
     if (!isSafeOfferwallUrl(data?.wall_url, user.id)) throw new Error("The secure CPX wall URL was invalid.");
     if (!isValidCpxWidgetPayload(data?.cpx_widget, user.id)) throw new Error("The secure CPX widget configuration was invalid.");
 
     cpxButton.href = data.wall_url;
-    const timewallFrame = qs("#timewallSurveyFrame");
-    const timewallPanel = qs("#timewallSurveyPanel");
-    const timewallLink = qs("#timewallProviderLink");
-    if (timewallFrame && timewallPanel && timewallLink && typeof data.timewall_wall_url === "string") {
-      try {
-        const url = new URL(data.timewall_wall_url);
-        if (url.protocol === "https:" &&
-            (url.hostname === "timewall.io" || url.hostname.endsWith(".timewall.io")) &&
-            decodeURIComponent(url.toString()).includes(user.id)) {
-          timewallFrame.src = url.toString();
-          timewallPanel.classList.remove("hidden");
-          timewallLink.classList.remove("hidden");
-        }
-      } catch { /* Keep unconfigured TimeWall hidden. */ }
-    }
     cpxButton.target = "_blank";
     cpxButton.rel = "noopener";
     cpxButton.setAttribute("aria-disabled", "false");
@@ -1485,6 +1471,7 @@ function bindCpxOfferwallButton(button) {
     // Count an observable launch click, never a page load or widget render.
     if (Date.now() - Number(button.dataset.lastTrackedCpxOpen || 0) < 1000) return;
     button.dataset.lastTrackedCpxOpen = String(Date.now());
+    if(window.SQ15){window.SQ15.recordOpen('cpx');return;}
     Promise.resolve(sb.rpc("sq_track_event", {
       p_event_name: "cpx_wall_open_requested",
       p_page_path: location.pathname,
@@ -1621,6 +1608,7 @@ function buildCpxConfig(widget) {
       },
       get_all_surveys: (surveys) => {
         if (!Array.isArray(surveys)) return;
+        window.SQ15?.recordView('cpx');
         const count = Array.isArray(surveys) ? surveys.length : 0;
         if (count > 0) {
           window.__skinquestCpxAvailabilityState = "ready";
@@ -2317,6 +2305,7 @@ function renderRewards() {
               ${!orderable && total !== null && reserved > 0 ? `<span class="stock-pill reserved-stock">${reserved} reserved</span>` : ""}</div>
             </div>
             <div class="reward-actions reward-actions-smart">
+              <span class="sq15-card-eta">${outOfStock ? "Unavailable" : family ? "Delivery depends on selected variant" : orderable ? `Purchase + Steam lock · at least ${getRewardOrderEtaDays(item)} days` : "Prepared stock · usually 1–2 days after review"}</span>
               <a class="button ${action.action === "redeem" ? "button-primary" : "button-ghost"}" href="/rewards/${item.id}">${family ? "Choose variant" : "View reward"}</a>
               <small>${escapeHtml(action.note)}</small>
             </div>
@@ -4317,6 +4306,7 @@ async function loadAdminRewards() {
 }
 
 async function refreshAll() {
+  if(!currentUser)window.SQ15?.resetProviders();
   await updateNavAuthState();
   await updateHomeAuthState();
   await refreshDashboard();
@@ -4331,6 +4321,7 @@ async function refreshAll() {
   if (typeof window.initAdminV145 === "function") await window.initAdminV145();
   else await initAdmin();
   await window.SQ146?.init();
+  await window.SQ15?.init();
 }
 
 function initActivityTracking() {
@@ -4374,6 +4365,7 @@ function applyRewardSearchFromQuery() {
 
 async function boot() {
   window.SQ146?.prepare();
+  window.SQ15?.prepare();
   initSkinQuestSelects();
   initActivityTracking();
   initThemeControls();
@@ -4406,6 +4398,7 @@ async function boot() {
   if (typeof window.initAdminV145 === "function") await window.initAdminV145();
   else await initAdmin();
   await window.SQ146?.init();
+  await window.SQ15?.init();
   finishPageLoad();
 }
 

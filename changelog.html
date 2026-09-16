@@ -18,7 +18,7 @@
       }
     }());
   </script>
-  <link rel="stylesheet" href="styles.css?v=1462" />
+  <link rel="stylesheet" href="styles.css?v=1500" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#0b0f16" />
   <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png" />
@@ -30,8 +30,9 @@
   <meta property="og:site_name" content="SkinQuest" />
   <meta property="og:description" content="SkinQuest version history and recent platform updates." />
   <meta property="og:image" content="https://skinquestcs.com/assets/interface/skinquestlogo.png" />
-  <link rel="stylesheet" href="skinquest-v14.css?v=1462" />
-  <link rel="stylesheet" href="skinquest-v146.css?v=1462" />
+  <link rel="stylesheet" href="skinquest-v14.css?v=1500" />
+  <link rel="stylesheet" href="skinquest-v146.css?v=1500" />
+  <link rel="stylesheet" href="skinquest-v15.css?v=1500" />
 </head>
 <body>
 <div id="pageLoader" class="page-loader">
@@ -49,6 +50,8 @@
   <nav class="site-nav" data-nav>
     <a href="/dashboard">Dashboard</a>
     <a href="/surveys">Surveys</a>
+    <a href="/earn">Earn</a>
+    <a href="/orders">My orders</a>
     <a href="/rewards">Rewards</a>
     <a class="hidden-admin-link" href="/admin">Admin</a>
     <a href="/how-it-works">How it works</a>
@@ -67,8 +70,25 @@
   <section class="panel changelog-list">
     <article class="changelog-entry current">
       <span class="pill">Current</span>
-      <h2>v14.6.2 - Reward layout and variant picker</h2>
-      <p>Aligned catalogue cards, separate price/stock rows and a compact type-and-wear picker. Normal, Souvenir and StatTrak tabs have clear labels and colour accents; wear runs FN through BS. Website-only update: no SQL, Edge Function or Cron changes for existing v14.6.0.</p>
+      <h2>v15.0.0 - Providers, shared deliveries and mobile journeys</h2>
+      <ul>
+        <li>CPX and approved TimeWall Surveys together, with account-bound launch controls. A separate Earn page is prepared for a future tasks placement.</li>
+        <li>Private My orders page with recorded unlock times, next steps and saved prices.</li>
+        <li>Shared deliveries group one customer's orders for bulk updates without merging their prices or history.</li>
+        <li>Trade locked defaults to 192 hours from the saved update, with optional custom times. Staff must use Steam's actual item availability when it differs.</li>
+        <li>Changed trade links require explicit staff review before unsent orders are marked sent.</li>
+        <li>Actionable order badges, clearer stock/delivery estimates and provider-labelled coin movements.</li>
+        <li>Mobile safe areas, larger controls and layouts for small screens.</li>
+        <li>Owner-only earning statistics and corrected user metrics based on recorded events, not invented historical activity.</li>
+      </ul>
+    </article>
+    <article class="changelog-entry">
+      <h2>v14.6.2 - TimeWall callback preparation</h2>
+      <p>Added the TimeWall surveys callback, duplicate-event handling and hold/chargeback processing alongside CPX.</p>
+    </article>
+    <article class="changelog-entry">
+      <h2>v14.6.1 - Reward layout and variant picker</h2>
+      <p>Aligned catalogue cards and a compact Normal, Souvenir and StatTrak type-and-wear picker.</p>
     </article>
     <article class="changelog-entry">
       <h2>v14.6.0 - Clear reward journeys and owner finance</h2>
@@ -523,7 +543,7 @@
     <a href="/install">Install app</a>
     <a href="/support">Support</a>
   </div>
-  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v14.6.2</a></p>
+  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v15.0.0</a></p>
 </footer>
 <div class="modal-backdrop hidden" id="authModal">
   <div class="auth-modal" role="dialog" aria-modal="true">
@@ -565,8 +585,9 @@
   </div>
 </div>
 <script src="assets/vendor/supabase-js-2.45.4.js"></script>
-<script src="skinquest-v146.js?v=1462"></script>
-<script src="app.js?v=1462"></script>
-<script src="skinquest-v14.js?v=1462"></script>
+<script src="skinquest-v146.js?v=1500"></script>
+<script src="skinquest-v15.js?v=1500"></script>
+<script src="app.js?v=1500"></script>
+<script src="skinquest-v14.js?v=1500"></script>
 </body>
 </html>

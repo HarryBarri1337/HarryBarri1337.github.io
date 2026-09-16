@@ -7,6 +7,8 @@
     overview: "Overview",
     search: "Search results",
     orders: "Reward orders",
+    deliveries: "Shared deliveries",
+    earnings: "Earning statistics",
     support: "Support inbox",
     users: "Users",
     user: "User account",
@@ -18,7 +20,7 @@
     finance: "Finance & funding",
     team: "Team access"
   };
-  const OWNER_VIEWS = new Set(["coins", "team", "finance"]);
+  const OWNER_VIEWS = new Set(["coins", "team", "finance", "earnings"]);
   const ORDER_STATUSES = ["pending", "reviewing", "ordered", "trade_locked", "ready_to_trade", "trade_sent", "completed", "rejected", "refunded", "cancelled"];
   const SUPPORT_STATUSES = ["new", "open", "resolved"];
 
@@ -320,7 +322,7 @@
   }
 
   function updateNavCounts() {
-    const openOrders = Number(state.kpis?.open_rewards ?? state.orders.filter((item) => ["pending", "reviewing", "ordered", "trade_locked", "ready_to_trade", "trade_sent"].includes(item.status)).length);
+    const openOrders = Number(state.kpis?.actionable_rewards ?? state.orders.filter((item) => ["pending", "reviewing", "ordered", "ready_to_trade"].includes(item.status)).length);
     const openSupport = Number(state.kpis?.open_support ?? state.support.filter((item) => ["new", "open", null].includes(item.status)).length);
     [["orders", openOrders], ["support", openSupport]].forEach(([key, value]) => {
       const badge = $(`[data-nav-count="${key}"]`);
@@ -353,6 +355,7 @@
     closeSidebar();
     window.scrollTo({ top: 0, behavior: "auto" });
     if (next === "finance" && !state.finance && state.owner) loadFinance().catch(error => notify(error.message, "error"));
+    window.SQ15?.adminView(next);
   }
 
   function openSidebar() {
@@ -525,6 +528,7 @@
   }
 
   function retryPendingOrderNotifications(rows) {
+    const notifiedDeliveries=new Set();
     (rows || []).forEach((item) => {
       // Retry failed initial email only while a newly placed order is recent.
       // Legacy orders must not receive a fresh "order received" email months later.
@@ -544,7 +548,11 @@
         || (status === "ready_to_trade" && item?.fulfillment_mode === "orderable");
       const needsUserStatus = item?.last_user_notified_status !== status;
       const needsReadyAdmin = status === "ready_to_trade" && item?.fulfillment_mode === "orderable" && !item?.ready_admin_notified_at;
-      if (retryable && recentStatusChange && (needsUserStatus || needsReadyAdmin)) notifyOrderStatus(item.id);
+      if (retryable && recentStatusChange && (needsUserStatus || needsReadyAdmin)) {
+        if(item.delivery_id&&notifiedDeliveries.has(item.delivery_id))return;
+        if(item.delivery_id)notifiedDeliveries.add(item.delivery_id);
+        notifyOrderStatus(item.id);
+      }
     });
   }
 
@@ -716,7 +724,7 @@
     if (!target) return;
     const kpi = state.kpis || {};
     const cards = [
-      ["Open orders", kpi.open_rewards, "Awaiting fulfilment", "orders", true],
+      ["Needs action", kpi.actionable_rewards ?? kpi.open_rewards, `${formatNumber(kpi.locked_rewards)} waiting on trade locks`, "orders", true],
       ["Open support", kpi.open_support, "New or active tickets", "support", true],
       ["Active rewards", kpi.active_rewards, "Visible in the shop", "rewards", false],
       ["Users", kpi.users, `${formatNumber(kpi.new_users_24h)} new in 24h`, "users", false],
@@ -949,6 +957,7 @@
   function renderUserProfile(result) {
     const item = result.user;
     const cpx = result.cpx || {};
+    window.SQ15?.userEarnings(item.user_id);
     const metric = (value) => value == null ? "No records" : formatNumber(value);
     $("#adminUserProfile").innerHTML = `
       <div class="admin-user-profile-head"><span class="admin-account-avatar admin-user-profile-avatar" aria-hidden="true">${safe((userDisplayName(item)[0] || "U").toUpperCase())}</span><div class="admin-user-profile-identity"><p class="admin-eyebrow">User account</p><h1 tabindex="-1">${safe(userDisplayName(item))}</h1><p>${safe(item.contact_email || item.email || "No verified email")}</p></div>${statusPill(item.account_status || "active")}</div>
@@ -965,8 +974,8 @@
         <div class="admin-card admin-user-total"><span>Support tickets</span><strong>${formatNumber(item.support_count)}</strong><small>Recorded requests</small></div>`;
     $("#adminUserCpx").innerHTML = `
       <details><summary>CPX activity &amp; data status</summary><div class="admin-user-profile-stats">
-        <div><strong>${metric(cpx.completed_reward_events)}</strong><span>Completed reward postbacks</span></div>
-        <div><strong>${metric(cpx.ledger_credit_rows)}</strong><span>CPX-labelled ledger credits</span></div>
+        <div><strong>${metric(cpx.completed_reward_events)}</strong><span>Verified CPX reward events</span></div>
+        <div><strong>${metric(cpx.verified_coins)}</strong><span>Verified CPX coins</span></div>
         <div><strong>${metric(cpx.logged_opens)}</strong><span>Logged CPX launch clicks</span></div>
       </div><p>${safe(cpx.note)}</p>${!cpx.postback_rows ? '<p>No CPX postbacks are recorded for this account. Check coin history for legacy credits; this does not prove the user completed zero surveys.</p>' : ""}${cpx.logged_opens == null ? '<p>No launch clicks recorded. Individual survey launches inside the CPX widget cannot be counted here.</p>' : ""}</details>`;
     $("[data-copy-profile-id]")?.addEventListener("click", () => copyToClipboard(item.user_id, "User ID copied."));
@@ -1248,8 +1257,10 @@
       $("[data-copy-drawer=trade]")?.addEventListener("click", () => copyToClipboard(item.steam_trade_url || "", "Trade URL copied."));
       $("[data-open-trade]")?.addEventListener("click", () => openTrustedUrl(item.steam_trade_url));
       $("#adminOrderUpdateForm")?.addEventListener("submit", (event) => saveOrderUpdate(event, item));
+      window.SQ15?.mountOrderTools(item);
       $$('[data-order-quick]').forEach((button) => button.addEventListener("click", () => {
         if ($("#drawerOrderStatus")) $("#drawerOrderStatus").value = button.dataset.orderQuick;
+        $("#drawerOrderStatus")?.dispatchEvent(new Event("change"));
         $("#adminOrderUpdateForm")?.requestSubmit();
       }));
       $("[data-copy-order-message]")?.addEventListener("click", () => {
@@ -1276,7 +1287,7 @@
     if (!allowedOrderStatuses(item).includes(status)) return notify(`You cannot move this order from ${statusLabel(item.status)} to ${statusLabel(status)}.`, "error");
     if (trade && !isValidTradeProof(trade)) return notify("Use a Steam trade-offer URL like https://steamcommunity.com/tradeoffer/123456789/.", "error");
     if (status === "trade_locked" && item.fulfillment_mode !== "orderable") return notify("Prepared rewards do not use Trade locked.", "error");
-    if (status === "trade_locked" && (!lockUntil || Number.isNaN(lockUntil.getTime()) || lockUntil.getTime() <= Date.now())) return notify("Set a future Steam trade-lock end time first.", "error");
+    if (status === "trade_locked" && lockUntil && (Number.isNaN(lockUntil.getTime()) || lockUntil.getTime() <= Date.now())) return notify("Set a future Steam trade-lock end time.", "error");
 
     if (status === "completed" && item.status !== "trade_sent") return notify("Mark the Steam trade as sent before completing the order.", "error");
     if (status === "trade_sent" && item.status !== "trade_sent") {
@@ -1302,7 +1313,7 @@
         p_status: status,
         p_admin_note: note || null,
         p_trade_offer_url: trade || null,
-        p_trade_locked_until: lockUntil ? lockUntil.toISOString() : null
+        p_trade_locked_until: lockUntil && !$("#drawerOrderLockUntil")?.dataset.defaultLock ? lockUntil.toISOString() : null
       });
       try { await rpc("sq_admin_order_customer_note", { p_order_id: item.id, p_note: textValue($("#drawerCustomerNote")?.value) || null }); }
       catch(noteError) { notify(`Order status saved, but the customer update was not saved: ${noteError.message}`, "error"); }
@@ -2121,5 +2132,6 @@
     target.innerHTML = state.coinHistory.length ? state.coinHistory.map((item) => `<div class="admin-audit-row"><span class="admin-audit-icon">$</span><div><strong>${item.amount > 0 ? "+" : ""}${formatNumber(item.amount)} coins</strong><small>${safe(item.reason || "Manual adjustment")}</small></div><div><strong>${safe(profileLabel(item.user_id))}</strong><small>By ${safe(adminLabel(item.created_by))}</small></div><time class="admin-audit-time">${safe(formatDateTime(item.created_at))}</time></div>`).join("") : '<div class="admin-empty">No manual coin adjustments yet.</div>';
   }
 
+  window.SQ15Admin={showView,openOrder,closeDrawer,refresh:async()=>{await Promise.allSettled([loadOrders({reset:true}),loadKpis(),loadAudit()]);renderOverview();}};
   window.initAdminV145 = initAdminV145;
 })();
