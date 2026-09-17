@@ -1,4 +1,4 @@
-/* v15.0.1: compact navigation, static item artwork and one-price cards. */
+/* v15.0.2: compact navigation, static item artwork and one-price cards. */
 .sq15 .shop-toolbar.reward-toolbar.reward-toolbar-v118 { grid-template-columns:minmax(180px,1.2fr) minmax(210px,1fr) minmax(290px,1.3fr) minmax(160px,.8fr);align-items:end; }
 .sq15 .filter-availability .filter-chip-group { display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px;padding:3px; }
 .sq15 .filter-availability .filter-chip { width:auto;min-width:0;padding:10px 5px;font-size:12px; }

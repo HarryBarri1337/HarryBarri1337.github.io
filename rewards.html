@@ -18,7 +18,7 @@
       }
     }());
   </script>
-  <link rel="stylesheet" href="styles.css?v=1501" />
+  <link rel="stylesheet" href="styles.css?v=1502" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#0b0f16" />
   <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png" />
@@ -28,10 +28,11 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="SkinQuest" />
   <meta property="og:site_name" content="SkinQuest" />
-  <link rel="stylesheet" href="skinquest-v14.css?v=1501" />
-  <link rel="stylesheet" href="skinquest-v146.css?v=1501" />
-  <link rel="stylesheet" href="skinquest-v15.css?v=1501" />
-  <link rel="stylesheet" href="skinquest-v151.css?v=1501" />
+  <link rel="stylesheet" href="skinquest-v14.css?v=1502" />
+  <link rel="stylesheet" href="skinquest-v146.css?v=1502" />
+  <link rel="stylesheet" href="skinquest-v15.css?v=1502" />
+  <link rel="stylesheet" href="skinquest-v151.css?v=1502" />
+  <link rel="stylesheet" href="skinquest-v152.css?v=1502" />
 </head>
 <body>
 <div id="pageLoader" class="page-loader">
@@ -47,6 +48,7 @@
   </a>
   <button class="nav-toggle" aria-label="Open navigation" data-nav-toggle>☰</button>
   <nav class="site-nav" data-nav>
+    <a href="/dashboard">Dashboard</a>
     <a href="/surveys">Surveys</a>
     <a href="/earn">Earn</a>
     <a href="/orders">My orders</a>
@@ -113,12 +115,11 @@
     </div>
   </section>
 
-  <div class="sq146-quickbar" aria-label="Quick catalogue filters"><button class="filter-chip" type="button" data-reward-quick="starter">First rewards</button><button class="filter-chip" type="button" data-reward-quick="affordable">Within my balance</button><button class="filter-chip" type="button" data-reward-quick="case">Cases</button><button class="filter-chip" type="button" data-reward-quick="ak47">AK-47</button><label class="sq146-group-control"><input type="checkbox" id="groupRewardVariants" checked /> Group wear &amp; StatTrak variants</label></div>
-  <p class="sq146-search-hint">Search words in any order: “black lotus ft”, “ak47 slate”, “factory new”. Common wear abbreviations and small spelling mistakes are supported. A grouped price belongs to the pictured variant; open it to choose the exact item.</p>
+  <div class="sq152-group-row"><label class="sq146-group-control"><input type="checkbox" id="groupRewardVariants" checked /> Group variants</label></div>
 
   <section class="reward-shop-status" aria-live="polite">
     <span id="rewardResultCount">Loading rewards...</span>
-    <span class="favorite-count-pill" data-favorite-count>0/6 goals starred</span>
+    <span class="favorite-count-pill" data-favorite-count>0/6 saved</span>
     <button id="clearRewardFilters" class="mini-button clear-filters-button hidden" type="button">Clear filters</button>
   </section>
 
@@ -138,7 +139,7 @@
     <a href="/install">Install app</a>
     <a href="/support">Support</a>
   </div>
-  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v15.0.1</a></p>
+  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v15.0.2</a></p>
 </footer>
 <div class="modal-backdrop hidden" id="authModal">
   <div class="auth-modal" role="dialog" aria-modal="true">
@@ -180,9 +181,9 @@
   </div>
 </div>
 <script src="assets/vendor/supabase-js-2.45.4.js"></script>
-<script src="skinquest-v146.js?v=1501"></script>
-<script src="skinquest-v15.js?v=1501"></script>
-<script src="app.js?v=1501"></script>
-<script src="skinquest-v14.js?v=1501"></script>
+<script src="skinquest-v146.js?v=1502"></script>
+<script src="skinquest-v15.js?v=1502"></script>
+<script src="app.js?v=1502"></script>
+<script src="skinquest-v14.js?v=1502"></script>
 </body>
 </html>

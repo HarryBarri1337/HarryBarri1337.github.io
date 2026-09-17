@@ -37,10 +37,11 @@
   }
   function resetProviders() {
     providerUser=null;urls.clear();
+    $$('[data-cpx-direct]').forEach(b=>{b.removeAttribute('href');b.setAttribute('aria-disabled','true');});
     for(const source of ['timewall_surveys','timewall_earn']) {
       const frame=$(`[data-timewall-frame="${source}"]`);if(frame)frame.src='about:blank';
       $(`[data-timewall-stage="${source}"]`)?.classList.add('hidden');
-      $$(`[data-provider-open="${source}"]`).forEach(b=>{b.removeAttribute('href');b.disabled=true;});
+      $$(`[data-provider-open="${source}"]`).forEach(b=>{b.removeAttribute('href');b.disabled=true;b.setAttribute('aria-disabled','true');});
     }
   }
   function safeTimewall(value,uid) {
@@ -50,14 +51,17 @@
   function configureProviders(data,uid) {
     if(currentUser?.id!==uid)return;
     if(providerUser!==uid){resetProviders();providerUser=uid;}
+    const cpx=typeof isSafeOfferwallUrl==='function'&&isSafeOfferwallUrl(data?.wall_url,uid)?data.wall_url:null;
+    if(cpx){urls.set('cpx',cpx);$$('[data-cpx-direct]').forEach(b=>{b.href=cpx;b.setAttribute('aria-disabled','false');});}
+    else{urls.delete('cpx');$$('[data-cpx-direct]').forEach(b=>{b.removeAttribute('href');b.setAttribute('aria-disabled','true');});}
     for(const [source,key] of [['timewall_surveys','timewall_wall_url'],['timewall_earn','timewall_earn_url']]) {
       const url=safeTimewall(data?.[key],uid),panel=$(`[data-timewall-panel="${source}"]`);if(!panel)continue;
       if(url){urls.set(source,url);panel.classList.remove('hidden');
-        $$(`[data-provider-open="${source}"]`).forEach(b=>{b.disabled=false;if(b.tagName==='A')b.href=url;});
+        $$(`[data-provider-open="${source}"]`).forEach(b=>{b.disabled=false;b.setAttribute('aria-disabled','false');if(b.tagName==='A')b.href=url;});
         $(`[data-timewall-empty="${source}"]`)?.classList.add('hidden');
         $(`[data-timewall-controls="${source}"]`)?.classList.remove('hidden');
         if(source==='timewall_surveys')$('#timewallProviderLink')?.classList.remove('hidden');
-      }else{urls.delete(source);$(`[data-timewall-controls="${source}"]`)?.classList.add('hidden');
+      }else{urls.delete(source);$$(`[data-provider-open="${source}"]`).forEach(b=>{b.removeAttribute('href');b.disabled=true;b.setAttribute('aria-disabled','true');});$(`[data-timewall-controls="${source}"]`)?.classList.add('hidden');
         const empty=$(`[data-timewall-empty="${source}"]`);empty?.classList.remove('hidden');}
     }
   }
@@ -171,7 +175,7 @@
     if(bound)return;bound=true;
     document.addEventListener('click',async e=>{
       const b=e.target.closest('button,a');if(!b)return;
-      if(b.matches('[data-provider-open]')){if(b.getAttribute('aria-disabled')==='true')return e.preventDefault();if(b.tagName==='BUTTON'){e.preventDefault();launchProvider(b.dataset.providerOpen,true);}else{if(!urls.get(b.dataset.providerOpen))return e.preventDefault();launchProvider(b.dataset.providerOpen);}}
+      if(b.matches('[data-provider-open]')){if(b.getAttribute('aria-disabled')==='true')return e.preventDefault();if(b.tagName==='BUTTON'){e.preventDefault();launchProvider(b.dataset.providerOpen,true);}else{if(!urls.get(b.dataset.providerOpen)||providerUser!==currentUser?.id)return e.preventDefault();launchProvider(b.dataset.providerOpen);}}
       if(b.matches('[data-provider-retry]')){providerUser=null;await initProviders();}
       if(b.matches('[data-orders-filter]')){customer.filter=b.dataset.ordersFilter;$$('[data-orders-filter]').forEach(x=>{x.classList.toggle('active',x===b);x.setAttribute('aria-pressed',String(x===b));});await myOrders();}
       if(b.matches('[data-orders-more]'))await myOrders(true);

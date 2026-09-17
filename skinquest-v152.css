@@ -1,0 +1,34 @@
+/* v15.0.2: aligned navigation and compact saved rewards. */
+.sq15 .site-header,.sq15 main.page,.sq15 main.hero,.sq15 .site-footer { width:min(1180px,calc(100% - 32px));margin-left:auto;margin-right:auto; }
+.sq15 .site-nav a { padding:10px;font-size:13px; }
+.sq15 .survey-provider-nav a { display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:13px 18px;min-height:44px;line-height:1.5; }
+.sq15 .survey-provider-nav a strong { font-size:13px;font-weight:650;white-space:nowrap; }
+.sq15 .survey-provider-nav a span { font-size:12px;line-height:1.5;color:#a5b1c2; }
+.sq15 .survey-provider-nav a[aria-disabled="true"] { cursor:default;opacity:.65; }
+.sq15 .sq152-group-row { display:flex;justify-content:flex-end;margin:16px 0; }
+.sq15 .goal-rewards-list { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px; }
+.sq15 .goal-reward-card { display:grid;grid-template-columns:80px minmax(0,1fr);gap:14px;align-items:center;width:100%;min-width:0;padding:16px;text-align:left; }
+.sq15 .goal-reward-card .reward-art { width:80px;height:80px;min-height:80px; }
+.sq15 .goal-reward-info { width:100%;min-width:0;gap:10px; }
+.sq15 .goal-reward-head { display:grid;grid-template-columns:minmax(0,1fr) 44px;gap:8px;align-items:start;min-width:0; }
+.sq15 .goal-reward-head h3 { white-space:normal;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-height:1.5;font-size:14px; }
+.sq15 .goal-reward-head h3 a { color:inherit;text-decoration:none; }
+.sq15 .goal-reward-head h3 a:hover { color:#e8b34d; }
+.sq15 .goal-reward-head .favorite-star { position:static;width:44px;height:44px;min-width:44px; }
+.sq15 .goal-reward-coins { display:flex;flex-wrap:wrap;gap:6px;font-size:12px; }
+.sq15 .goal-reward-card .goal-progress-bar { width:100%;max-width:100%;min-width:0;height:5px; }
+.sq15 .goal-claim-button { width:100%;font-size:12px; }
+@media(max-width:1100px) { .sq15 .site-nav a { font-size:14px; } }
+@media(max-width:760px) {
+ .sq15 .site-header,.sq15 main.page,.sq15 main.hero,.sq15 .site-footer { width:calc(100% - 16px); }
+ .sq15 .goal-rewards-list { grid-template-columns:minmax(0,1fr); }
+ .sq15 .goal-reward-card { position:relative;grid-template-columns:64px minmax(0,1fr);gap:12px;padding:12px;align-items:start; }
+ .sq15 .goal-reward-card .reward-art { width:64px;height:64px;min-height:64px; }
+ .sq15 .survey-provider-nav a { flex:1 1 140px;flex-wrap:wrap;gap:4px 10px; }
+ .sq15 .goal-reward-info { display:contents; }
+ .sq15 .goal-reward-head { display:block;grid-column:2;grid-row:1; }
+ .sq15 .goal-reward-head h3 { display:block;-webkit-line-clamp:unset;font-size:13px;line-height:1.5; }
+ .sq15 .goal-reward-head .favorite-star { position:absolute;top:auto;right:12px;bottom:12px; }
+ .sq15 .goal-reward-coins { grid-column:1/-1;margin-right:56px;display:grid;grid-template-columns:20px minmax(0,1fr);align-items:center; }
+ .sq15 .goal-reward-card .goal-progress-bar,.sq15 .goal-claim-button { grid-column:1/-1;width:calc(100% - 56px); }
+}

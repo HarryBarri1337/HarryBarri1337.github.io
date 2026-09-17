@@ -1,4 +1,4 @@
-// SkinQuest v15.0.1 core - secure base; enhanced by skinquest-v14.js
+// SkinQuest v15.0.2 core - secure base; enhanced by skinquest-v14.js
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -1786,7 +1786,7 @@ async function loadFavoriteRewards(userId) {
 
 function updateFavoriteCountUi() {
   qsa("[data-favorite-count]").forEach((el) => {
-    el.textContent = `${favoriteRewardIds.size}/${MAX_FAVORITE_REWARDS} goals starred`;
+    el.textContent = `${favoriteRewardIds.size}/${MAX_FAVORITE_REWARDS} saved`;
   });
 }
 
@@ -1826,7 +1826,7 @@ async function toggleFavoriteReward(rewardId, starButton = null) {
   qsa(`[data-favorite-star="${id}"]`).forEach((button) => {
     button.classList.toggle("is-favorited", favoriteRewardIds.has(id));
     button.setAttribute("aria-pressed", String(favoriteRewardIds.has(id)));
-    button.setAttribute("aria-label", favoriteRewardIds.has(id) ? "Remove goal star" : "Set as goal");
+    button.setAttribute("aria-label", favoriteRewardIds.has(id) ? "Remove saved reward" : "Save reward");
   });
   updateFavoriteCountUi();
 }
@@ -2241,8 +2241,8 @@ function renderRewards() {
       resultCount.textContent = total === 0
         ? "No rewards loaded yet"
         : rewardItems.length >= total
-          ? `Showing ${total.toLocaleString()} ${rewardCatalogState.grouped ? "reward families" : "rewards"}`
-          : `Showing ${rewardItems.length.toLocaleString()} of ${total.toLocaleString()} ${rewardCatalogState.grouped ? "reward families" : "rewards"}`;
+          ? `Showing ${total.toLocaleString()} rewards`
+          : `Showing ${rewardItems.length.toLocaleString()} of ${total.toLocaleString()} rewards`;
     }
     updateRewardLoadMoreButton();
     clearFilters?.classList.toggle("hidden", !hasActiveRewardFilters());
@@ -2286,7 +2286,7 @@ function renderRewards() {
       return `
         <article class="reward-card steam-item ${rarityClass(item)} ${outOfStock ? "is-out" : ""} ${steamPriced && !currentPrice ? "is-price-stale" : ""}">
           <a class="sq-reward-art-link" href="/rewards/${item.id}" aria-label="View ${escapeHtml(family ? item.family_name : item.name)}">${renderRewardArt(item)}</a>
-          <button class="favorite-star ${isFavorited ? "is-favorited" : ""}" type="button" data-favorite-star="${item.id}" aria-pressed="${isFavorited}" aria-label="${isFavorited ? "Remove goal star" : "Set as goal"}">
+          <button class="favorite-star ${isFavorited ? "is-favorited" : ""}" type="button" data-favorite-star="${item.id}" aria-pressed="${isFavorited}" aria-label="${isFavorited ? "Remove saved reward" : "Save reward"}">
             <svg class="star-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.95 6.53 7.15.66-5.4 4.73 1.63 7-6.33-3.8-6.33 3.8 1.63-7-5.4-4.73 7.15-.66L12 2.6z"/></svg>
           </button>
           <div class="reward-info">
@@ -3442,12 +3442,12 @@ async function renderGoalRewards(user, profile) {
         ${renderRewardArt(item)}
         <div class="goal-reward-info">
           <div class="goal-reward-head">
-            <h3>${escapeHtml(item.name)}</h3>
-            <button class="favorite-star is-favorited" type="button" data-favorite-star="${item.id}" aria-pressed="true" aria-label="Remove goal star">
+            <h3><a href="/rewards/${item.id}">${escapeHtml(item.name)}</a></h3>
+            <button class="favorite-star is-favorited" type="button" data-favorite-star="${item.id}" aria-pressed="true" aria-label="Remove saved reward">
               <svg class="star-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.95 6.53 7.15.66-5.4 4.73 1.63 7-6.33-3.8-6.33 3.8 1.63-7-5.4-4.73 7.15-.66L12 2.6z"/></svg>
             </button>
           </div>
-          <p class="muted goal-reward-coins">${coinIcon("coin-icon-small")} ${balance.toLocaleString()} / ${cost.toLocaleString()} coins</p>
+          <p class="muted goal-reward-coins">${coinIcon("coin-icon-small")} <span>${balance.toLocaleString()} / ${cost.toLocaleString()} coins</span></p>
           ${canClaim
             ? `<a class="button button-primary goal-claim-button" href="/rewards/${item.id}">View reward</a>`
             : `<div class="goal-progress-bar" role="progressbar" aria-valuenow="${Math.round(pct)}" aria-valuemin="0" aria-valuemax="100"><span style="width:${pct}%"></span></div>`}

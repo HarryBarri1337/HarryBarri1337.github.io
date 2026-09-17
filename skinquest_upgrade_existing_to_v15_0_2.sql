@@ -1,0 +1,2 @@
+-- SkinQuest v15.0.2: UI-only update from v15.0.1.
+-- No SQL needs to run. Keep the already installed v15.0.1 schema.

@@ -1,4 +1,4 @@
-/* SkinQuest v15.0.1: fixed reward journeys, private order pages and linked support. */
+/* SkinQuest v15.0.2: fixed reward journeys, private order pages and linked support. */
 (() => {
   "use strict";
   const $ = (s, root=document) => root.querySelector(s);
@@ -102,7 +102,7 @@
       ${renderVariantPicker()}
       ${currentUser?`<div class="sq146-goal-progress"><p>${missing?(balance>0?`${n(missing)} coins to go`:'Start earning toward this reward'):'Within your balance'}<small>${Math.round(pct)}% saved</small></p><div class="goal-progress-bar" role="progressbar" aria-label="Reward goal progress" aria-valuenow="${Math.round(pct)}" aria-valuemin="0" aria-valuemax="100"><span style="width:${pct}%"></span></div></div>`:''}
       <div class="sq151-delivery-summary"><strong>${orderable?`Purchase required · ${getRewardOrderEtaDays(item)}+ days`:'Prepared stock · usually 1–2 days'}</strong><p>${orderable?'Purchased after review. The recorded Steam unlock time appears on your order.':'Reserved when your order is saved, then reviewed before sending.'} Delivery is manual; timing is an estimate.</p></div>
-      <div class="sq146-detail-actions">${action(item)}<button class="button button-ghost" type="button" data-detail-star aria-pressed="${starred}">${starred?'★ Goal saved':'☆ Set as goal'}</button><button class="button button-ghost" type="button" data-copy-reward-link>Copy link</button></div>
+      <div class="sq146-detail-actions">${action(item)}<button class="button button-ghost" type="button" data-detail-star aria-pressed="${starred}">${starred?'★ Reward saved':'☆ Save reward'}</button><button class="button button-ghost" type="button" data-copy-reward-link>Copy link</button></div>
       <p class="muted sq146-security-copy">Never share your Steam password, Guard codes or API key.</p></div>
       <details class="panel sq146-delivery-info"><summary>How delivery works</summary><p>Coins are deducted only when the server saves your order. Each order keeps its original item and coin price.</p><p>${orderable?`SkinQuest purchases the item after review. Allow at least ${getRewardOrderEtaDays(item)} days; the actual recorded Steam unlock time is shown on your private order page. This is not a guaranteed delivery date.`:'Prepared items are usually sent within 1–2 days after review. Delivery is manual, not instant.'}</p><a class="mini-link" href="/orders">My orders</a> · <a class="mini-link" href="/how-it-works">Delivery guide</a></details></section>`;
   }
@@ -222,7 +222,7 @@
     if($('#rewardsGrid')&&legacyReward){location.replace(`/rewards/${legacyReward}`);return;}
     const group=$('#groupRewardVariants');if(group){try{group.checked=localStorage.getItem('sq_group_variants')!=='false';}catch{}group.addEventListener('change',()=>{try{localStorage.setItem('sq_group_variants',String(group.checked));}catch{}});}
     const search=$('#skinSearch'),suggestions=$('#rewardSearchSuggestions');
-    if(search)search.placeholder='Try ak47 slate ft, black lotus, cases…';
+    if(search)search.placeholder='Search rewards…';
     const closeSuggestions=()=>{suggestions?.classList.add('hidden');search?.setAttribute('aria-expanded','false');};
     if(search&&suggestions){
       search.addEventListener('input',()=>{
