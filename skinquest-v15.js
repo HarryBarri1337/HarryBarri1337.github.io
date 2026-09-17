@@ -96,14 +96,14 @@
       if(seq!==ordersSeq||currentUser?.id!==user.id)return;
       customer.items=append?[...customer.items,...data.items]:data.items;customer.total=Number(data.total);
       const stats=$('#myOrderStats');if(stats)stats.innerHTML=[['Active orders',data.active],['Waiting on a lock',data.locked],['Trade marked sent',data.sent]].map(([label,value])=>`<div><strong>${n(value)}</strong><span>${label}</span></div>`).join('');
-      root.innerHTML=group(customer.items).map(([key,items])=>`<section class="panel sq15-delivery"><header><div><span class="pill">${key.startsWith('ungrouped:')?'Individual orders':'Grouped Steam delivery'}</span><h2>${safe(items[0].delivery_label||'Not assigned to a shared delivery yet')}</h2><p class="muted">${n(items.length)} loaded item${items.length===1?'':'s'} · ${n(items.reduce((v,o)=>v+Number(o.points_coins||o.points_cost),0))} saved coins${key.startsWith('ungrouped:')?'':' · may be sent in the same Steam offer'}</p></div></header>${items.map(orderRow).join('')}</section>`).join('')||errorBox('No orders in this view','Choose a reward to start your first order.');
+      root.innerHTML=group(customer.items).map(([key,items])=>`<section class="panel sq15-delivery">${key.startsWith('ungrouped:')?'':`<header><div><h2>Steam delivery</h2><p class="muted">${n(items.length)} item${items.length===1?'':'s'} · may arrive in the same Steam offer</p></div></header>`}${items.map(orderRow).join('')}</section>`).join('')||errorBox('No orders in this view','Choose a reward to start your first order.');
       if(customer.items.length<customer.total)root.insertAdjacentHTML('beforeend',`<button class="button button-ghost" data-orders-more>Load more orders (${n(customer.items.length)} / ${n(customer.total)})</button>`);
     }catch(e){if(seq===ordersSeq)root.innerHTML=errorBox('Could not load orders',e)+'<button class="button button-ghost" data-orders-retry>Try again</button>';}
   }
   function augmentOrder(item) {
     const root=$('#orderDetail');if(!root||!item)return;
     if(item.trade_url_needs_review)root.insertAdjacentHTML('afterbegin','<aside class="sq15-notice">Your trade link changed. Staff will review the new link before sending this order. An already-sent offer is not redirected.</aside>');
-    if(item.delivery_id&&item.delivery_items?.length)root.insertAdjacentHTML('beforeend',`<section class="panel sq15-delivery"><span class="pill">Grouped Steam delivery</span><h2>${safe(item.delivery_label)}</h2><p class="muted">These orders are grouped for fulfilment. Each retains its own saved coin price and status.</p>${item.delivery_items.map(s=>`<a class="sq15-sibling" href="/orders/${s.id}"><span><strong>${safe(s.reward_name)}</strong><small>${safe(s.order_number)} · ${n(s.coins)} coins</small></span>${badge(s.status)}</a>`).join('')}</section>`);
+    if(item.delivery_id&&item.delivery_items?.length)root.insertAdjacentHTML('beforeend',`<section class="panel sq15-delivery"><h2>Items in this delivery</h2><p class="muted">These items may arrive in the same Steam offer.</p>${item.delivery_items.map(s=>`<a class="sq15-sibling" href="/orders/${s.id}"><span><strong>${safe(s.reward_name)}</strong><small>${safe(s.order_number)} · ${n(s.coins)} coins</small></span>${badge(s.status)}</a>`).join('')}</section>`);
   }
   async function adminDeliveries(append=false) {
     const root=$('#adminDeliveries');if(!root)return;
@@ -171,7 +171,6 @@
   }
   function prepare() {
     document.documentElement.classList.add('sq15');
-    if($('#redeemHistory')&&!$('#sq15OrdersLink'))$('#redeemHistory').closest('.panel')?.insertAdjacentHTML('afterbegin','<a id="sq15OrdersLink" class="sq15-text-link" href="/orders">Open all orders & deliveries →</a>');
     if(bound)return;bound=true;
     document.addEventListener('click',async e=>{
       const b=e.target.closest('button,a');if(!b)return;

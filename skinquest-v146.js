@@ -1,4 +1,4 @@
-/* SkinQuest v15.0.2: fixed reward journeys, private order pages and linked support. */
+/* SkinQuest v15.0.3: fixed reward journeys, private order pages and linked support. */
 (() => {
   "use strict";
   const $ = (s, root=document) => root.querySelector(s);
@@ -10,9 +10,9 @@
   const params = () => new URLSearchParams(location.search);
   const routeId = kind => id(location.pathname.match(new RegExp(`^/${kind}/([0-9]+)/?$`))?.[1] || params().get("id"));
   const errorBox = (title,copy,retry="") => `<div class="sq146-empty"><h2>${safe(title)}</h2><p class="muted">${safe(copy)}</p>${retry?`<button class="button button-ghost" type="button" data-sq146-retry="${retry}">Try again</button>`:""}</div>`;
-  let prepared=false, detailSeq=0, supportSeq=0, starterSeq=0, nextSeq=0, suggestionSeq=0, suggestionTimer;
+  let prepared=false, detailSeq=0, supportSeq=0, starterSeq=0, suggestionSeq=0, suggestionTimer;
   let detail=null, selected=null, supportKey=null;
-  const ledger={uid:null,items:[],total:0,kind:"all",seq:0,loading:false};
+  const ledger={uid:null,items:[],total:0,kind:"all",seq:0,loading:false,expanded:false};
   let extra={weapon:'all',condition:'all',rarity:'all'};
   const resetExtraQuery=()=>{extra={weapon:'all',condition:'all',rarity:'all'};};
   const extraQuery=()=>Object.values(extra).filter(v=>v&&v!=='all').map(v=>v==='mil-spec'?'milspec':v).join(' ');
@@ -98,7 +98,7 @@
       <div class="panel sq146-detail-copy"><div class="sq146-detail-badges">${variantWear(item)!=='STD'||variantType(item)!=='normal'?`<span class="sq146-type-badge is-${variantType(item)}">${types.find(([k])=>k===variantType(item))[1]}</span>`:''}<span class="stock-pill">${orderable?'Available to order':available>0?`${n(available)} in stock`:'Out of stock'}</span></div><h1>${safe(family)}</h1>
       ${item.name!==family?`<p class="muted sq151-selected-name">${safe(item.name)}</p>`:''}
       <strong class="sq146-detail-price">${n(getRewardCost(item))}<small> coins</small></strong>
-      <p class="muted sq151-price-caption">${rewardUsesSteamPricing(item)?rewardHasCurrentPrice(item)?'Steam-linked · price saved at checkout':'Price refreshing · ordering paused':'Price saved at checkout'}</p>
+      <p class="muted sq151-price-caption">${rewardHasCurrentPrice(item)?'Price saved at checkout':'Price refreshing · ordering paused'}</p>
       ${renderVariantPicker()}
       ${currentUser?`<div class="sq146-goal-progress"><p>${missing?(balance>0?`${n(missing)} coins to go`:'Start earning toward this reward'):'Within your balance'}<small>${Math.round(pct)}% saved</small></p><div class="goal-progress-bar" role="progressbar" aria-label="Reward goal progress" aria-valuenow="${Math.round(pct)}" aria-valuemin="0" aria-valuemax="100"><span style="width:${pct}%"></span></div></div>`:''}
       <div class="sq151-delivery-summary"><strong>${orderable?`Purchase required · ${getRewardOrderEtaDays(item)}+ days`:'Prepared stock · usually 1–2 days'}</strong><p>${orderable?'Purchased after review. The recorded Steam unlock time appears on your order.':'Reserved when your order is saved, then reviewed before sending.'} Delivery is manual; timing is an estimate.</p></div>
@@ -144,39 +144,18 @@
   }
   async function coinHistory(userId,append=false) {
     const root=$("#coinHistory");if(!root)return;
-    if(ledger.uid!==userId){ledger.uid=userId;ledger.kind="all";ledger.items=[];}
+    if(ledger.uid!==userId){ledger.uid=userId;ledger.kind="all";ledger.items=[];ledger.expanded=false;}
     const seq=++ledger.seq;ledger.loading=true;
     try {
-      const data=await rpc("sq_my_coin_history",{p_kind:ledger.kind,p_limit:25,p_offset:append?ledger.items.length:0});
+      const data=await rpc("sq_my_coin_history",{p_kind:ledger.kind,p_limit:ledger.expanded?25:3,p_offset:append?ledger.items.length:0});
       if(seq!==ledger.seq||currentUser?.id!==userId)return;
       ledger.items=append?[...ledger.items,...(data?.items||[])]:data?.items||[];ledger.total=Number(data?.total||0);
       const labels={all:"All",survey:"Surveys",earn:"Tasks",reward:"Rewards",refund:"Refunds",promo:"Promo codes",level:"Level bonuses",adjustment:"Adjustments"};
       const kinds={survey:"Survey reward",earn:"Task reward",reward:"Reward order",refund:"Coin refund",promo:"Promo code",level:"Level bonus",adjustment:"Account adjustment"};
       root.className="sq146-ledger";
-      root.innerHTML=`<div class="sq146-chips" role="group" aria-label="Coin history type">${Object.entries(labels).map(([k,v])=>`<button class="filter-chip ${k===ledger.kind?"active":""}" type="button" data-ledger-kind="${k}" aria-pressed="${k===ledger.kind}">${v}</button>`).join("")}</div><p class="muted sq146-ledger-caption">${ledger.items.length} of ${n(ledger.total)} recorded movements. Pending survey claims are not spendable coins.</p>${ledger.items.length?ledger.items.map(c=>`<div class="sq146-ledger-row"><div><span class="sq146-ledger-kind">${safe(['survey','earn'].includes(c.kind)&&Number(c.amount)<0?'Partner reversal':kinds[c.kind]||'Account adjustment')}</span><strong>${safe(c.reason||kinds[c.kind]||'Coin adjustment')}</strong><small>${date(c.created_at)} · Transaction #${c.id}${c.provider?` · ${safe(c.provider)}`:""}</small>${c.kind==='refund'?`<small>Actual returned coins; your original order price has not changed.</small>`:['survey','earn'].includes(c.kind)&&Number(c.amount)<0?`<small>The provider reversed a previously recorded reward.</small>`:""}<div class="sq146-row-links">${c.order_id?`<a href="/orders/${c.order_id}">View order</a>`:""}<a href="/support?transaction=${c.id}">Ask about this transaction</a></div></div><strong class="sq146-amount ${Number(c.amount)>=0?'positive':'negative'}">${Number(c.amount)>0?'+':''}${n(c.amount)}<small> coins</small></strong></div>`).join(""):errorBox("No recorded movements","There are no entries in this history section. Missing records are not proof that a survey was completed.")}${ledger.items.length<ledger.total?`<button class="button button-ghost" type="button" data-ledger-more>Load older movements</button>`:""}`;
+      root.innerHTML=`${ledger.expanded?`<div class="sq146-chips" role="group" aria-label="Coin history type">${Object.entries(labels).map(([k,v])=>`<button class="filter-chip ${k===ledger.kind?"active":""}" type="button" data-ledger-kind="${k}" aria-pressed="${k===ledger.kind}">${v}</button>`).join("")}</div>`:""}<p class="muted sq146-ledger-caption">${ledger.items.length} of ${n(ledger.total)} transactions.</p>${ledger.items.length?ledger.items.map(c=>`<div class="sq146-ledger-row"><div><span class="sq146-ledger-kind">${safe(['survey','earn'].includes(c.kind)&&Number(c.amount)<0?'Partner reversal':kinds[c.kind]||'Account adjustment')}</span><strong>${safe(c.reason||kinds[c.kind]||'Coin adjustment')}</strong><small>${date(c.created_at)} · Transaction #${c.id}${c.provider?` · ${safe(c.provider)}`:""}</small>${c.kind==='refund'?`<small>Actual returned coins; your original order price has not changed.</small>`:['survey','earn'].includes(c.kind)&&Number(c.amount)<0?`<small>The provider reversed a previously recorded reward.</small>`:""}<div class="sq146-row-links">${c.order_id?`<a href="/orders/${c.order_id}">View order</a>`:""}<a href="/support?transaction=${c.id}">Ask about this transaction</a></div></div><strong class="sq146-amount ${Number(c.amount)>=0?'positive':'negative'}">${Number(c.amount)>0?'+':''}${n(c.amount)}<small> coins</small></strong></div>`).join(""):errorBox("No recorded movements","There are no entries in this history section. Missing records are not proof that a survey was completed.")}${ledger.items.length<ledger.total?`<button class="button button-ghost" type="button" data-ledger-more>Show more</button>`:""}${ledger.expanded?'<button class="button button-ghost" type="button" data-ledger-less>Show less</button>':""}`;
     } catch(e){if(seq===ledger.seq)root.innerHTML=errorBox("Coin history unavailable",e.message||"Try again.","ledger");}
     finally{if(seq===ledger.seq)ledger.loading=false;}
-  }
-  async function nextAction(profile,orders) {
-    const root=$("#personalNextAction");if(!root||!currentUser)return;
-    const seq=++nextSeq,uid=currentUser.id;
-    const show=(title,copy,href,label)=>{if(seq!==nextSeq||currentUser?.id!==uid)return;root.classList.remove("hidden");root.innerHTML=`<div><span class="pill">Your next move</span><h2>${safe(title)}</h2><p class="muted">${safe(copy)}</p></div><a class="button button-primary" href="${safe(href)}">${safe(label)}</a>`;};
-    if(profile.account_status&&profile.account_status!=='active')return show("Your account needs review","Contact support before making new reward requests.","/support","Contact support");
-    if(!hasActiveContactEmail(currentUser,profile))return show("Verify your contact email","Your order updates need a real verified email address.","/settings","Open Settings");
-    const sent=orders.find(o=>o.status==='trade_sent');if(sent)return show("Your Steam trade is ready to check",`${sent.reward_name} · ${sent.order_number}. Verify the exact item before accepting.`,`/orders/${sent.id}`,"View your order");
-    if(!profile.steam_trade_url||!isValidSteamTradeUrl(profile.steam_trade_url)||(profile.steam_id&&!tradeUrlMatchesConnectedSteam(profile.steam_trade_url,profile.steam_id)))return show("Set up your Steam delivery","Save the trade URL for your connected Steam account once, before redeeming.","/settings#tradeForm","Add trade URL");
-    const active=orders.find(o=>!['completed','cancelled','rejected','refunded'].includes(o.status));
-    if(active)return show("Keep track of your current order",`${active.reward_name} · ${active.order_number}. Check its recorded status and delivery details.`,`/orders/${active.id}`,"View order");
-    try {
-      const goals=Array.from(favoriteRewardIds);
-      let goal=null;
-      if(goals.length){const result=await sb.from('reward_items').select('*').in('id',goals).eq('active',true);if(!result.error)goal=(result.data||[]).filter(r=>rewardHasCurrentPrice(r)&&!rewardIsOutOfStock(r)).sort((a,b)=>getRewardCost(a)-getRewardCost(b))[0];}
-      if(!goal){const data=await rpc('sq_browse_reward_families',{p_sort:'price-asc',p_show_out_of_stock:false,p_limit:12});goal=(data?.items||[]).find(r=>rewardHasCurrentPrice(r)&&!rewardIsOutOfStock(r));}
-      if(!goal)return show("Find your next reward","The catalogue is updating. Pick an available item when current stock and prices are loaded.","/rewards","Browse rewards");
-      const missing=Math.max(0,getRewardCost(goal)-Number(profile.points_balance||0));
-      if(!missing)return show(orders.length?"Your next reward is within reach":"You can work towards your first delivery",`${goal.name} is within your coin balance. Check the exact variant and delivery type before confirming.`,`/rewards/${goal.id}`,"View reward");
-      show(orders.length?"Build towards your next skin":"Start with a reachable first reward",`${goal.name} · ${n(missing)} more coins. Survey availability and verified rewards vary; no completion time is guaranteed.`,`/rewards/${goal.id}`,"View your target");
-    }catch(e){show("Choose your next move","Browse the current catalogue or check available surveys. We could not load a live reward recommendation.","/rewards","Browse rewards");}
   }
   async function supportPage() {
     const root=$("#linkedSupport");if(!root)return;
@@ -220,7 +199,6 @@
     if(prepared)return;prepared=true;
     const legacyReward=id(params().get('reward'));
     if($('#rewardsGrid')&&legacyReward){location.replace(`/rewards/${legacyReward}`);return;}
-    const group=$('#groupRewardVariants');if(group){try{group.checked=localStorage.getItem('sq_group_variants')!=='false';}catch{}group.addEventListener('change',()=>{try{localStorage.setItem('sq_group_variants',String(group.checked));}catch{}});}
     const search=$('#skinSearch'),suggestions=$('#rewardSearchSuggestions');
     if(search)search.placeholder='Search rewards…';
     const closeSuggestions=()=>{suggestions?.classList.add('hidden');search?.setAttribute('aria-expanded','false');};
@@ -230,7 +208,7 @@
         if(query.length<2)return;
         suggestionTimer=window.setTimeout(async()=>{
           try{const data=await rpc('sq_browse_reward_families',{p_query:query,p_sort:'price-asc',p_limit:5});if(seq!==suggestionSeq||document.activeElement!==search)return;
-            suggestions.innerHTML=(data?.items||[]).map(r=>`<button class="sq146-suggestion" type="button" role="option" data-suggestion-id="${r.id}"><strong>${safe(r.family_name||r.name)}</strong><small>${n(getRewardCost(r))} coins · ${r.variant_count>1?`${n(r.variant_count)} variants`:'Exact item'}${!rewardHasCurrentPrice(r)?' · Price updating':''}</small></button>`).join('');
+            suggestions.innerHTML=(data?.items||[]).map(r=>`<button class="sq146-suggestion" type="button" role="option" data-suggestion-id="${r.id}"><strong>${safe(r.family_name||r.name)}</strong><small>${n(getRewardCost(r))} coins${!rewardHasCurrentPrice(r)?' · Price updating':''}</small></button>`).join('');
             if(data?.items?.length){suggestions.classList.remove('hidden');search.setAttribute('aria-expanded','true');}
           }catch{closeSuggestions();}
         },220);
@@ -250,7 +228,8 @@
       const star=e.target.closest('[data-detail-star]');if(star&&selected){await toggleFavoriteReward(selected.id,star);renderDetail();return;}
       if(e.target.closest('[data-copy-reward-link]')){try{await navigator.clipboard.writeText(`${location.origin}/rewards/${selected.id}`);showMessage('Reward link copied.','success');}catch{showMessage('Copy the page address from your browser.','info');}return;}
       const kind=e.target.closest('[data-ledger-kind]');if(kind){ledger.kind=kind.dataset.ledgerKind;return coinHistory(currentUser?.id);}
-      const more=e.target.closest('[data-ledger-more]');if(more&&!ledger.loading){more.disabled=true;return coinHistory(currentUser?.id,true);}
+      const more=e.target.closest('[data-ledger-more]');if(more&&!ledger.loading){more.disabled=true;ledger.expanded=true;return coinHistory(currentUser?.id,true);}
+      const less=e.target.closest('[data-ledger-less]');if(less&&!ledger.loading){less.disabled=true;ledger.expanded=false;ledger.kind='all';return coinHistory(currentUser?.id);}
       const quick=e.target.closest('[data-reward-quick]');if(quick){if(quick.dataset.rewardQuick==='starter'){setActiveRewardSort('starter');setActiveAvailabilityFilter('all');clearRewardFilterControls();}else if(quick.dataset.rewardQuick==='affordable'){setActiveAvailabilityFilter('affordable');}else{const input=$('#skinSearch');if(input)input.value=quick.dataset.rewardQuick;}try{await loadRewards();window.__skinquestRewardApply?.(true);}catch(err){showMessage(err.message||'Could not load the current catalogue.','error');}}
     });
     window.setInterval(()=>{ $$('[data-sq146-countdown]').forEach(t=>{t.textContent=formatTradeLockRemaining(t.dataset.sq146Countdown);});},30000);
@@ -267,5 +246,5 @@
     if($('#linkedSupport'))tasks.push(supportPage());
     await Promise.allSettled(tasks);
   }
-  window.SQ146={prepare,init,coinHistory,nextAction,extraQuery,extraFilters,resetExtraQuery,variantType};
+  window.SQ146={prepare,init,coinHistory,extraQuery,extraFilters,resetExtraQuery,variantType};
 })();

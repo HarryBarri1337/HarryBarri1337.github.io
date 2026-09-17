@@ -1,0 +1,50 @@
+SkinQuest v15.0.3 release checks — 17 September 2026
+==================================================
+
+LOCAL STATIC CHECKS
+- All root JavaScript files pass node --check.
+- 311 local HTML asset/file references resolve.
+- All 17 app pages load the v15 module before app.js and include v153 styles.
+- Asset query markers and service-worker cache use v1503.
+- Clean rewards/orders routes and private-page cache exclusions are preserved.
+- Header, Dashboard and Help navigation are consistent across customer pages.
+- Group-variants opt-out and recommendation banner are absent from customer HTML.
+- Database upgrade has comments only.
+- Full setup is byte-identical to v15.0.2.
+- Every file under supabase is byte-identical to v15.0.2.
+
+MOCK BROWSER CHECKS
+- Rewards boot at 320/390/430/1024/1101/1199/1212/1440 px without page overflow.
+- Four cards across desktop, three on tablets, two on phones.
+- Long usernames and million-coin balances do not overlap desktop navigation.
+- Navigation collapses before the six menu links become cramped.
+- Availability controls have equal widths and centered labels.
+- Old saved group-variants=false preference cannot disable grouping.
+- Entire reward card opens details; separate star changes saved state, not route.
+- Card click never calls redeem_reward.
+- No catalogue variant counts, redundant action buttons or Steam-linked badges.
+- Detail art remains static. Exact single-variant rewards have no empty chooser.
+- Saved cards remain contained on mobile, including long reward names.
+- Dashboard top is centered and has no recommendation or duplicate order list.
+- Coin history starts at three entries; Show more appends from offset 3,
+  filters work, and Show less restores the three-entry all-source view.
+- 24 locked customer orders keep visible recorded unlock countdowns.
+- Ungrouped customer lists do not expose internal assignment/count headings.
+- Private order views omit staff notes; guests receive an account gate.
+- Signed CPX/TimeWall launch links open the provider in a separate tab.
+- TimeWall embed loads only on explicit request; logout clears launch URLs/frame.
+- Not-yet-connected TimeWall Earn is correctly shown as not connected.
+- Owner grouping/update controls retain the blank = 192-hour lock default.
+- Owner analytics remain hidden from non-owners.
+- Admin global/filter searches use one focused border, no inner outline/glow.
+- Mouse-selected checkbox has no ring or oversized height.
+- Keyboard-selected checkbox retains a visible focus indicator.
+- No browser page errors.
+
+LIMITATIONS / LIVE ROLLOUT
+Accounts, orders, survey feeds and API responses in the browser harness are mocks.
+No production data, provider placement, wallet, payment or Cron job was changed.
+Live provider availability, completions, reversals and payouts are not proven by
+these checks. Recheck those with the existing configured account after upload.
+Keep a website backup; revert website files if a production-only issue appears.
+Do not import full SQL or redeploy backend functions for this UI-only update.

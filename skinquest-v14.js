@@ -1,13 +1,13 @@
-/* SkinQuest v15.0.2 product upgrade layer.
+/* SkinQuest v15.0.3 product upgrade layer.
    Loaded after app.js. The full setup includes the v14 database layer;
-   v15.0.2 adds journeys, catalogue search and owner money records via its delta.
+   v15.0.3 adds journeys, catalogue search and owner money records via its delta.
    This layer extends the secure SkinQuest core without replacing reward authority.
 */
 
 (() => {
   "use strict";
 
-  const VERSION = "15.0.2";
+  const VERSION = "15.0.3";
   const GA_ID = "G-DFRR03C4BP";
   const ATTRIBUTION_KEY = "skinquest.firstTouch.v14";
   const CONSENT_KEY = "skinquest.cookieConsent.v1";
@@ -893,29 +893,10 @@
     return (aliases[filter] || [filter]).some((x) => text.includes(x));
   }
 
-  async function getBalance() {
-    const user = await currentUser();
-    if (!user) return 0;
-    const c = client();
-    try {
-      const { data } = await c.from("profiles").select("points_balance").eq("id", user.id).maybeSingle();
-      return Number(data?.points_balance || 0);
-    } catch {
-      return 0;
-    }
-  }
-
-  function parseCardCost(card) {
-    const priceText = $(".price", card)?.textContent || "";
-    const n = Number(priceText.replace(/[^0-9]/g, ""));
-    return Number.isFinite(n) ? n : 0;
-  }
-
   async function applyRewardEnhancements() {
     if (path !== "rewards.html") return;
     const grid = $("#rewardsGrid");
     if (!grid) return;
-    const balance = await getBalance();
     const cards = $$(".reward-card", grid);
 
     for (const card of cards) {
@@ -926,20 +907,6 @@
       const rarityMatch = rewardFilters.rarity === "all" || text.includes(rewardFilters.rarity);
       const star = $("[data-favorite-star]", card);
       card.classList.toggle("sq-extra-hidden", !window.SQ146 && !(weaponMatch && conditionMatch && rarityMatch));
-
-      if (!$(".sq-reward-progress", card)) {
-        const cost = parseCardCost(card);
-        if (cost > 0) {
-          const remaining = Math.max(0, cost - balance);
-          const pct = Math.min(100, (balance / cost) * 100);
-          const progress = create("div", "sq-reward-progress", `
-            <div class="sq-reward-progress-copy"><span>${balance > 0 ? `${Math.round(pct)}% saved` : ""}</span><strong>${remaining === 0 ? "Within your balance" : ""}</strong></div>
-            <div class="sq-mini-progress"><span style="width:${pct}%"></span></div>
-          `);
-          const actions = $(".reward-actions", card);
-          actions?.parentNode.insertBefore(progress, actions);
-        }
-      }
 
       const redeem = $("[data-redeem]", card);
       const rewardId = Number(redeem?.dataset.redeem || star?.dataset.favoriteStar || 0);

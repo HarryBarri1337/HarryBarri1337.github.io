@@ -1,4 +1,4 @@
-/* v15.0.2: compact navigation, static item artwork and one-price cards. */
+/* v15.0.3: compact navigation, static item artwork and one-price cards. */
 .sq15 .shop-toolbar.reward-toolbar.reward-toolbar-v118 { grid-template-columns:minmax(180px,1.2fr) minmax(210px,1fr) minmax(290px,1.3fr) minmax(160px,.8fr);align-items:end; }
 .sq15 .filter-availability .filter-chip-group { display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px;padding:3px; }
 .sq15 .filter-availability .filter-chip { width:auto;min-width:0;padding:10px 5px;font-size:12px; }
@@ -55,8 +55,8 @@
 .sq15 .custom-select-option.active { color:#f0cc7f;background:#e8b34d0b; }.sq15 .custom-select-option:hover { background:#ffffff06; }
 .sq15 .survey-provider-nav { display:flex;flex-wrap:wrap;gap:10px; }.sq15 .survey-provider-nav a { display:flex;align-items:center;justify-content:center;min-height:44px;padding:12px 20px;border-radius:9px;gap:0; }.sq15 .survey-provider-nav strong { font-size:13px;font-weight:650; }
 .sq15 :is(#cpxSurveyPanel,#timewallSurveyPanel) { scroll-margin-top:130px; }
-@media(min-width:1101px) { .sq15 .site-nav { display:flex; }.sq15 .nav-toggle { display:none; } }
-@media(max-width:1100px) {
+@media(min-width:1200px) { .sq15 .site-nav { display:flex; }.sq15 .nav-toggle { display:none; } }
+@media(max-width:1199px) {
  .sq15 .site-header { display:flex;flex-wrap:wrap;gap:8px;min-height:calc(68px + var(--sq15-safe-top));top:0;padding:calc(10px + var(--sq15-safe-top)) 14px 10px; }
  .sq15 .brand { flex:1;min-width:0; }.sq15 .brand-logo { width:160px;max-width:100%;height:auto; }
  .sq15 .nav-toggle { display:grid;order:3;width:44px;height:44px;min-width:44px; }

@@ -1,4 +1,4 @@
-// SkinQuest v15.0.2 core - secure base; enhanced by skinquest-v14.js
+// SkinQuest v15.0.3 core - secure base; enhanced by skinquest-v14.js
 
 const SUPABASE_URL = "https://ubvkupqgigfxehprsoit.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidmt1cHFnaWdmeGVocHJzb2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Nzc4NjIsImV4cCI6MjA5NzQ1Mzg2Mn0.GWI920G80kZYIOiFPvkHr-blpOvY_N-zvDY1QATCjfY";
@@ -1725,8 +1725,7 @@ async function loadRewards(options = {}) {
   };
 
   try {
-    const grouped = qs("#groupRewardVariants")?.checked !== false;
-    const { data, error } = await sb.rpc(grouped ? "sq_browse_reward_families" : "sq_search_rewards", request);
+    const { data, error } = await sb.rpc("sq_browse_reward_families", request);
     if (error) throw error;
     if (requestId !== rewardCatalogState.requestId) return;
 
@@ -2277,15 +2276,13 @@ function renderRewards() {
       const steamPriced = rewardUsesSteamPricing(item);
       const currentPrice = rewardHasCurrentPrice(item);
       const stockText = orderable ? "Available to order" : (available === null ? "In stock" : `${available} in stock`);
-      const description = item.description || item.market_name || (orderable ? "Ordered by SkinQuest after checkout" : "Prepared for manual Steam delivery");
-      const action = getRewardActionState(item, currentProfile);
 
       const isFavorited = favoriteRewardIds.has(Number(item.id));
       const family = rewardCatalogState.grouped && Number(item.variant_count) > 1;
 
       return `
         <article class="reward-card steam-item ${rarityClass(item)} ${outOfStock ? "is-out" : ""} ${steamPriced && !currentPrice ? "is-price-stale" : ""}">
-          <a class="sq-reward-art-link" href="/rewards/${item.id}" aria-label="View ${escapeHtml(family ? item.family_name : item.name)}">${renderRewardArt(item)}</a>
+          ${renderRewardArt(item)}
           <button class="favorite-star ${isFavorited ? "is-favorited" : ""}" type="button" data-favorite-star="${item.id}" aria-pressed="${isFavorited}" aria-label="${isFavorited ? "Remove saved reward" : "Save reward"}">
             <svg class="star-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.95 6.53 7.15.66-5.4 4.73 1.63 7-6.33-3.8-6.33 3.8 1.63-7-5.4-4.73 7.15-.66L12 2.6z"/></svg>
           </button>
@@ -2294,20 +2291,15 @@ function renderRewards() {
               ${window.SQ146?.variantType(item)==='souvenir'?'<span class="sq146-type-badge is-souvenir">Souvenir</span>':window.SQ146?.variantType(item)==='stattrak'?'<span class="sq146-type-badge is-stattrak">StatTrak™</span>':''}
               ${rarity ? `<span class="rarity-badge">${escapeHtml(rarity.label)}</span>` : ""}
               ${condition ? `<span class="condition-badge">${escapeHtml(condition)}</span>` : ""}
-              ${steamPriced ? `<span class="price-source-badge ${currentPrice ? "" : "is-stale"}" title="${escapeHtml(currentPrice ? `${formatSteamPrice(item)} on Steam · converted with the SkinQuest markup` : "The stored Steam price needs to be refreshed")}">${currentPrice ? "Steam linked" : "Price updating"}</span>` : ""}
+              ${steamPriced && !currentPrice ? '<span class="price-source-badge is-stale">Price updating</span>' : ""}
             </div>
-            <h2><a href="/rewards/${item.id}">${escapeHtml(family ? item.family_name : item.name)}</a></h2>
-            <p class="sq-variant-hint">${family ? `${Number(item.variant_count)} variants available` : ""}</p>
-            <p class="muted reward-description">${escapeHtml(description)}</p>
+            <h2><a class="sq153-card-link" href="/rewards/${item.id}">${escapeHtml(family ? item.family_name : item.name)}</a></h2>
             <div class="reward-meta">
-              <span class="price">${family ? "From " : ""}${coinIcon("coin-icon-small")} ${formatCoins(getRewardCost(item))}</span>
+              <span class="price">${family ? '<span class="sq153-from">From</span>' : ""}<span class="sq153-card-cost">${coinIcon("coin-icon-small")} ${formatCoins(getRewardCost(item))}</span></span>
               <div class="sq146-card-stock"><span class="stock-pill ${outOfStock ? "stock-out" : ""} ${orderable ? "stock-order" : ""}">${outOfStock ? "Out of stock" : escapeHtml(stockText)}</span>
               ${!orderable && total !== null && reserved > 0 ? `<span class="stock-pill reserved-stock">${reserved} reserved</span>` : ""}</div>
             </div>
-            <div class="reward-actions reward-actions-smart">
-              <span class="sq15-card-eta">${outOfStock ? "Unavailable" : family ? "Delivery depends on selected variant" : orderable ? `Purchase + Steam lock · at least ${getRewardOrderEtaDays(item)} days` : "Prepared stock · usually 1–2 days after review"}</span>
-              <a class="button ${action.action === "redeem" ? "button-primary" : "button-ghost"}" href="/rewards/${item.id}">${family ? "Choose variant" : "View reward"}</a>
-            </div>
+            <div class="reward-actions reward-card-tools"></div>
           </div>
         </article>
       `;
@@ -2357,7 +2349,6 @@ function renderRewards() {
     };
 
     search?.addEventListener("input", scheduleSearchApply);
-    qs("#groupRewardVariants")?.addEventListener("change", scheduleApply);
     minPrice?.addEventListener("input", () => { cleanCoinRangeInput(minPrice); scheduleSearchApply(); });
     maxPrice?.addEventListener("input", () => { cleanCoinRangeInput(maxPrice); scheduleSearchApply(); });
     clearFilters?.addEventListener("click", () => {
@@ -2463,7 +2454,7 @@ async function performRequestRedeem(rewardId, sourceButton = null) {
   }
 
   if (!rewardHasCurrentPrice(reward)) {
-    showMessage("That Steam-linked price is being refreshed. No coins were deducted; try again after the next sync.", "error");
+    showMessage("This price is being refreshed. No coins were deducted; try again after the next sync.", "error");
     await loadRewards();
     renderRewards();
     return;
@@ -3362,7 +3353,6 @@ async function refreshDashboard({ background = false } = {}) {
       const pendingDisplay = qs("#pendingDisplay");
       if (pendingDisplay) pendingDisplay.textContent = pending;
       renderRedeemHistory(userRedemptions);
-      window.SQ146?.nextAction(profile, userRedemptions);
     } else {
       const pendingDisplay = qs("#pendingDisplay");
       if (pendingDisplay) pendingDisplay.textContent = "—";
@@ -3634,7 +3624,7 @@ async function renderCoinHistory(userId) {
   const rows = data.map((item, index) => {
     const amount = Number(item.amount || 0);
     return `
-      <div class="coin-history-row ${amount >= 0 ? "positive" : "negative"} ${index >= 5 ? "history-extra hidden" : ""}">
+      <div class="coin-history-row ${amount >= 0 ? "positive" : "negative"} ${index >= 3 ? "history-extra hidden" : ""}">
         <strong>${amount >= 0 ? "+" : ""}${amount.toLocaleString()} coins</strong>
         <span>${escapeHtml(item.reason || "Coin adjustment")}</span>
         <small>${formatDate(item.created_at)}</small>
@@ -3642,7 +3632,7 @@ async function renderCoinHistory(userId) {
     `;
   }).join("");
 
-  const showMore = data.length > 5 ? `
+  const showMore = data.length > 3 ? `
     <button class="button button-ghost history-show-more" type="button" data-show-more-history>
       Show more
     </button>

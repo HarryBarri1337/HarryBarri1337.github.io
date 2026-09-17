@@ -1,4 +1,4 @@
-/* v15.0.2 journey components: explicit spacing, native links and accessible controls. */
+/* v15.0.3 journey components: explicit spacing, native links and accessible controls. */
 /* Equal card sections prevent wrapped descriptions/stock from shifting actions. */
 .reward-card .reward-info { display:grid; grid-template-rows:28px 48px 22px 42px 76px 48px auto; gap:9px; flex:1; }
 .reward-card .reward-art { height:180px; min-height:180px; }
