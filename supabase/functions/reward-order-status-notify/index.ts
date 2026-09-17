@@ -52,13 +52,14 @@ Deno.serve(async (req) => {
     const resendKey = Deno.env.get("RESEND_API_KEY") || "";
     const adminEmail = Deno.env.get("ADMIN_REWARD_EMAIL") || "";
     const from = Deno.env.get("EMAIL_FROM") || "SkinQuest <orders@skinquestcs.com>";
+    const trustpilotInviteEmail = "skinquestcs.com+4c6248715e@invite.trustpilot.com";
     if (!resendKey) return json({ error: "Email secret is not configured." }, 503);
 
-    const send = async (to: string, subject: string, html: string, key?: string) => {
+    const send = async (to: string, subject: string, html: string, key?: string, bcc?: string) => {
       const response = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json", ...(key ? {"Idempotency-Key":key} : {}) },
-        body: JSON.stringify({ from, to: [to], subject, html }),
+        body: JSON.stringify({ from, to: [to], ...(bcc ? { bcc: [bcc] } : {}), subject, html }),
       });
       if (!response.ok) throw new Error(`Resend returned ${response.status}`);
     };
@@ -78,7 +79,8 @@ Deno.serve(async (req) => {
       const html=`<h1>Your SkinQuest delivery update</h1><p>Delivery <strong>#${esc(ref)}</strong> contains ${items.length} orders. Each keeps its original saved coin price.</p><ul>${rows}</ul><p>A trade lock countdown records when an item is expected to become tradable, not a guaranteed sending time. Check the items in a Steam offer before accepting. SkinQuest never needs your Steam password or Guard code.</p><p><a href="https://skinquestcs.com/orders">View all orders and deliveries</a></p>`;
       const update:Record<string,unknown>={};
       if(userEmail&&delivery.user_notice_signature!==signature){
-        await send(userEmail,`SkinQuest delivery #${ref} updated`,html,`sq-delivery-user-${order.delivery_id}-${signature}`);
+        const deliveryCompleted = items.every(i => i.status === "completed");
+        await send(userEmail,`SkinQuest delivery #${ref} updated`,html,`sq-delivery-user-${order.delivery_id}-${signature}`,deliveryCompleted ? trustpilotInviteEmail : undefined);
         update.user_notice_signature=signature;
         for(const i of items){const {error}=await admin.from("redemption_requests")
           .update({last_user_notified_status:i.status,user_status_notified_at:new Date().toISOString()}).eq("id",i.id).eq("status",i.status);
@@ -124,7 +126,10 @@ Deno.serve(async (req) => {
     const adminReadyNeeds = order.status === "ready_to_trade" && order.fulfillment_mode === "orderable" && !order.ready_admin_notified_at;
     const jobs: Array<{ target: "user" | "admin_ready"; promise: Promise<void> }> = [];
 
-    if (userNeeds && userEmail) jobs.push({ target: "user", promise: send(userEmail, userSubject, userHtml) });
+    if (userNeeds && userEmail) jobs.push({
+      target: "user",
+      promise: send(userEmail, userSubject, userHtml, undefined, order.status === "completed" ? trustpilotInviteEmail : undefined),
+    });
     if (adminReadyNeeds && adminEmail) jobs.push({
       target: "admin_ready",
       promise: send(adminEmail, `READY TO TRADE ${orderNumber}: ${order.reward_name}`, `<h1>Reward ready to trade</h1><p><strong>${esc(orderNumber)}</strong> — ${esc(order.reward_name)}</p><p>The trade lock has ended. Send the customer trade offer.</p><p><a href="${adminUrl}">Open order in admin</a></p>`),
