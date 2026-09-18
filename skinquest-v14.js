@@ -1,4 +1,4 @@
-/* SkinQuest v15.0.4 product upgrade layer.
+/* SkinQuest v15.0.5 product upgrade layer.
    Loaded after app.js. The full setup includes the v14 database layer;
    v15.0.3 adds journeys, catalogue search and owner money records via its delta.
    This layer extends the secure SkinQuest core without replacing reward authority.
@@ -7,7 +7,7 @@
 (() => {
   "use strict";
 
-  const VERSION = "15.0.4";
+  const VERSION = "15.0.5";
   const GA_ID = "G-DFRR03C4BP";
   const ATTRIBUTION_KEY = "skinquest.firstTouch.v14";
   const CONSENT_KEY = "skinquest.cookieConsent.v1";

@@ -998,3 +998,6 @@ body.admin-ops-body {
   .admin-ops-body *::before,
   .admin-ops-body *::after { scroll-behavior: auto !important; animation-duration: .001ms !important; transition-duration: .001ms !important; }
 }
+
+/* v15.0.5 finance workspace refinement */
+.admin-finance-locked{display:block;max-width:220px;color:var(--admin-muted,#94a3b8);font-size:.78rem;line-height:1.35}.admin-finance-form .admin-form-wide{grid-column:1/-1}.admin-finance-row .admin-row-actions{align-self:center}.admin-finance-grid{grid-template-columns:repeat(4,minmax(0,1fr))}@media(max-width:1100px){.admin-finance-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:640px){.admin-finance-grid{grid-template-columns:1fr}}

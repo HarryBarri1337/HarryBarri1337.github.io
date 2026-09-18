@@ -1,0 +1,50 @@
+SkinQuest v15.0.5 release checks — 18 September 2026
+===================================================
+
+PACKAGE / VERSIONING
+- ZIP/release folder remains SkinQuest v15.0.5.
+- Only README_v15_0_5.txt and RELEASE_CHECKS_v15_0_5.txt are the current release docs.
+- Current SQL files are skinquest_full_setup_v15_0_5.sql and skinquest_upgrade_existing_to_v15_0_5.sql.
+- Existing v1505 asset/cache/version markers remain unchanged because this is a continued v15.0.5 build.
+
+FINANCE MODEL
+- UI displays and accepts SEK.
+- No Payment state field.
+- No expected income / expected cost cards or workflow.
+- Top cards: Money available, Income, Expenses, Owner funding.
+- Entry form contains Type, Category, Amount, Date, Reference / who bought it, external Order / invoice ID and Note.
+- Finance history shows Added by <admin>.
+- Owner can edit/delete every finance record.
+- Admin can create income/expense finance records and edit/delete only their own records.
+- Owner funding can only be recorded by an Owner.
+- Server RPCs enforce the same permissions.
+- Deleting requires UI confirmation and removes the finance row; the deletion event remains in admin audit log.
+- Repeated references are allowed; the old unique reference index is removed.
+- Legacy EUR rows remain EUR and are excluded from SEK cash totals instead of being silently converted.
+
+SQL / SECURITY
+- Finance SELECT policy allows authenticated SkinQuest admins, not arbitrary authenticated users.
+- sq_admin_finance_save validates type/category/amount/date and creator edit permission.
+- sq_admin_finance_delete validates creator-or-owner deletion permission.
+- sq_admin_finance_dashboard requires is_admin() and totals only SEK records.
+- Fresh full setup and existing-installation upgrade contain matching finance RPC/policy changes.
+
+PRESERVED V15.0.5 UI
+- Dashboard lower panels retain normal full customer-page width.
+- Coin history remains below Achievements.
+- Reward detail left rail retains delivery info below artwork.
+- Trustpilot completion BCC integration remains present.
+
+STATIC TESTS
+- Run node --check on root JS files.
+- Search admin UI for stale finance EUR/payment-state/expected-income labels.
+- Verify no stale old finance RPC names are used by the current admin UI.
+- Confirm the ZIP is named exactly SkinQuest v15.0.5.zip.
+
+LIVE ROLLOUT
+- Back up the database before running the upgrade.
+- Test Owner create/edit/delete.
+- Test Admin create/edit/delete own entry.
+- Test Admin cannot edit/delete another creator's entry.
+- Test SEK totals after one income, one expense and one funding entry.
+- If legacy EUR rows exist, verify they are visible in history but excluded from SEK totals until corrected.

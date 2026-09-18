@@ -1,4 +1,4 @@
--- SkinQuest full Supabase setup v15.0.4 (NEW installations ONLY)
+-- SkinQuest full Supabase setup v15.0.5 (NEW installations ONLY)
 -- Includes the dedicated admin operations workspace, traceable case numbers, handler attribution, and hardened admin workflows.
 -- This full setup remains complete for brand-new Supabase projects.
 -- Run this in Supabase SQL Editor only when setting up a fresh project.
@@ -6736,118 +6736,123 @@ grant execute on function public.sq_admin_order_customer_note(bigint,text) to au
 create table if not exists public.sq_finance_entries (
  id uuid primary key,
  kind text not null check(kind in ('income','expense','funding')),
- category text not null check(category in ('provider','item_purchase','fees','other')),
- amount_minor bigint not null check(amount_minor between 1 and 100000000000),
- currency text not null default 'EUR' check(currency='EUR'),
- settlement text not null check(settlement in ('expected','paid')),
+ category text not null,
+ amount_minor bigint not null check(amount_minor>0),
+ currency text not null default 'SEK',
+ settlement text not null default 'paid',
  occurred_on date not null,
  provider text,
  reference text not null check(length(reference) between 1 and 120),
+ external_order_id text check(length(external_order_id)<=120),
  note text check(length(note)<=1000),
  order_id bigint references public.redemption_requests(id) on delete set null,
  order_snapshot text,
  created_by uuid references auth.users(id) on delete set null,
- created_at timestamptz not null default now(),settled_at timestamptz,
+ created_at timestamptz not null default now(),
+ updated_by uuid references auth.users(id) on delete set null,
+ updated_at timestamptz not null default now(),
+ settled_at timestamptz,
  voided_at timestamptz,voided_by uuid references auth.users(id) on delete set null,void_reason text
 );
+alter table public.sq_finance_entries add column if not exists external_order_id text;
+alter table public.sq_finance_entries add column if not exists updated_by uuid references auth.users(id) on delete set null;
+alter table public.sq_finance_entries add column if not exists updated_at timestamptz not null default now();
+alter table public.sq_finance_entries alter column currency set default 'SEK';
+alter table public.sq_finance_entries alter column settlement set default 'paid';
+alter table public.sq_finance_entries drop constraint if exists sq_finance_entries_currency_check;
+alter table public.sq_finance_entries add constraint sq_finance_entries_currency_check check(currency in ('SEK','EUR'));
+alter table public.sq_finance_entries drop constraint if exists sq_finance_entries_category_check;
 alter table public.sq_finance_entries enable row level security;
 drop policy if exists "sq finance owner read" on public.sq_finance_entries;
-create policy "sq finance owner read" on public.sq_finance_entries for select to authenticated using(public.is_owner());
+drop policy if exists "sq finance admin read" on public.sq_finance_entries;
+create policy "sq finance admin read" on public.sq_finance_entries for select to authenticated using(public.is_admin());
 revoke all on public.sq_finance_entries from anon,authenticated;
 grant select on public.sq_finance_entries to authenticated;
 create index if not exists sq_finance_recent_idx on public.sq_finance_entries(occurred_on desc,created_at desc);
--- Active references must be unique even if requests arrive concurrently.
-create unique index if not exists sq_finance_reference_idx on public.sq_finance_entries(kind,lower(reference),lower(coalesce(provider,''))) where voided_at is null;
+drop index if exists public.sq_finance_reference_idx;
 
-create or replace function public.sq_owner_finance_record(
- p_id uuid,p_kind text,p_category text,p_amount_minor bigint,p_settlement text,p_occurred_on date,
- p_reference text,p_provider text default null,p_order_id bigint default null,p_note text default null
+create or replace function public.sq_admin_finance_save(
+ p_id uuid,p_kind text,p_category text,p_amount_minor bigint,p_occurred_on date,
+ p_reference text,p_external_order_id text default null,p_order_id bigint default null,p_note text default null
 )
 returns jsonb language plpgsql security definer set search_path=public as $$
-declare v_entry public.sq_finance_entries%rowtype; v_number text;
+declare v_entry public.sq_finance_entries%rowtype; v_number text; v_existing boolean := false;
 begin
- if not public.is_owner() then raise exception 'Owner access required.'; end if;
+ if not public.is_admin() then raise exception 'Admin access required.'; end if;
  if p_id is null then raise exception 'An entry identifier is required.'; end if;
- perform pg_advisory_xact_lock(hashtextextended('sq-finance-'||p_id::text,0));
- select * into v_entry from public.sq_finance_entries where id=p_id;
- if found then
-  if v_entry.kind is distinct from p_kind or v_entry.category is distinct from p_category
-   or v_entry.amount_minor is distinct from p_amount_minor or v_entry.reference is distinct from trim(p_reference)
-   or v_entry.provider is distinct from nullif(left(trim(p_provider),80),'') or v_entry.order_id is distinct from p_order_id
-   or v_entry.occurred_on is distinct from p_occurred_on or v_entry.note is distinct from nullif(trim(p_note),'') then
-   raise exception 'This identifier was already used for a different entry.'; end if;
-  return to_jsonb(v_entry);
- end if;
- if p_kind not in ('income','expense','funding') or p_category not in ('provider','item_purchase','fees','other')
-  or p_settlement not in ('expected','paid') then raise exception 'Choose valid finance fields.'; end if;
- if p_amount_minor is null or p_amount_minor not between 1 and 100000000000 then raise exception 'Enter a positive EUR amount.'; end if;
+ if p_kind not in ('income','expense','funding') then raise exception 'Choose a valid finance type.'; end if;
+ if p_kind='funding' and not public.is_owner() then raise exception 'Only an owner can record owner funding.'; end if;
+ if p_category not in ('provider','item_purchase','hosting','marketing','fees','other') then raise exception 'Choose a valid finance category.'; end if;
+ if p_kind='income' and p_category not in ('provider','other') then raise exception 'Choose an income category.'; end if;
+ if p_kind='expense' and p_category not in ('item_purchase','hosting','marketing','fees','other') then raise exception 'Choose an expense category.'; end if;
+ if p_kind='funding' and p_category<>'other' then raise exception 'Owner funding uses the Other category.'; end if;
+ if p_amount_minor is null or p_amount_minor not between 1 and 100000000000 then raise exception 'Enter a positive SEK amount.'; end if;
  if p_occurred_on is null or p_occurred_on>current_date+365 then raise exception 'Choose a valid entry date.'; end if;
- if length(trim(coalesce(p_reference,''))) not between 1 and 120 or length(coalesce(p_note,''))>1000 then raise exception 'Enter a reference and keep the note under 1,000 characters.'; end if;
- if p_category='provider' and (p_kind<>'income' or trim(coalesce(p_provider,''))='') then raise exception 'Provider income needs a provider name.'; end if;
- if p_category='item_purchase' and p_kind<>'expense' then raise exception 'Item purchases must be expenses.'; end if;
+ if length(trim(coalesce(p_reference,''))) not between 1 and 120 or length(coalesce(p_note,''))>1000 or length(coalesce(p_external_order_id,''))>120 then raise exception 'Check the reference, order ID and note lengths.'; end if;
  if p_order_id is not null then
-  if p_kind<>'expense' or p_category<>'item_purchase' then raise exception 'Only item purchases can be linked to an order.'; end if;
+  if p_kind<>'expense' or p_category<>'item_purchase' then raise exception 'Only reward purchases can be linked to a SkinQuest order.'; end if;
   select order_number into v_number from public.redemption_requests where id=p_order_id;
-  if not found then raise exception 'Order not found.'; end if;
+  if not found then raise exception 'SkinQuest order not found.'; end if;
  end if;
- if exists(select 1 from public.sq_finance_entries where voided_at is null and kind=p_kind
-  and lower(reference)=lower(trim(p_reference)) and lower(coalesce(provider,''))=lower(trim(coalesce(p_provider,'')))) then
-  raise exception 'That reference already exists. Use the existing entry or a unique reference.'; end if;
- insert into public.sq_finance_entries(id,kind,category,amount_minor,settlement,occurred_on,reference,provider,order_id,order_snapshot,note,created_by,settled_at)
- values(p_id,p_kind,p_category,p_amount_minor,p_settlement,p_occurred_on,trim(p_reference),nullif(left(trim(p_provider),80),''),p_order_id,v_number,nullif(trim(p_note),''),auth.uid(),case when p_settlement='paid' then now() end) returning * into v_entry;
+ perform pg_advisory_xact_lock(hashtextextended('sq-finance-'||p_id::text,0));
+ select * into v_entry from public.sq_finance_entries where id=p_id for update;
+ v_existing := found;
+ if v_existing and not (public.is_owner() or v_entry.created_by=auth.uid()) then raise exception 'You can only edit finance records you created.'; end if;
+ if v_existing then
+  update public.sq_finance_entries set kind=p_kind,category=p_category,amount_minor=p_amount_minor,currency='SEK',settlement='paid',occurred_on=p_occurred_on,
+   reference=trim(p_reference),external_order_id=nullif(left(trim(p_external_order_id),120),''),provider=null,order_id=p_order_id,order_snapshot=v_number,
+   note=nullif(trim(p_note),''),updated_by=auth.uid(),updated_at=now(),settled_at=coalesce(settled_at,now()),voided_at=null,voided_by=null,void_reason=null
+  where id=p_id returning * into v_entry;
+ else
+  insert into public.sq_finance_entries(id,kind,category,amount_minor,currency,settlement,occurred_on,reference,external_order_id,provider,order_id,order_snapshot,note,created_by,updated_by,settled_at)
+  values(p_id,p_kind,p_category,p_amount_minor,'SEK','paid',p_occurred_on,trim(p_reference),nullif(left(trim(p_external_order_id),120),''),null,p_order_id,v_number,nullif(trim(p_note),''),auth.uid(),auth.uid(),now()) returning * into v_entry;
+ end if;
  insert into public.sq_admin_audit_log(actor_user_id,action,entity_type,entity_id,details)
- values(auth.uid(),'finance_record','finance',p_id::text,jsonb_build_object('kind',p_kind,'amount_minor',p_amount_minor,'currency','EUR','reference',trim(p_reference)));
+ values(auth.uid(),case when v_existing then 'finance_edit' else 'finance_record' end,'finance',p_id::text,jsonb_build_object('kind',p_kind,'amount_minor',p_amount_minor,'currency','SEK','reference',trim(p_reference),'external_order_id',p_external_order_id));
  return to_jsonb(v_entry);
 end;
 $$;
-revoke all on function public.sq_owner_finance_record(uuid,text,text,bigint,text,date,text,text,bigint,text) from public,anon;
-grant execute on function public.sq_owner_finance_record(uuid,text,text,bigint,text,date,text,text,bigint,text) to authenticated;
-create or replace function public.sq_owner_finance_update(p_id uuid,p_action text,p_reason text default null)
+revoke all on function public.sq_admin_finance_save(uuid,text,text,bigint,date,text,text,bigint,text) from public,anon;
+grant execute on function public.sq_admin_finance_save(uuid,text,text,bigint,date,text,text,bigint,text) to authenticated;
+
+create or replace function public.sq_admin_finance_delete(p_id uuid)
 returns jsonb language plpgsql security definer set search_path=public as $$
 declare v_entry public.sq_finance_entries%rowtype;
 begin
- if not public.is_owner() then raise exception 'Owner access required.'; end if;
+ if not public.is_admin() then raise exception 'Admin access required.'; end if;
  select * into v_entry from public.sq_finance_entries where id=p_id for update;
- if not found then raise exception 'Entry not found.'; end if;
- if p_action='settle' then
-  if v_entry.voided_at is not null then raise exception 'A voided entry cannot be settled.'; end if;
-  if v_entry.settlement='paid' then return to_jsonb(v_entry); end if;
-  update public.sq_finance_entries set settlement='paid',settled_at=now() where id=p_id returning * into v_entry;
- elsif p_action='void' then
-  if v_entry.voided_at is not null then return to_jsonb(v_entry); end if;
-  if length(trim(coalesce(p_reason,''))) not between 5 and 300 then raise exception 'Give a correction reason between 5 and 300 characters.'; end if;
-  update public.sq_finance_entries set voided_at=now(),voided_by=auth.uid(),void_reason=trim(p_reason) where id=p_id returning * into v_entry;
- else raise exception 'Choose a valid finance action.'; end if;
+ if not found then raise exception 'Finance record not found.'; end if;
+ if not (public.is_owner() or v_entry.created_by=auth.uid()) then raise exception 'You can only delete finance records you created.'; end if;
  insert into public.sq_admin_audit_log(actor_user_id,action,entity_type,entity_id,details)
- values(auth.uid(),'finance_'||p_action,'finance',p_id::text,jsonb_build_object('reason',p_reason,'amount_minor',v_entry.amount_minor));
- return to_jsonb(v_entry);
+ values(auth.uid(),'finance_delete','finance',p_id::text,jsonb_build_object('kind',v_entry.kind,'category',v_entry.category,'amount_minor',v_entry.amount_minor,'currency',v_entry.currency,'reference',v_entry.reference,'external_order_id',v_entry.external_order_id,'created_by',v_entry.created_by));
+ delete from public.sq_finance_entries where id=p_id;
+ return jsonb_build_object('deleted',true,'id',p_id);
 end;
 $$;
-revoke all on function public.sq_owner_finance_update(uuid,text,text) from public,anon;
-grant execute on function public.sq_owner_finance_update(uuid,text,text) to authenticated;
-create or replace function public.sq_owner_finance_dashboard(p_limit integer default 50,p_offset integer default 0)
+revoke all on function public.sq_admin_finance_delete(uuid) from public,anon;
+grant execute on function public.sq_admin_finance_delete(uuid) to authenticated;
+
+create or replace function public.sq_admin_finance_dashboard(p_limit integer default 50,p_offset integer default 0)
 returns jsonb language plpgsql stable security definer set search_path=public as $$
 declare v_result jsonb;
 begin
- if not public.is_owner() then raise exception 'Owner access required.'; end if;
- with live as (select * from public.sq_finance_entries where voided_at is null), totals as (
-  select coalesce(sum(amount_minor) filter(where kind='income' and settlement='paid'),0) as received,
-   coalesce(sum(amount_minor) filter(where kind='expense' and settlement='paid'),0) as spent,
-   coalesce(sum(amount_minor) filter(where kind='funding' and settlement='paid'),0) as funding,
-   coalesce(sum(amount_minor) filter(where kind='income' and settlement='expected'),0) as receivable,
-   coalesce(sum(amount_minor) filter(where kind='expense' and settlement='expected'),0) as payable,count(*) as recorded_count from live
+ if not public.is_admin() then raise exception 'Admin access required.'; end if;
+ with live as (select * from public.sq_finance_entries where voided_at is null and currency='SEK'), totals as (
+  select coalesce(sum(amount_minor) filter(where kind='income'),0) as income,
+   coalesce(sum(amount_minor) filter(where kind='expense'),0) as expenses,
+   coalesce(sum(amount_minor) filter(where kind='funding'),0) as funding,count(*) as recorded_count from live
  ), costs as (
   select order_id,sum(amount_minor) as amount from live where kind='expense' and category='item_purchase' and order_id is not null group by order_id
  ), open_orders as (
   select r.id,r.order_number,r.reward_name,r.points_coins,r.status,r.fulfillment_mode,c.amount as recorded_purchase_minor,
-   case when i.pricing_mode='steam' and i.steam_price_minor>0 and i.steam_price_currency='EUR' and i.steam_price_valid_until>now()
-    then i.steam_price_minor else null end as current_steam_estimate_minor
+   null::bigint as current_steam_estimate_minor
   from public.redemption_requests r left join public.reward_items i on i.id=r.reward_id left join costs c on c.order_id=r.id
   where r.status not in ('completed','rejected','refunded','cancelled')
- ), page as (select * from public.sq_finance_entries order by occurred_on desc,created_at desc,id limit greatest(1,least(coalesce(p_limit,50),100)) offset greatest(0,coalesce(p_offset,0)))
- select jsonb_build_object('currency','EUR','totals',(select to_jsonb(t) from totals t),
+ ), page as (select * from public.sq_finance_entries where voided_at is null order by occurred_on desc,created_at desc,id limit greatest(1,least(coalesce(p_limit,50),100)) offset greatest(0,coalesce(p_offset,0)))
+ select jsonb_build_object('currency','SEK','totals',(select to_jsonb(t) from totals t),
   'entries',coalesce((select jsonb_agg(to_jsonb(e) order by occurred_on desc,created_at desc,id) from page e),'[]'::jsonb),
-  'total',(select count(*) from public.sq_finance_entries),
+  'total',(select count(*) from public.sq_finance_entries where voided_at is null),
+  'legacy_currency_count',(select count(*) from public.sq_finance_entries where voided_at is null and currency<>'SEK'),
   'customer_coin_balance',(select coalesce(sum(p.points_balance),0) from public.profiles p where not exists(select 1 from public.admin_users a where a.user_id=p.id)),
   'open_orders',coalesce((select jsonb_agg(to_jsonb(o) order by o.id desc) from (select * from open_orders order by id desc limit 100) o),'[]'::jsonb),
   'open_order_count',(select count(*) from open_orders),
@@ -6857,8 +6862,15 @@ begin
  return v_result;
 end;
 $$;
+revoke all on function public.sq_admin_finance_dashboard(integer,integer) from public,anon;
+grant execute on function public.sq_admin_finance_dashboard(integer,integer) to authenticated;
+
+-- Compatibility wrappers retained for older deployed admin assets during rollout.
+create or replace function public.sq_owner_finance_dashboard(p_limit integer default 50,p_offset integer default 0)
+returns jsonb language sql stable security definer set search_path=public as $$ select public.sq_admin_finance_dashboard(p_limit,p_offset); $$;
 revoke all on function public.sq_owner_finance_dashboard(integer,integer) from public,anon;
 grant execute on function public.sq_owner_finance_dashboard(integer,integer) to authenticated;
+
 commit;
 notify pgrst,'reload schema';
 

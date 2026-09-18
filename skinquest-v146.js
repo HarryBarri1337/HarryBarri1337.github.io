@@ -94,7 +94,10 @@
     const balance=Number(currentProfile?.points_balance||0),missing=Math.max(0,getRewardCost(item)-balance),pct=Math.min(100,Math.max(0,balance/getRewardCost(item)*100));
     const family=item.family_name||item.name;
     root.innerHTML=`<section class="sq146-detail-layout">
-      <div class="panel sq146-detail-art">${renderRewardArt(item)}</div>
+      <div class="sq146-detail-aside">
+        <div class="panel sq146-detail-art">${renderRewardArt(item)}</div>
+        <details class="panel sq146-delivery-info"><summary>How delivery works</summary><p>Coins are deducted only when the server saves your order. Each order keeps its original item and coin price.</p><p>${orderable?`SkinQuest purchases the item after review. Allow at least ${getRewardOrderEtaDays(item)} days; the actual recorded Steam unlock time is shown on your private order page. This is not a guaranteed delivery date.`:'Prepared items are usually sent within 1–2 days after review. Delivery is manual, not instant.'}</p><a class="mini-link" href="/orders">My orders</a> · <a class="mini-link" href="/how-it-works">Delivery guide</a></details>
+      </div>
       <div class="panel sq146-detail-copy"><div class="sq146-detail-badges">${variantWear(item)!=='STD'||variantType(item)!=='normal'?`<span class="sq146-type-badge is-${variantType(item)}">${types.find(([k])=>k===variantType(item))[1]}</span>`:''}<span class="stock-pill">${orderable?'Available to order':available>0?`${n(available)} in stock`:'Out of stock'}</span></div><h1>${safe(family)}</h1>
       ${item.name!==family?`<p class="muted sq151-selected-name">${safe(item.name)}</p>`:''}
       <strong class="sq146-detail-price">${n(getRewardCost(item))}<small> coins</small></strong>
@@ -104,7 +107,7 @@
       <div class="sq151-delivery-summary"><strong>${orderable?`Purchase required · ${getRewardOrderEtaDays(item)}+ days`:'Prepared stock · usually 1–2 days'}</strong><p>${orderable?'Purchased after review. The recorded Steam unlock time appears on your order.':'Reserved when your order is saved, then reviewed before sending.'} Delivery is manual; timing is an estimate.</p></div>
       <div class="sq146-detail-actions">${action(item)}<button class="button button-ghost" type="button" data-detail-star aria-pressed="${starred}">${starred?'★ Reward saved':'☆ Save reward'}</button><button class="button button-ghost" type="button" data-copy-reward-link>Copy link</button></div>
       <p class="muted sq146-security-copy">Never share your Steam password, Guard codes or API key.</p></div>
-      <details class="panel sq146-delivery-info"><summary>How delivery works</summary><p>Coins are deducted only when the server saves your order. Each order keeps its original item and coin price.</p><p>${orderable?`SkinQuest purchases the item after review. Allow at least ${getRewardOrderEtaDays(item)} days; the actual recorded Steam unlock time is shown on your private order page. This is not a guaranteed delivery date.`:'Prepared items are usually sent within 1–2 days after review. Delivery is manual, not instant.'}</p><a class="mini-link" href="/orders">My orders</a> · <a class="mini-link" href="/how-it-works">Delivery guide</a></details></section>`;
+      </section>`;
   }
   const statusCopy={
     pending:["Waiting for review","Your request is saved. SkinQuest will review the request before fulfilment."],

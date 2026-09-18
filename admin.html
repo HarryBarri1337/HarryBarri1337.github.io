@@ -18,20 +18,21 @@
       }
     }());
   </script>
-  <link rel="stylesheet" href="styles.css?v=1504" />
-  <link rel="stylesheet" href="skinquest-v14.css?v=1504" />
-  <link rel="stylesheet" href="admin.css?v=1504" />
+  <link rel="stylesheet" href="styles.css?v=1505" />
+  <link rel="stylesheet" href="skinquest-v14.css?v=1505" />
+  <link rel="stylesheet" href="admin.css?v=1505" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#080b10" />
   <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png" />
   <link rel="icon" href="assets/icons/favicon-16.png" sizes="16x16" type="image/png" />
   <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png" />
-  <link rel="stylesheet" href="skinquest-v146.css?v=1504" />
-  <link rel="stylesheet" href="skinquest-v15.css?v=1504" />
-  <link rel="stylesheet" href="skinquest-v151.css?v=1504" />
-  <link rel="stylesheet" href="skinquest-v152.css?v=1504" />
-  <link rel="stylesheet" href="skinquest-v153.css?v=1504" />
-  <link rel="stylesheet" href="skinquest-v154.css?v=1504" />
+  <link rel="stylesheet" href="skinquest-v146.css?v=1505" />
+  <link rel="stylesheet" href="skinquest-v15.css?v=1505" />
+  <link rel="stylesheet" href="skinquest-v151.css?v=1505" />
+  <link rel="stylesheet" href="skinquest-v152.css?v=1505" />
+  <link rel="stylesheet" href="skinquest-v153.css?v=1505" />
+  <link rel="stylesheet" href="skinquest-v154.css?v=1505" />
+  <link rel="stylesheet" href="skinquest-v155.css?v=1505" />
 </head>
 <body class="admin-ops-body">
 <div id="pageLoader" class="page-loader">
@@ -80,11 +81,11 @@
       <button class="admin-nav-item" type="button" data-admin-view="status"><svg viewBox="0 0 24 24"><path d="M4 18V6M4 18h16M7 15l4-4 3 2 5-6"/></svg><span>System status</span></button>
       <button class="admin-nav-item" type="button" data-admin-view="promos"><svg viewBox="0 0 24 24"><path d="M4 8h16v12H4V8Zm-1-4h18v4H3V4Z"/><path d="M12 4v16M8.5 4C7 4 6 3.2 6 2.3S7 1 8.1 1C10 1 12 4 12 4Zm7.5-1.7c0 .9-1 1.7-2.5 1.7H12s2-3 3.9-3C17 1 18 1.4 18 2.3Z"/></svg><span>Promo codes</span></button>
       <button class="admin-nav-item" type="button" data-admin-view="audit"><svg viewBox="0 0 24 24"><path d="M5 3h14v18H5V3Z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg><span>Audit trail</span></button>
+      <button class="admin-nav-item" type="button" data-admin-view="finance"><svg viewBox="0 0 24 24"><path d="M4 20V4h16v16H4ZM8 8h8M8 12h4M8 16h8"/></svg><span>Finance &amp; funding</span></button>
 
       <div data-owner-only>
         <p class="admin-nav-label">Owner tools</p>
         <button class="admin-nav-item" type="button" data-admin-view="earnings"><svg viewBox="0 0 24 24"><path d="M4 20V4M4 20h16M8 16v-4M12 16V8M16 16V5"/></svg><span>Earning statistics</span></button>
-        <button class="admin-nav-item" type="button" data-admin-view="finance"><svg viewBox="0 0 24 24"><path d="M4 20V4h16v16H4ZM8 8h8M8 12h4M8 16h8"/></svg><span>Finance &amp; funding</span></button>
         <button class="admin-nav-item" type="button" data-admin-view="coins"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15 8.5c-.7-.7-1.7-1-3-1-1.7 0-3 .8-3 2s1 1.8 3 2.2 3 1 3 2.3-1.3 2.5-3 2.5c-1.4 0-2.5-.4-3.2-1.2M12 5.5v13"/></svg><span>Coin adjustments</span></button>
         <button class="admin-nav-item" type="button" data-admin-view="team"><svg viewBox="0 0 24 24"><path d="M8.5 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm7-1a3 3 0 1 0 0-6M2.5 20v-2.2c0-2.7 2.4-4.8 6-4.8s6 2.1 6 4.8V20h-12Zm12-6.4c3.8.2 7 1.8 7 4.6V20h-4"/></svg><span>Team access</span></button>
       </div>
@@ -95,7 +96,7 @@
       <div><strong id="adminAccountName">Admin</strong><span id="adminAccountRole">Verifying…</span></div>
       <button class="admin-icon-button" id="adminSignOutButton" type="button" aria-label="Sign out" title="Sign out"><svg viewBox="0 0 24 24"><path d="M10 5H5v14h5M14 8l4 4-4 4M18 12H9"/></svg></button>
     </div>
-    <div class="admin-sidebar-footer"><a href="/">Open customer site</a><span>v15.0.4</span></div>
+    <div class="admin-sidebar-footer"><a href="/">Open customer site</a><span>v15.0.5</span></div>
   </aside>
 
   <div class="admin-main-shell">
@@ -222,23 +223,22 @@
         <section class="admin-card admin-table-card"><div class="admin-card-head admin-card-head-padded"><div><p class="admin-eyebrow">Recent</p><h2>Manual adjustments</h2></div></div><div id="adminCoinHistory" class="admin-audit-list"><div class="admin-empty">Loading adjustments…</div></div></section>
       </section>
 
-      <section class="admin-view hidden" data-admin-view-panel="finance" data-owner-only-view>
-        <div class="admin-page-head"><div><p class="admin-eyebrow">Owner money records · EUR</p><h1>Finance &amp; funding</h1><p>Record real receipts and purchase costs. Expected provider payments, owner funding and customer coins are kept separate.</p></div><button class="admin-secondary-button" type="button" id="financeRefresh">Refresh records</button></div>
+      <section class="admin-view hidden" data-admin-view-panel="finance">
+        <div class="admin-page-head"><div><p class="admin-eyebrow">Company money records · SEK</p><h1>Finance &amp; funding</h1><p>Track actual money that has moved in or out of SkinQuest. No forecasts, expected payments or coin balances are mixed into the cash total.</p></div><button class="admin-secondary-button" type="button" id="financeRefresh">Refresh records</button></div>
         <div id="financeStats" class="admin-finance-grid"><div class="admin-skeleton-card"></div></div>
-        <div class="admin-finance-layout"><section class="admin-card"><div class="admin-card-head admin-card-head-padded"><div><p class="admin-eyebrow">Manual entry</p><h2>Record money, not coins</h2></div></div><form id="financeRecordForm" class="admin-finance-form">
+        <div class="admin-finance-layout"><section class="admin-card"><div class="admin-card-head admin-card-head-padded"><div><p class="admin-eyebrow">Manual entry</p><h2 id="financeFormTitle">Add payment</h2><p id="financeFormHelp">Record a real payment, purchase or owner funding event.</p></div></div><form id="financeRecordForm" class="admin-finance-form">
           <label>Type<select id="financeKind"><option value="income">Income</option><option value="expense">Expense</option><option value="funding">Owner funding / opening funds</option></select></label>
-          <label>Category<select id="financeCategory"><option value="provider">Provider payment</option><option value="item_purchase">Item purchase</option><option value="fees">Fees</option><option value="other">Other</option></select></label>
-          <label>Amount in EUR<input id="financeAmount" type="text" inputmode="decimal" maxlength="13" required placeholder="e.g. 12.50" /></label>
-          <label>Payment state<select id="financeSettlement"><option value="expected">Expected — not received/paid yet</option><option value="paid">Actually received/paid</option></select></label>
-          <label>Statement / purchase date<input id="financeDate" type="date" required /></label>
-          <label>Unique reference<input id="financeReference" maxlength="120" required placeholder="Statement or purchase reference" /></label>
-          <label>Provider (for provider income)<input id="financeProvider" maxlength="80" placeholder="e.g. CPX" /></label>
-          <label>Order ID (for item purchase costs only)<input id="financeOrder" type="text" inputmode="numeric" pattern="[1-9][0-9]*" placeholder="Numeric ID; use Record cost below to fill it" /></label>
-          <label>Note<textarea id="financeNote" maxlength="1000" placeholder="Optional context; never bank credentials or secrets"></textarea></label>
-          <button class="admin-primary-button" type="submit">Save finance record</button>
-        </form><p class="admin-finance-note">No provider income is assumed automatically. Enter expected statement amounts, then mark them received only after payment. EUR only; reconcile these records with your provider statements and actual accounts.</p></section>
-        <section class="admin-card"><div class="admin-card-head admin-card-head-padded"><div><p class="admin-eyebrow">History</p><h2>Money records</h2><p id="financeCount">Loading records…</p></div></div><div id="financeEntries" class="admin-finance-list"><div class="admin-empty">Loading money records…</div></div><button id="financeMore" class="admin-load-more hidden" type="button">Load older records</button></section></div>
-        <section class="admin-card"><div class="admin-card-head admin-card-head-padded"><div><p class="admin-eyebrow">Delivery exposure</p><h2>Orders and unspent coins</h2></div></div><div id="financeExposure" class="admin-finance-note">Loading recorded costs and current estimates…</div><div id="financeOpenOrders" class="admin-finance-list"></div><p class="admin-finance-note">Up to 100 open orders are listed here; totals include all open orders. Market estimates are not actual costs or a full inventory valuation. This view is a management aid, not formal accounting or tax reporting.</p></section>
+          <label>Category<select id="financeCategory"><option value="provider">Provider income</option><option value="item_purchase">Reward / skin purchase</option><option value="hosting">Hosting &amp; software</option><option value="marketing">Marketing</option><option value="fees">Fees</option><option value="other">Other</option></select></label>
+          <label>Amount in SEK<input id="financeAmount" type="text" inputmode="decimal" maxlength="13" required placeholder="e.g. 249.00" /></label>
+          <label>Date<input id="financeDate" type="date" required /></label>
+          <label>Reference / who bought it<input id="financeReference" maxlength="120" required placeholder="e.g. Harry, SkinQuest, CPX" /></label>
+          <label>Order / invoice ID<input id="financeExternalOrder" maxlength="120" placeholder="Order number from the store or service" /></label>
+          <label class="admin-form-wide">Note<textarea id="financeNote" maxlength="1000" placeholder="Optional context about the payment"></textarea></label>
+          <input id="financeLinkedOrder" type="hidden" />
+          <div class="admin-form-actions admin-form-wide"><button class="admin-primary-button" id="financeSubmit" type="submit">Add payment</button><button class="admin-secondary-button hidden" id="financeCancelEdit" type="button">Cancel edit</button></div>
+        </form><p class="admin-finance-note" id="financePermissionNote">Admins can add finance records. Owners can edit or delete any record; admins can only edit or delete records they created themselves.</p></section>
+        <section class="admin-card"><div class="admin-card-head admin-card-head-padded"><div><p class="admin-eyebrow">History</p><h2>Payments &amp; invoices</h2><p id="financeCount">Loading records…</p></div></div><div id="financeEntries" class="admin-finance-list"><div class="admin-empty">Loading money records…</div></div><button id="financeMore" class="admin-load-more hidden" type="button">Load older records</button></section></div>
+        <section class="admin-card"><div class="admin-card-head admin-card-head-padded"><div><p class="admin-eyebrow">Delivery exposure</p><h2>Orders and unspent coins</h2></div></div><div id="financeExposure" class="admin-finance-note">Loading recorded costs and current estimates…</div><div id="financeOpenOrders" class="admin-finance-list"></div><p class="admin-finance-note">Open reward orders are shown as an operational aid. Market estimates are not cash movements and are not included in the cash balance above.</p></section>
       </section>
 
       <section class="admin-view hidden" data-admin-view-panel="team" data-owner-only-view>
@@ -276,9 +276,9 @@
 </div>
 
 <script src="assets/vendor/supabase-js-2.45.4.js"></script>
-<script src="admin.js?v=1504"></script>
-<script src="skinquest-v146.js?v=1504"></script>
-<script src="skinquest-v15.js?v=1504"></script>
-<script src="app.js?v=1504"></script>
+<script src="admin.js?v=1505"></script>
+<script src="skinquest-v146.js?v=1505"></script>
+<script src="skinquest-v15.js?v=1505"></script>
+<script src="app.js?v=1505"></script>
 </body>
 </html>
