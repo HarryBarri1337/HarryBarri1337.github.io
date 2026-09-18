@@ -1,4 +1,4 @@
-/* SkinQuest v15.0.3 product upgrade layer.
+/* SkinQuest v15.0.4 product upgrade layer.
    Loaded after app.js. The full setup includes the v14 database layer;
    v15.0.3 adds journeys, catalogue search and owner money records via its delta.
    This layer extends the secure SkinQuest core without replacing reward authority.
@@ -7,7 +7,7 @@
 (() => {
   "use strict";
 
-  const VERSION = "15.0.3";
+  const VERSION = "15.0.4";
   const GA_ID = "G-DFRR03C4BP";
   const ATTRIBUTION_KEY = "skinquest.firstTouch.v14";
   const CONSENT_KEY = "skinquest.cookieConsent.v1";
@@ -595,6 +595,13 @@
     `);
     hub.id = "sqGrowthHub";
     account.appendChild(hub);
+
+    // Keep activity where users expect it: directly below Achievements rather
+    // than detached at the end of the dashboard. Moving the existing node keeps
+    // app.js bindings and loaded ledger state intact.
+    const coinHistoryPanel = document.getElementById("coinHistoryPanel") || document.getElementById("coinHistory")?.closest(".panel");
+    const achievementPanel = $(".sq-achievement-panel", hub);
+    if (coinHistoryPanel && achievementPanel) achievementPanel.insertAdjacentElement("afterend", coinHistoryPanel);
 
     const pendingPromo = localStorage.getItem(LAST_PROMO_KEY);
     if (pendingPromo) {

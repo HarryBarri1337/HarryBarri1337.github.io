@@ -1,4 +1,4 @@
--- SkinQuest full Supabase setup v15.0.0 (NEW installations ONLY)
+-- SkinQuest full Supabase setup v15.0.4 (NEW installations ONLY)
 -- Includes the dedicated admin operations workspace, traceable case numbers, handler attribution, and hardened admin workflows.
 -- This full setup remains complete for brand-new Supabase projects.
 -- Run this in Supabase SQL Editor only when setting up a fresh project.

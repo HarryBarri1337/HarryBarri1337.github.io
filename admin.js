@@ -421,6 +421,9 @@
     $("#rewardPricingForm")?.addEventListener("submit", saveRewardPricing);
     $("#syncSteamCatalog")?.addEventListener("click", syncSteamCatalog);
     $("#financeRecordForm")?.addEventListener("submit", saveFinanceRecord);
+    $("#financeKind")?.addEventListener("change", normalizeFinanceFields);
+    $("#financeCategory")?.addEventListener("change", normalizeFinanceFields);
+    normalizeFinanceFields();
     const financeDraftChanged = () => { if (!$("#financeRecordForm")?.dataset.submitting) state.financeKey = null; };
     $("#financeRecordForm")?.addEventListener("input", financeDraftChanged);
     $("#financeRecordForm")?.addEventListener("change", financeDraftChanged);
@@ -597,18 +600,45 @@
     ];
     if ($("#financeStats")) $("#financeStats").innerHTML = stats.map(([label,value,note]) => `<section class="admin-card admin-finance-stat"><span>${safe(label)}</span><strong>${safe(value)}</strong><small>${safe(note)}</small></section>`).join("");
     const rows = state.financeEntries;
-    if ($("#financeEntries")) $("#financeEntries").innerHTML = rows.length ? rows.map(e => `<article class="admin-finance-row ${e.voided_at ? "is-void" : ""}"><div><strong>${safe(e.reference)}</strong><span>${safe(e.kind)} · ${safe(e.category.replaceAll("_"," "))}${e.provider ? ` · ${safe(e.provider)}` : ""} · ${safe(e.occurred_on)}</span><small>${e.voided_at ? `Voided: ${safe(e.void_reason)}` : e.settlement === "paid" ? "Recorded as paid" : "Expected, not paid"}${e.order_snapshot ? ` · ${safe(e.order_snapshot)}` : ""}</small>${e.note ? `<small>${safe(e.note)}</small>` : ""}</div><strong>${e.kind === "expense" ? "−" : "+"}${safe(euro(e.amount_minor))}</strong>${!e.voided_at ? `<div class="admin-row-actions">${e.settlement === "expected" ? `<button class="admin-row-action" type="button" data-finance-settle="${e.id}">Mark ${e.kind === "expense" ? "paid" : "received"}</button>` : ""}<details class="admin-finance-correction"><summary>Correct / void entry</summary><label>Correction reason<input type="text" maxlength="300" minlength="5" data-finance-reason="${e.id}" placeholder="Why is this entry being voided?" /></label><button class="admin-row-action is-danger" type="button" data-finance-void="${e.id}">Void entry</button></details></div>` : ""}</article>`).join("") : '<div class="admin-empty"><strong>No money records yet</strong>Enter provider statements, actual receipts, purchase costs and owner funding. A coin balance is not cash revenue.</div>';
+    if ($("#financeEntries")) $("#financeEntries").innerHTML = rows.length ? rows.map(e => `<article class="admin-finance-row ${e.voided_at ? "is-void" : ""}"><div><strong>${safe(e.reference)}</strong><span>${safe(e.kind)} · ${safe(textValue(e.category || "other").replaceAll("_"," "))}${e.provider ? ` · ${safe(e.provider)}` : ""} · ${safe(e.occurred_on)}</span><small>${e.voided_at ? `Voided: ${safe(e.void_reason)}` : e.settlement === "paid" ? "Recorded as paid" : "Expected, not paid"}${e.order_snapshot ? ` · ${safe(e.order_snapshot)}` : ""}</small>${e.note ? `<small>${safe(e.note)}</small>` : ""}</div><strong>${e.kind === "expense" ? "−" : "+"}${safe(euro(e.amount_minor))}</strong>${!e.voided_at ? `<div class="admin-row-actions">${e.settlement === "expected" ? `<button class="admin-row-action" type="button" data-finance-settle="${e.id}">Mark ${e.kind === "expense" ? "paid" : "received"}</button>` : ""}<details class="admin-finance-correction"><summary>Correct / void entry</summary><label>Correction reason<input type="text" maxlength="300" minlength="5" data-finance-reason="${e.id}" placeholder="Why is this entry being voided?" /></label><button class="admin-row-action is-danger" type="button" data-finance-void="${e.id}">Void entry</button></details></div>` : ""}</article>`).join("") : '<div class="admin-empty"><strong>No money records yet</strong>Enter provider statements, actual receipts, purchase costs and owner funding. A coin balance is not cash revenue.</div>';
     if ($("#financeCount")) $("#financeCount").textContent = `Showing ${rows.length} of ${formatNumber(data.total)} records · EUR · all time`;
     $("#financeMore")?.classList.toggle("hidden", rows.length >= Number(data.total || 0));
     if ($("#financeExposure")) $("#financeExposure").innerHTML = `<p><strong>${formatNumber(data.customer_coin_balance)} customer wallet coins</strong> remain unspent. Staff balances are excluded; coins are not cash revenue. Redeeming them still has fulfilment costs.</p><p><strong>${formatNumber(data.open_order_count)} open orders</strong> · ${formatNumber(data.unrecorded_purchase_count)} without a recorded purchase cost.</p><p>Current Steam estimate for unrecorded purchases: <strong>${safe(euro(data.unrecorded_steam_estimate_minor))}</strong> across items with a fresh EUR Steam price. <strong>${formatNumber(data.unknown_estimate_count)} prices are unknown</strong>; they are not treated as free. Prepared stock also has a cost—record it, even if purchased earlier.</p><p>Recorded net money movement, including funding: <strong>${safe(euro(Number(t.received)+Number(t.funding)-Number(t.spent)))}</strong>. This is not your bank balance or accounting profit.</p>`;
     if ($("#financeOpenOrders")) $("#financeOpenOrders").innerHTML = (data.open_orders || []).map(o => `<div class="admin-finance-row"><div><strong>${safe(o.order_number)} · ${safe(o.reward_name)}</strong><span>${formatNumber(o.points_coins)} saved coins · ${safe(statusLabel(o.status))}</span><small>${o.recorded_purchase_minor != null ? `Purchase cost recorded: ${safe(euro(o.recorded_purchase_minor))}` : o.current_steam_estimate_minor != null ? `Unrecorded purchase · Steam estimate ${safe(euro(o.current_steam_estimate_minor))}` : "Purchase cost and current market estimate unknown"}</small></div><button class="admin-row-action" type="button" data-finance-order="${o.id}">Record cost</button></div>`).join("") || '<div class="admin-empty">No open reward orders.</div>';
     $$("[data-finance-order]").forEach(b => b.addEventListener("click", () => {
       $("#financeKind").value = "expense"; $("#financeCategory").value = "item_purchase";
+      normalizeFinanceFields();
       $("#financeOrder").value = b.dataset.financeOrder; $("#financeReference").value = `Purchase ${state.finance.open_orders.find(o => String(o.id) === b.dataset.financeOrder)?.order_number || b.dataset.financeOrder}`;
       state.financeKey = null; window.refreshSkinQuestSelects?.(); $("#financeAmount").focus(); $("#financeRecordForm").scrollIntoView({ block: "center", behavior: "smooth" });
     }));
     $$("[data-finance-settle]").forEach(b => b.addEventListener("click", () => updateFinance(b.dataset.financeSettle, "settle", b)));
     $$("[data-finance-void]").forEach(b => b.addEventListener("click", () => updateFinance(b.dataset.financeVoid, "void", b)));
+  }
+
+  function normalizeFinanceFields() {
+    const kind = $("#financeKind")?.value;
+    const category = $("#financeCategory");
+    const provider = $("#financeProvider");
+    const order = $("#financeOrder");
+    if (!kind || !category) return;
+
+    const allowed = kind === "income" ? new Set(["provider", "other"])
+      : kind === "expense" ? new Set(["item_purchase", "fees", "other"])
+      : new Set(["other"]);
+    Array.from(category.options).forEach((option) => {
+      option.hidden = !allowed.has(option.value);
+      option.disabled = !allowed.has(option.value);
+    });
+    if (!allowed.has(category.value)) category.value = kind === "income" ? "provider" : kind === "expense" ? "item_purchase" : "other";
+    if (provider) {
+      provider.disabled = !(kind === "income" && category.value === "provider");
+      if (provider.disabled) provider.value = "";
+    }
+    if (order) {
+      order.disabled = !(kind === "expense" && category.value === "item_purchase");
+      if (order.disabled) order.value = "";
+    }
+    window.refreshSkinQuestSelects?.();
   }
 
   async function saveFinanceRecord(event) {

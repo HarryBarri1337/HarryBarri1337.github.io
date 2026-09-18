@@ -1,0 +1,7 @@
+-- SkinQuest v15.0.4 upgrade from v15.0.3.
+-- This release contains customer UI/layout polish, finance form validation fixes,
+-- and preserves the Trustpilot completed-order BCC integration.
+-- No database schema, policy, RPC, trigger, or data migration is required.
+--
+-- Existing installations: no SQL statements need to be executed for v15.0.4.
+-- Do not run the full setup script against an existing live database.

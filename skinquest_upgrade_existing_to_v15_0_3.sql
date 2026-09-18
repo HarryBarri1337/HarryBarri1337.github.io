@@ -1,3 +1,0 @@
--- SkinQuest v15.0.3 is a website-only update from v15.0.2.
--- No SQL statements, data changes or schema migrations are required.
--- Do not run the full setup script against an existing live database.
