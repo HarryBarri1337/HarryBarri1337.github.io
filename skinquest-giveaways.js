@@ -1,4 +1,4 @@
-/* SkinQuest v15.1.0: giveaway display and admin controls; eligibility lives in SQL. */
+/* SkinQuest v15.1.1: giveaway display and admin controls; eligibility lives in SQL. */
 (() => {
   'use strict';
   const $ = (selector, root=document) => root.querySelector(selector);
@@ -22,10 +22,19 @@
   };
   async function feed() {
     const root=$('#giveawaysGrid');if(!root)return;
-    const seq=++request;root.innerHTML='<div class="sq-giveaway-empty">Loading giveaways…</div>';
+    const seq=++request;
+    root.setAttribute('aria-busy','true');
+    root.innerHTML='<div class="sq-giveaway-empty">Loading giveaways…</div>';
     try {
-      const data=await rpc('sq_giveaway_feed'),rows=data.active||[],recent=data.recent||[];
+      const data=await rpc('sq_giveaway_feed');
+      if(!data||!Array.isArray(data.active)||!Array.isArray(data.recent))throw new Error('The giveaway feed returned an invalid response.');
+      const rows=data.active,recent=data.recent;
       if(seq!==request)return;
+      $('.sq-giveaway-guide')?.classList.toggle('hidden',rows.length===0);
+      $('.sq-giveaway-results')?.classList.toggle('hidden',recent.length===0);
+      $('.sq-giveaway-fine')?.classList.toggle('hidden',rows.length===0&&recent.length===0);
+      const intro=$('#giveawayIntro');
+      if(intro)intro.textContent=rows.length?'Complete a verified survey after a giveaway opens, then choose the prize you want to enter. No coins are spent.':'New prizes and their entry details will appear here when a giveaway opens.';
       root.innerHTML=rows.length?rows.map(g=>`<article class="sq-giveaway-card">
         <div class="sq-giveaway-art">${image(g.reward_image)?`<img src="${image(g.reward_image)}" alt="" loading="lazy">`:'<span aria-hidden="true">SQ</span>'}</div>
         <div class="sq-giveaway-content"><span class="sq-giveaway-kicker">SkinQuest giveaway</span><h2>${safe(g.reward_name)}</h2>
@@ -34,10 +43,17 @@
         ${g.entered?(g.eligible?'<strong class="sq-giveaway-confirmed">You are entered ✓</strong>':'<div class="sq-giveaway-actions"><span>Your entry is recorded, but its survey credit is no longer verified. Earn another survey reward before the deadline to stay eligible.</span><a class="button button-ghost" href="/surveys">Go to surveys</a></div>'):
           g.eligible?`<button class="button button-primary" type="button" data-giveaway-enter="${safe(g.id)}">Enter giveaway</button>`:
           `<div class="sq-giveaway-actions"><span>${currentUser?.id?'Complete a survey to unlock entry.':'Sign in to check your eligibility.'}</span><a class="button button-ghost" href="/surveys">Go to surveys</a>${!currentUser?.id?'<button class="button button-ghost" type="button" data-giveaway-login>Sign in</button>':''}</div>`}
-        </div></article>`).join(''):'<div class="sq-giveaway-empty"><strong>No giveaways available right now</strong><p>Check back later for the next one.</p></div>';
+        </div></article>`).join(''):'<div class="sq-giveaway-empty"><span class="sq-giveaway-empty-icon" aria-hidden="true">✦</span><strong>No giveaways available right now</strong><p>When a new prize is added, you can complete a survey and enter here.</p></div>';
       const results=$('#giveawayResults');
       if(results)results.innerHTML=recent.length?recent.map(g=>`<article class="sq-giveaway-result"><div><strong>${safe(g.reward_name)}</strong><small>Ended ${safe(date(g.ends_at))} · ${Number(g.entry_count).toLocaleString()} entered</small></div><span>${g.state==='awaiting_draw'?'Draw pending':g.state==='closed'?'No valid entries':g.state==='cancelled'?'Cancelled':g.won?'You won!':'Winner selected'}</span>${g.won?'<a href="/support">Contact support about your prize →</a>':''}</article>`).join(''):'<p class="muted">Past giveaways will appear here.</p>';
-    } catch(e) {if(seq===request)root.innerHTML=`<div class="sq-giveaway-empty"><strong>Giveaways could not load</strong><p>${safe(e.message)}</p><button class="button button-ghost" type="button" data-giveaway-refresh>Try again</button></div>`;}
+    } catch(e) {
+      if(seq!==request)return;
+      console.error('Giveaway feed:',e);
+      $('.sq-giveaway-guide')?.classList.add('hidden');
+      $('.sq-giveaway-results')?.classList.add('hidden');
+      $('.sq-giveaway-fine')?.classList.add('hidden');
+      root.innerHTML='<div class="sq-giveaway-empty"><strong>Giveaways are temporarily unavailable</strong><p>We could not check the prizes right now. Please try again.</p><button class="button button-ghost" type="button" data-giveaway-refresh>Try again</button></div>';
+    } finally {if(seq===request)root.removeAttribute('aria-busy');}
   }
   async function enter(id,button) {
     button.disabled=true;

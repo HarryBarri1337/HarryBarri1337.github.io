@@ -880,6 +880,24 @@ function initNav() {
   const toggle = qs("[data-nav-toggle]");
   const nav = qs("[data-nav]");
 
+  // Keep the customer navigation in the same order on every page, including
+  // pages still served from an older HTML cache during an update.
+  if (nav) {
+    for (const [path, label] of [
+      ["/dashboard", "Dashboard"], ["/rewards", "Rewards"],
+      ["/surveys", "Surveys"], ["/giveaways", "Giveaways"],
+      ["/earn", "Earn"], ["/orders", "My orders"]
+    ]) {
+      let link = Array.from(nav.querySelectorAll("a")).find((item) => item.getAttribute("href") === path);
+      if (!link) {
+        link = document.createElement("a");
+        link.href = path;
+        link.textContent = label;
+      }
+      nav.appendChild(link);
+    }
+  }
+
   const setOpen = (open) => {
     if (!nav || !toggle) return;
     nav.classList.toggle("open", open);
@@ -904,7 +922,7 @@ function initNav() {
     });
 
     window.addEventListener("resize", () => {
-      if (window.innerWidth > 1080) setOpen(false);
+      if (window.innerWidth > 1199) setOpen(false);
     });
   }
 
@@ -4361,11 +4379,16 @@ async function boot() {
   initThemeControls();
   applyRewardShopVisualPreferences();
   initNav();
+  // Start the public giveaway feed immediately; unrelated account requests
+  // must not leave this page on its initial Loading state.
+  window.SQGiveaways?.init();
   initProgressRefreshWatcher();
   initAuthModal();
   initSupportWidget();
   initInstallPage();
   await updateNavAuthState();
+  // Recheck entry copy once the signed-in account is known.
+  window.SQGiveaways?.init();
   await updateHomeAuthState();
   await initAuthConfirmPage();
   await initOfferwall();

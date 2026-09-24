@@ -1,5 +1,25 @@
-SkinQuest v15.1.0
+SkinQuest v15.1.1
 =================
+
+This update fixes the Giveaways page staying on Loading, removes the survey-entry
+instructions when no giveaway is open, puts Rewards beside Dashboard, and places
+Giveaways between Surveys and Earn on every customer page. It also aligns the
+header, main page and footer widths and restores the gap above Giveaways.
+
+If v15.1.0 and its database upgrade are already live:
+1. Copy ALL updated website files (including every .html page, app.js,
+   skinquest-giveaways.js, skinquest-v1511.css and sw.js) to the root of the
+   website repository, then push to main; the existing workflow uploads them to
+   Simply /public_html/. For manual FTP, upload the contents into /public_html/.
+   Do not upload only giveaways.html. Wait for the deployment to finish.
+2. Refresh /giveaways, /dashboard, /surveys, /earn and /rewards. The empty public
+   page should say "No giveaways available right now". The nav should match on
+   every page, and the Giveaways panel should have the same gap as other pages.
+3. Do not rerun the v15.1.0 SQL migration for this visual fix. No Edge Function
+   changes are required if v15.1.0 was fully deployed.
+
+If moving from v15.0.5 directly to v15.1.1, follow the steps below. Do not run
+the SQL twice if it was already applied.
 
 What's new
 - Deliveries shows a clear next step for both single orders and shared Steam offers. The Completed action appears after Trade sent; mixed shared orders are handled individually until aligned.
@@ -11,8 +31,8 @@ What's new
 
 Existing-site deployment, in this order
 1. Back up the site and Supabase database.
-2. Run skinquest_upgrade_existing_to_v15_1_0.sql in Supabase SQL Editor. This expects v15.0.5 (including its finance upgrade) to be present. Run the new migration before uploading the new pages.
-3. Deploy the updated website files, .htaccess and supabase/functions/survey-feed/index.ts. The existing timewall-postback function must also remain deployed with verify_jwt=false as specified by supabase/config.toml. Do not deploy the full_setup SQL to an existing database.
+2. Run skinquest_upgrade_existing_to_v15_1_0.sql in Supabase SQL Editor only if it has not already been applied. This expects v15.0.5 (including its finance upgrade) to be present. Run the migration before uploading the new pages.
+3. Deploy ALL updated website files and .htaccess, including the HTML for every customer page, and deploy supabase/functions/survey-feed/index.ts separately. The existing timewall-postback function must also remain deployed with verify_jwt=false as specified by supabase/config.toml. Do not deploy the full_setup SQL to an existing database.
 4. In Supabase Edge Function secrets, set TIMEWALL_IFRAME_URL_TEMPLATE to the real surveys placement URL, with its own oid and uid={user_id}. The launcher requires TIMEWALL_SECRET_KEY and an integer TIMEWALL_COINS_PER_USD (1–100000) as well. The old URL embedded in code is no longer a fallback. TIMEWALL_EARN_URL_TEMPLATE and TIMEWALL_EARN_SECRET_KEY are separate, optional settings for a different Earn placement.
 5. In the TimeWall publisher dashboard, inspect the surveys placement and postback URL. The current callback expects GET /functions/v1/timewall-postback?placement=surveys with userid, txid, raw revenue, hash and type query values. The code expects a SHA-256 hash of userid + raw revenue text + survey secret. Ensure the dashboard maps its actual postback variables to these names and that the configured URL responds successfully. Do not paste secrets into an email or support ticket.
 6. Open Admin > Earning statistics > TimeWall connection. A configured wall is only the first check; compare a real provider test completion with a new verified event and the customer's Coin history. Test a duplicate callback and a reversal from the provider dashboard before advertising TimeWall as reliably crediting.

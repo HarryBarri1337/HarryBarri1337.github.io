@@ -1,8 +1,10 @@
-SkinQuest v15.1.0 checks
+SkinQuest v15.1.1 checks
 ========================
 Code
 - node --check passes for modified JavaScript files.
 - HTML route, script and stylesheet references resolve in the release archive.
+- The customer menu has the same six links and order on all 17 customer pages; the startup code restores the link on older cached HTML.
+- The giveaway loader is started during boot, and a failed feed shows a retry state instead of staying on Loading.
 - Migration includes RLS and grants for every giveaway function. Only authenticated admins can create/cancel/draw; visitors can only see public counts and authenticated users can enter.
 
 Delivery test on a staging copy
@@ -13,6 +15,8 @@ Delivery test on a staging copy
 
 Giveaway test on staging
 - Empty public page says no giveaways available right now.
+- No open prizes and no recent results hides both the entry instructions and the results section; active prizes reveal the instructions.
+- At desktop and mobile widths the header and giveaway panel have matching edges and a visible gap between them.
 - Two admins can create multiple prize cards with custom dates; default is eight days.
 - A survey credited before the creation time cannot qualify. A verified CPX or TimeWall Surveys reward after creation unlocks Enter, but does not enter automatically.
 - The same later survey reward can unlock two already-open giveaways; pressing Enter on each yields one unique entry per prize.
