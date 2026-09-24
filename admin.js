@@ -7,7 +7,8 @@
     overview: "Overview",
     search: "Search results",
     orders: "Reward orders",
-    deliveries: "Shared deliveries",
+    deliveries: "Deliveries",
+    giveaways: "Giveaways",
     earnings: "Earning statistics",
     support: "Support inbox",
     users: "Users",
@@ -356,6 +357,7 @@
     window.scrollTo({ top: 0, behavior: "auto" });
     if (next === "finance" && !state.finance) loadFinance().catch(error => notify(error.message, "error"));
     window.SQ15?.adminView(next);
+    window.SQGiveaways?.adminView(next);
   }
 
   function openSidebar() {

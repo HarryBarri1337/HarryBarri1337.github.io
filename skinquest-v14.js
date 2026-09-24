@@ -353,7 +353,7 @@
     const nav = create("nav", "sq-mobile-nav", `
       <a href="/" data-page="index.html" aria-label="Home"><span>⌂</span><small>Home</small></a>
       <a href="/surveys" data-page="surveys.html" aria-label="Surveys"><span>✓</span><small>Surveys</small></a>
-      <a href="/earn" data-page="earn.html" aria-label="Earn"><span>+</span><small>Earn</small></a>
+      <a href="/giveaways" data-page="giveaways.html" aria-label="Giveaways"><span>★</span><small>Giveaways</small></a>
       <a href="/rewards" data-page="rewards.html" aria-label="Rewards"><span>◇</span><small>Rewards</small></a>
       <a href="/dashboard" data-page="dashboard.html" aria-label="Dashboard"><span>◎</span><small>Dashboard</small></a>
     `);

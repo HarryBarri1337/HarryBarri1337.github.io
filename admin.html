@@ -33,6 +33,7 @@
   <link rel="stylesheet" href="skinquest-v153.css?v=1505" />
   <link rel="stylesheet" href="skinquest-v154.css?v=1505" />
   <link rel="stylesheet" href="skinquest-v155.css?v=1505" />
+  <link rel="stylesheet" href="skinquest-v1510.css?v=1510" />
 </head>
 <body class="admin-ops-body">
 <div id="pageLoader" class="page-loader">
@@ -71,7 +72,8 @@
       <p class="admin-nav-label">Workspace</p>
       <button class="admin-nav-item active" type="button" data-admin-view="overview"><svg viewBox="0 0 24 24"><path d="M4 13h6V4H4v9Zm10 7h6v-9h-6v9ZM4 20h6v-3H4v3Zm10-13h6V4h-6v3Z"/></svg><span>Overview</span></button>
       <button class="admin-nav-item" type="button" data-admin-view="orders"><svg viewBox="0 0 24 24"><path d="M7 3h10v4H7V3Z"/><path d="M5 5H3v16h18V5h-2M8 12h8M8 16h5"/></svg><span>Reward orders</span><b class="admin-nav-count hidden" data-nav-count="orders">0</b></button>
-      <button class="admin-nav-item" type="button" data-admin-view="deliveries"><svg viewBox="0 0 24 24"><path d="M3 7h18v14H3V7ZM7 3h10v4H7M8 12h8M8 16h8"/></svg><span>Shared deliveries</span></button>
+      <button class="admin-nav-item" type="button" data-admin-view="deliveries"><svg viewBox="0 0 24 24"><path d="M3 7h18v14H3V7ZM7 3h10v4H7M8 12h8M8 16h8"/></svg><span>Deliveries</span></button>
+      <button class="admin-nav-item" type="button" data-admin-view="giveaways"><svg viewBox="0 0 24 24"><path d="M4 8h16v12H4V8Zm-1-4h18v4H3V4Z"/><path d="M12 4v16M8 8c-5-4-2-7 1-5l3 5m0 0c5-8 10-4 4 0"/></svg><span>Giveaways</span></button>
       <button class="admin-nav-item" type="button" data-admin-view="support"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4V5Z"/><path d="M8 9h8M8 12h5"/></svg><span>Support inbox</span><b class="admin-nav-count hidden" data-nav-count="support">0</b></button>
       <button class="admin-nav-item" type="button" data-admin-view="users"><svg viewBox="0 0 24 24"><path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm7-1a3.5 3.5 0 1 0 0-7M2 21v-3c0-3 2.8-5 7-5s7 2 7 5v3H2Zm14-7c3.5.3 6 1.9 6 4.5V21h-4"/></svg><span>Users</span></button>
       <button class="admin-nav-item" type="button" data-admin-view="rewards"><svg viewBox="0 0 24 24"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="m4.5 7.8 7.5 4.3 7.5-4.3M12 12v9"/></svg><span>Rewards &amp; stock</span></button>
@@ -96,7 +98,7 @@
       <div><strong id="adminAccountName">Admin</strong><span id="adminAccountRole">Verifying…</span></div>
       <button class="admin-icon-button" id="adminSignOutButton" type="button" aria-label="Sign out" title="Sign out"><svg viewBox="0 0 24 24"><path d="M10 5H5v14h5M14 8l4 4-4 4M18 12H9"/></svg></button>
     </div>
-    <div class="admin-sidebar-footer"><a href="/">Open customer site</a><span>v15.0.5</span></div>
+    <div class="admin-sidebar-footer"><a href="/">Open customer site</a><span>v15.1.0</span></div>
   </aside>
 
   <div class="admin-main-shell">
@@ -132,11 +134,25 @@
       </section>
 
       <section class="admin-view hidden" data-admin-view-panel="deliveries">
-        <div class="admin-page-head"><div><p class="admin-eyebrow">Grouped fulfilment</p><h1>Shared deliveries</h1><p>Group unsent orders for one customer, then apply a shared lock or Steam offer. Each item retains its own price and history.</p></div><button class="admin-secondary-button" data-deliveries-retry>Refresh deliveries</button></div>
+        <div class="admin-page-head"><div><p class="admin-eyebrow">Steam fulfilment</p><h1>Deliveries</h1><p>Handle a single order or select orders from one customer to send together. Each card shows the next valid step and the Steam message to copy.</p></div><button class="admin-secondary-button" data-deliveries-retry>Refresh deliveries</button></div>
         <div id="adminDeliveries" aria-live="polite"></div>
+      </section>
+      <section class="admin-view hidden" data-admin-view-panel="giveaways">
+        <div class="admin-page-head"><div><p class="admin-eyebrow">Community</p><h1>Giveaways</h1><p>Publish several giveaways at once. Each begins when you create it and ends in eight days by default.</p></div><a class="admin-secondary-button" href="/giveaways" target="_blank" rel="noopener noreferrer">View customer page ↗</a></div>
+        <form id="giveawayCreateForm" class="admin-card sq-giveaway-create">
+          <div><h2>Create a giveaway</h2><p>A user earns one verified survey reward after the giveaway opens, then chooses to enter. The same reward can unlock several giveaways already open.</p></div>
+          <label>Find a catalog reward<input id="giveawayRewardSearch" type="search" autocomplete="off" placeholder="Search a skin or case" maxlength="120" /></label>
+          <div id="giveawayRewardResults" class="sq-giveaway-search" aria-live="polite"><p>Type at least two letters to find a catalog reward.</p></div>
+          <p class="sq-giveaway-selected">Selected: <strong id="giveawaySelected">No reward selected</strong></p>
+          <label>End date and time<input id="giveawayEndAt" type="datetime-local" required /><small>Starts immediately. Default: eight days. You can choose a different end time before publishing.</small></label>
+          <button class="admin-primary-button" type="submit">Create giveaway</button>
+        </form>
+        <div class="sq-giveaway-admin-header"><h2>Created giveaways</h2><button class="admin-secondary-button" type="button" data-giveaways-refresh>Refresh</button></div>
+        <div id="adminGiveawayList" aria-live="polite"></div>
       </section>
       <section class="admin-view hidden" data-admin-view-panel="earnings" data-owner-only-view>
         <div class="admin-page-head"><div><p class="admin-eyebrow">Owner only</p><h1>Earning statistics</h1><p>Provider engagement, verified rewards and reported USD — separate from actual payments in Finance.</p></div></div>
+        <section class="admin-card sq-giveaway-create"><div><h2>TimeWall connection</h2><p>Check whether the wall is configured and whether verified callbacks have arrived. A real test in the TimeWall dashboard is still needed to confirm the placement and postback URL.</p></div><button class="admin-secondary-button" type="button" data-timewall-check>Check connection</button><div id="timewallHealth" aria-live="polite">Run the check to view connection details.</div></section>
         <div class="admin-toolbar"><label><span>Period</span><select id="earningStatsPeriod"><option value="7">Last 7 days</option><option value="30" selected>Last 30 days</option><option value="90">Last 90 days</option><option value="0">All time</option></select></label><button class="admin-secondary-button" data-earning-refresh>Refresh statistics</button></div><div id="ownerEarningStats" aria-live="polite"></div>
       </section>
       <section class="admin-view hidden" data-admin-view-panel="support">
@@ -276,9 +292,10 @@
 </div>
 
 <script src="assets/vendor/supabase-js-2.45.4.js"></script>
-<script src="admin.js?v=1505"></script>
+<script src="admin.js?v=1510"></script>
 <script src="skinquest-v146.js?v=1505"></script>
-<script src="skinquest-v15.js?v=1505"></script>
-<script src="app.js?v=1505"></script>
+<script src="skinquest-v15.js?v=1510"></script>
+<script src="skinquest-giveaways.js?v=1510"></script>
+<script src="app.js?v=1510"></script>
 </body>
 </html>

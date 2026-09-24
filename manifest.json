@@ -12,6 +12,7 @@
   "categories": ["entertainment", "lifestyle"],
   "shortcuts": [
     { "name": "Surveys", "short_name": "Surveys", "url": "/surveys", "icons": [{ "src": "assets/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Giveaways", "short_name": "Giveaways", "url": "/giveaways", "icons": [{ "src": "assets/icons/icon-192.png", "sizes": "192x192" }] },
     { "name": "Rewards", "short_name": "Rewards", "url": "/rewards", "icons": [{ "src": "assets/icons/icon-192.png", "sizes": "192x192" }] },
     { "name": "Dashboard", "short_name": "Dashboard", "url": "/dashboard", "icons": [{ "src": "assets/icons/icon-192.png", "sizes": "192x192" }] }
   ],

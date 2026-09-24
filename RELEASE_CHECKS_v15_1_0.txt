@@ -1,0 +1,25 @@
+SkinQuest v15.1.0 checks
+========================
+Code
+- node --check passes for modified JavaScript files.
+- HTML route, script and stylesheet references resolve in the release archive.
+- Migration includes RLS and grants for every giveaway function. Only authenticated admins can create/cancel/draw; visitors can only see public counts and authenticated users can enter.
+
+Delivery test on a staging copy
+- Ungrouped order: copy Steam message and trade URL, advance one valid step, verify other orders for that customer did not change.
+- Shared delivery: select at least two unsent orders for one customer, copy the shared message, mark purchased with Steam's actual lock end, mark ready after the lock, mark trade sent, then mark completed after acceptance.
+- A mixed-status shared delivery does not offer a bulk action; open one item at a time.
+- A changed trade link blocks marking sent until admin review. Verify customer notification after a grouped update.
+
+Giveaway test on staging
+- Empty public page says no giveaways available right now.
+- Two admins can create multiple prize cards with custom dates; default is eight days.
+- A survey credited before the creation time cannot qualify. A verified CPX or TimeWall Surveys reward after creation unlocks Enter, but does not enter automatically.
+- The same later survey reward can unlock two already-open giveaways; pressing Enter on each yields one unique entry per prize.
+- TimeWall Earn tasks, reversed rewards, unsigned browser claims, duplicate clicks and attempts after end do not grant an entry.
+- After end, an admin can draw once and see a winner. A drawing with no currently valid entries closes without a winner. The winning admin can copy the Steam message, send/verify the offer manually, then mark delivery recorded once. Customer counts and winner contact remain appropriately scoped.
+
+TimeWall
+- Verify configured template and secret/conversion readiness in Admin > Earning statistics.
+- Use a real provider test to check the dashboard postback URL, success response, event idempotency, coin ledger and reversal. Check original event identity and revenue against the provider dashboard before fulfilling rewards.
+- If launcher is configured but no verified callback has arrived, the admin check must show that uncertainty clearly.

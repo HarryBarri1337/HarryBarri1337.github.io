@@ -4311,6 +4311,7 @@ async function refreshAll() {
   else await initAdmin();
   await window.SQ146?.init();
   await window.SQ15?.init();
+  await window.SQGiveaways?.init();
 }
 
 function initActivityTracking() {

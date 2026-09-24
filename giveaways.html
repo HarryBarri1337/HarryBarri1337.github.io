@@ -3,10 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="description" content="Learn how SkinQuest works: free partner tasks, fixed rewards, manual Steam trade review, and no gambling mechanics." />
-  <title>How it works - SkinQuest</title>
-  <link rel="canonical" href="https://skinquestcs.com/how-it-works" />
-  <meta property="og:type" content="article" /><meta property="og:title" content="How SkinQuest works" /><meta property="og:description" content="Understand verified tasks, coins, fixed rewards, and Steam delivery." /><meta property="og:url" content="https://skinquestcs.com/how-it-works" /><meta property="og:image" content="https://skinquestcs.com/assets/icons/icon-512.png" /><meta name="twitter:card" content="summary" />
+  <meta name="description" content="Enter SkinQuest giveaways after a verified survey reward. See live prizes, closing dates and entry counts." />
+  <title>Giveaways - SkinQuest</title>
+  <link rel="canonical" href="https://skinquestcs.com/giveaways" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Giveaways - SkinQuest" />
+  <meta property="og:description" content="See active SkinQuest giveaways and how to enter." />
+  <meta property="og:url" content="https://skinquestcs.com/giveaways" />
+  <meta property="og:image" content="https://skinquestcs.com/assets/icons/icon-512.png" />
+  <meta name="twitter:card" content="summary" />
   <script>
     (function () {
       try {
@@ -64,55 +69,12 @@
   </div>
 </header>
 
-<main class="page how-page">
-  <section class="page-heading compact-heading">
-    <span class="pill">Guide</span>
-    <h1>How SkinQuest works</h1>
-    <p>Earn coins through approved partner activities, choose the exact CS2 reward you want, and track the order from one account. No deposits, cases, or random rewards.</p>
-    <div class="hero-actions">
-      <a class="button button-primary" href="/surveys">Start earning</a>
-      <a class="button button-ghost" href="/rewards">View rewards</a>
-    </div>
-  </section>
-
-  <section class="how-step-grid how-step-grid-compact">
-    <article class="feature-card how-step-card">
-      <span class="step-number">01</span>
-      <h2>Sign up</h2>
-      <p>Create an account so your coins, saved rewards, orders, and progress stay linked to you.</p>
-    </article>
-    <article class="feature-card how-step-card">
-      <span class="step-number">02</span>
-      <h2>Earn coins</h2>
-      <p>Open an available earning partner and complete a survey or task. Coins are added after the provider verifies it.</p>
-    </article>
-    <article class="feature-card how-step-card">
-      <span class="step-number">03</span>
-      <h2>Save your Steam trade URL</h2>
-      <p>Add your public Steam trade URL in Settings so approved rewards can be delivered. We never need your password or Steam Guard code.</p>
-    </article>
-    <article class="feature-card how-step-card">
-      <span class="step-number">04</span>
-      <h2>Redeem fixed rewards</h2>
-      <p>Choose the exact listed reward and confirm its coin price before ordering. Prepared stock can be sent quickly; order items show their delivery or trade-lock status in My orders.</p>
-    </article>
-  </section>
-
-  <section class="faq-grid faq-grid-compact">
-    <article class="panel">
-      <h2>No deposits</h2>
-      <p class="muted">Coins cannot be bought on SkinQuest. You earn them through free partner tasks.</p>
-    </article>
-    <article class="panel">
-      <h2>No random rewards</h2>
-      <p class="muted">You always choose the exact listed item and see its exact coin price before ordering. No cases opened on SkinQuest, roulette, jackpots, or random drops.</p>
-    </article>
-    <article class="panel">
-      <h2>Offer delays can happen</h2>
-      <p class="muted">Providers can sometimes delay, hold, or reject a completion. If a verified reward is missing, send us the details through Support.</p>
-      <a class="mini-link" href="/support?topic=survey">Ask about a survey reward</a>
-    </article>
-  </section>
+<main class="page sq-giveaway-page">
+  <section class="page-heading compact-heading"><span class="pill">Current prizes</span><h1>Giveaways</h1><p>Complete a survey, claim your entry, and watch the countdown. No coins are spent to enter.</p></section>
+  <section class="sq-giveaway-guide" aria-label="How to enter"><div><span>01</span><strong>Earn a survey reward</strong><p>Complete a CPX or TimeWall survey after the giveaway opens. The provider must verify and credit it.</p></div><div><span>02</span><strong>Press Enter</strong><p>Entry is a separate step for each prize. One verified survey reward can qualify you for every giveaway already open.</p></div><div><span>03</span><strong>Check the result</strong><p>Each giveaway shows its own closing time and entry count. SkinQuest draws from valid entries after it ends.</p></div></section>
+  <div id="giveawaysGrid" class="sq-giveaway-grid" aria-live="polite"><div class="sq-giveaway-empty">Loading giveaways…</div></div>
+  <section class="sq-giveaway-results"><h2>Recent results</h2><div id="giveawayResults" aria-live="polite"><p>Loading results…</p></div></section>
+  <p class="sq-giveaway-fine">One entry per account per giveaway. Only credited survey rewards received after that giveaway opens count. Reversed rewards may invalidate an entry before the draw. Prizes are delivered manually after winner verification; see <a href="/terms">Terms</a>.</p>
 </main>
 
 <footer class="site-footer">
@@ -171,6 +133,7 @@
 <script src="assets/vendor/supabase-js-2.45.4.js"></script>
 <script src="skinquest-v146.js?v=1505"></script>
 <script src="skinquest-v15.js?v=1510"></script>
+<script src="skinquest-giveaways.js?v=1510"></script>
 <script src="app.js?v=1510"></script>
 <script src="skinquest-v14.js?v=1510"></script>
 </body>

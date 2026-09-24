@@ -49,13 +49,16 @@ Deno.serve(async (req) => {
   // The {user_id} placeholder must bind each wall visit to this authenticated
   // SkinQuest account; do not expose a generic wall URL without user binding.
   let timewallUrl: string | null = null;
-  const template = Deno.env.get("TIMEWALL_IFRAME_URL_TEMPLATE") ||
-    "https://timewall.io/users/login?oid=cbade60b064c1284&uid={user_id}";
-  if (template && template.split("{user_id}").length === 2) {
+  const template = (Deno.env.get("TIMEWALL_IFRAME_URL_TEMPLATE") || "").trim();
+  const timewallCreditReady = !!Deno.env.get("TIMEWALL_SECRET_KEY") &&
+    Number.isInteger(Number(Deno.env.get("TIMEWALL_COINS_PER_USD") || "")) &&
+    Number(Deno.env.get("TIMEWALL_COINS_PER_USD")) >= 1 &&
+    Number(Deno.env.get("TIMEWALL_COINS_PER_USD")) <= 100000;
+  if (timewallCreditReady && template.split("{user_id}").length === 2) {
     try {
       const prepared = new URL(template.replace("{user_id}", encodeURIComponent(user.id)));
       if (prepared.protocol === "https:" && prepared.hostname === "timewall.io" &&
-          prepared.searchParams.get("uid")===user.id && prepared.searchParams.get("oid"))
+          prepared.searchParams.get("uid")===user.id && /^[a-zA-Z0-9_-]{8,100}$/.test(prepared.searchParams.get("oid")||""))
         timewallUrl = prepared.toString();
     } catch { /* Unconfigured TimeWall must never interrupt CPX. */ }
   }
@@ -63,12 +66,12 @@ Deno.serve(async (req) => {
   // Earn needs a separate placement, not the surveys-only placement above.
   let timewallEarnUrl: string | null = null;
   const earnTemplate = Deno.env.get("TIMEWALL_EARN_URL_TEMPLATE") || "";
-  if (Deno.env.get("TIMEWALL_EARN_SECRET_KEY") && earnTemplate.split("{user_id}").length === 2) {
+  if (timewallCreditReady && Deno.env.get("TIMEWALL_EARN_SECRET_KEY") && earnTemplate.split("{user_id}").length === 2) {
     try {
       const prepared = new URL(earnTemplate.replace("{user_id}", encodeURIComponent(user.id)));
       const surveyOid = timewallUrl ? new URL(timewallUrl).searchParams.get("oid") : null;
       if (prepared.protocol === "https:" && prepared.hostname === "timewall.io" &&
-          prepared.searchParams.get("uid") === user.id && prepared.searchParams.get("oid") &&
+          prepared.searchParams.get("uid") === user.id && /^[a-zA-Z0-9_-]{8,100}$/.test(prepared.searchParams.get("oid")||"") &&
           prepared.searchParams.get("oid") !== surveyOid) timewallEarnUrl = prepared.toString();
     } catch { /* Not configured: Earn stays a labelled preview. */ }
   }
@@ -77,6 +80,10 @@ Deno.serve(async (req) => {
     cpx_error: cpxReady ? null : "CPX credentials are not configured.",
     timewall_wall_url: timewallUrl,
     timewall_earn_url: timewallEarnUrl,
+    timewall_launch_ready: !!timewallUrl,
+    timewall_configuration: !timewallCreditReady ? "Set the TimeWall survey secret and coins-per-USD conversion." :
+      !timewallUrl ? "Set a valid TIMEWALL_IFRAME_URL_TEMPLATE with your own placement ID and {user_id}." :
+      "Launch configured. A verified test postback and provider dashboard check are still required.",
     cpx_widget: cpxReady ? {
       app_id: appId,
       ext_user_id: user.id,
