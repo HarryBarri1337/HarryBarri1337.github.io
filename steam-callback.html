@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="description" content="SkinQuest Steam connection callback." />
+  <title>Connecting Steam - SkinQuest</title>
+  <meta name="robots" content="noindex,follow" />
+  <script>
+    (function () {
+      try {
+        var theme = localStorage.getItem("skinquest.siteTheme") || "nuke";
+        if (!/^(nuke|train|mirage|dust2|ancient)$/.test(theme)) theme = "nuke";
+        document.documentElement.dataset.theme = theme;
+      } catch (e) {
+        document.documentElement.dataset.theme = "nuke";
+      }
+    }());
+  </script>
+  <link rel="stylesheet" href="styles.css?v=1505" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#0b0f16" />
+  <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png" />
+  <link rel="icon" href="assets/icons/favicon-16.png" sizes="16x16" type="image/png" />
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="SkinQuest" />
+  <link rel="stylesheet" href="skinquest-v14.css?v=1505" />
+  <link rel="stylesheet" href="skinquest-v15.css?v=1505" />
+  <link rel="stylesheet" href="skinquest-v151.css?v=1505" />
+  <link rel="stylesheet" href="skinquest-v152.css?v=1505" />
+  <link rel="stylesheet" href="skinquest-v153.css?v=1505" />
+  <link rel="stylesheet" href="skinquest-v154.css?v=1505" />
+  <link rel="stylesheet" href="skinquest-v155.css?v=1505" />
+  <link rel="stylesheet" href="skinquest-v1511.css?v=1511" />
+</head>
+<body>
+<div id="pageLoader" class="page-loader">
+  <div class="loader-card">
+    <span class="loader-mark">SQ</span>
+    <span class="loader-line"></span>
+  </div>
+</div>
+<main class="page auth-confirm-page">
+  <section class="auth-confirm-shell">
+    <div class="panel auth-result auth-result-loading">
+      <span class="pill">Steam connection</span>
+      <h1>Finishing Steam connection...</h1>
+      <p class="muted">Sending the verified Steam response back to SkinQuest. This usually takes a second.</p>
+      <div class="hero-actions auth-confirm-actions">
+        <a class="button button-ghost" href="/settings">Back to Settings</a>
+      </div>
+    </div>
+  </section>
+</main>
+<script>
+  const SUPABASE_FUNCTIONS_URL = "https://ubvkupqgigfxehprsoit.supabase.co/functions/v1/steam-auth-callback";
+  const query = window.location.search || "";
+  window.location.replace(`${SUPABASE_FUNCTIONS_URL}${query}`);
+</script>
+<noscript>
+  <p style="padding: 24px; color: white;">JavaScript is required to finish connecting Steam. Please enable JavaScript and try again.</p>
+</noscript>
+</body>
+</html>
