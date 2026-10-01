@@ -1,13 +1,20 @@
--- SkinQuest v15.2.0: run on an existing v15.1.0 / v15.1.1 database.
+-- SkinQuest v15.2.1: cumulative upgrade for existing v15.1.x / v15.2.0 databases.
 -- Repeatable, transactional. Existing paid SEK records retain their meaning.
 begin;
 do $$ begin
  if to_regclass('public.sq_finance_entries') is null
  or to_regclass('public.sq_deliveries') is null
  or to_regprocedure('public.sq_admin_update_order(bigint,text,text,text,timestamp with time zone)') is null then
-  raise exception 'Apply the v15.1.0 setup/upgrade before this v15.2.0 upgrade.';
+  raise exception 'Apply the v15.1.0 setup/upgrade before this v15.2.1 upgrade.';
  end if;
 end $$;
+
+-- Older live databases retain a settlement check that rejects pending costs.
+-- Replace that rule explicitly; adding a second check cannot relax the old one.
+-- NOT VALID preserves historical rows while enforcing paid/pending on new writes.
+alter table public.sq_finance_entries drop constraint if exists sq_finance_entries_settlement_check;
+alter table public.sq_finance_entries add constraint sq_finance_entries_settlement_check
+ check (settlement in ('paid','pending')) not valid;
 
 alter table public.sq_finance_entries add column if not exists payment_origin text not null default 'company';
 alter table public.sq_finance_entries add column if not exists paid_by text;

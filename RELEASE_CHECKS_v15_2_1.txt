@@ -1,0 +1,35 @@
+SkinQuest v15.2.1 verification
+=============================
+
+PostgreSQL regression checks - passed
+- Reproduced the reported named settlement check failure using the shipped
+  v15.2.0 upgrade and a representative older database paid-only constraint.
+- Applied v15.2.1; the same pending personal EUR purchase then saves correctly.
+- Existing paid entry is byte-for-byte equal as JSON before/after migration.
+- Reapplying the upgrade preserves records; reimbursement succeeds and invalid
+  settlement values are rejected.
+- All 16 prior finance and fulfilment regression groups passed, including
+  cash/cost separation, EUR conversion, permissions, shared selection,
+  transaction rollback, Steam locks, link review and stock completion.
+
+Chromium browser checks - passed
+- Real admin HTML/CSS/JavaScript connected to the isolated PostgreSQL engine.
+- Seven orders selected, grouped, sent and completed through the customer queue.
+- Search, individual delivery, future locks and empty queue behavior checked.
+- Order cards have individual identities and at least 10 px between neighbors.
+- Checking one shared order selects all shared members and updates their
+  visible Selected labels; other individual orders remain unselected.
+- Personal EUR 10 pending purchase saves, cash remains unchanged until
+  reimbursement, and reimbursement counts the expense only once.
+- Finance editing/filtering checked. Desktop 1440 px and mobile 390 px
+  visually reviewed; no horizontal overflow or JavaScript errors observed.
+
+Package checks
+- Production JavaScript syntax, local HTML references and unique IDs checked.
+- Current version/cache is 15.2.1 and old 15.2.0 setup/upgrade files replaced.
+- Full setup ends with the identical current existing-site upgrade SQL.
+- Existing website assets and Edge Function sources unchanged from v15.2.0.
+- ZIP integrity and packaged bytes checked against the release folder.
+
+Tests used isolated fixture accounts/data. Live deployment is done by applying
+this release's upgrade SQL and uploading the website files.

@@ -590,7 +590,7 @@
       await hydrateProfiles(state.financeEntries.map(entry => entry.created_by));
       renderFinance();
     } catch (error) {
-      if ($("#financeEntries")) $("#financeEntries").innerHTML = `<div class="admin-empty"><strong>Finance data unavailable</strong>${safe(error.message)}<span>Run skinquest_upgrade_existing_to_v15_2_0.sql, then refresh.</span></div>`;
+      if ($("#financeEntries")) $("#financeEntries").innerHTML = `<div class="admin-empty"><strong>Finance data unavailable</strong>${safe(error.message)}<span>Run skinquest_upgrade_existing_to_v15_2_1.sql, then refresh.</span></div>`;
       throw error;
     } finally { state.financeLoading = false; }
   }

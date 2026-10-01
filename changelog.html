@@ -38,7 +38,7 @@
   <link rel="stylesheet" href="skinquest-v153.css?v=1505" />
   <link rel="stylesheet" href="skinquest-v154.css?v=1505" />
   <link rel="stylesheet" href="skinquest-v155.css?v=1505" />
-  <link rel="stylesheet" href="skinquest-v1511.css?v=1520" />
+  <link rel="stylesheet" href="skinquest-v1511.css?v=1521" />
 </head>
 <body>
 <div id="pageLoader" class="page-loader">
@@ -75,6 +75,15 @@
   <section class="panel changelog-list">
     <article class="changelog-entry current">
       <span class="pill">Current</span>
+      <h2>v15.2.1 - Clearer orders and unpaid purchase fix</h2>
+      <ul>
+        <li>Every delivery order has its own spaced card, prominent order number, item details and selection indicator. Shared deliveries have a distinct gold border.</li>
+        <li>Separated order selection from the actions for selected orders so it is easier to see exactly what a bulk action will affect.</li>
+        <li>Fixed an older database settlement constraint that prevented saving unpaid invoices and purchases awaiting reimbursement.</li>
+        <li>Included the corrected cumulative upgrade SQL and full database setup.</li>
+      </ul>
+    </article>
+    <article class="changelog-entry">
       <h2>v15.2.0 - Faster deliveries and purchase reimbursements</h2>
       <ul>
         <li>Rebuilt admin Deliveries as a searchable customer queue with compact checklists, grouped item quantities, one Steam message and bulk fulfilment actions.</li>
@@ -621,7 +630,7 @@
     <a href="/install">Install app</a>
     <a href="/support">Support</a>
   </div>
-  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v15.2.0</a></p>
+  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v15.2.1</a></p>
 </footer>
 <div class="modal-backdrop hidden" id="authModal">
   <div class="auth-modal" role="dialog" aria-modal="true">
@@ -664,8 +673,8 @@
 </div>
 <script src="assets/vendor/supabase-js-2.45.4.js"></script>
 <script src="skinquest-v146.js?v=1505"></script>
-<script src="skinquest-v15.js?v=1520"></script>
-<script src="app.js?v=1520"></script>
-<script src="skinquest-v14.js?v=1520"></script>
+<script src="skinquest-v15.js?v=1521"></script>
+<script src="app.js?v=1521"></script>
+<script src="skinquest-v14.js?v=1521"></script>
 </body>
 </html>
