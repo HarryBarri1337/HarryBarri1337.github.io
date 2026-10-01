@@ -16,7 +16,6 @@
   const urls = new Map(), tracking = new Map();
   let providerUser=null, providerRequest=0, bound=false, ordersSeq=0, adminSeq=0, earningsSeq=0;
   const customer={items:[],total:0,filter:'active'};
-  let adminOrders=[];
   async function rpc(name,args={}) { const {data,error}=await sb.rpc(name,args); if(error)throw error;return data; }
   function errorBox(title,e) { return `<div class="sq15-empty"><strong>${safe(title)}</strong><p>${safe(e?.message||e||'Please try again.')}</p></div>`; }
   const lock = until => `<div class="sq15-lock"><span>Steam trade lock</span><strong data-sq146-countdown="${safe(until)}">${safe(formatTradeLockRemaining(until))}</strong><small>Unlocks ${date(until)} · delivery follows manual review</small></div>`;
@@ -106,23 +105,6 @@
     if(item.trade_url_needs_review)root.insertAdjacentHTML('afterbegin','<aside class="sq15-notice">Your trade link changed. Staff will review the new link before sending this order. An already-sent offer is not redirected.</aside>');
     if(item.delivery_id&&item.delivery_items?.length)root.insertAdjacentHTML('beforeend',`<section class="panel sq15-delivery"><h2>Items in this delivery</h2><p class="muted">These items may arrive in the same Steam offer.</p>${item.delivery_items.map(s=>`<a class="sq15-sibling" href="/orders/${s.id}"><span><strong>${safe(s.reward_name)}</strong><small>${safe(s.order_number)} · ${n(s.coins)} coins</small></span>${badge(s.status)}</a>`).join('')}</section>`);
   }
-  function deliveryStep(items) {
-    if(!items.length)return null;
-    const statuses=new Set(items.map(o=>o.status)),modes=new Set(items.map(o=>o.fulfillment_mode));
-    if(statuses.size===1&&statuses.has('trade_sent'))return {target:'completed',label:'Mark delivered',help:'Only after the customer has accepted the Steam offer.'};
-    if(statuses.size===1&&statuses.has('ready_to_trade'))return {target:'trade_sent',label:'Mark Steam offer sent',help:'Send the offer in Steam first, then record it here.'};
-    if(statuses.size===1&&statuses.has('trade_locked')) {
-      return items.every(o=>o.trade_locked_until&&new Date(o.trade_locked_until)<=new Date())
-        ? {target:'ready_to_trade',label:'Mark ready to trade',help:'Check Steam: the recorded lock has ended.'} : null;
-    }
-    if(modes.size===1&&modes.has('orderable')&&items.every(o=>['pending','reviewing','ordered'].includes(o.status)))
-      return statuses.size===1&&statuses.has('ordered')
-        ? {target:'trade_locked',label:'Mark purchased / trade locked',help:'Set the actual unlock time shown by Steam. Eight days is filled in as a starting estimate.'}
-        : {target:'ordered',label:'Mark awaiting purchase',help:'Use after accepting these orders for fulfilment.'};
-    if(modes.size===1&&modes.has('stocked')&&items.every(o=>['pending','reviewing','ordered'].includes(o.status)))
-      return {target:'ready_to_trade',label:'Mark ready to trade',help:'Confirm these prepared items are available in the sending Steam account.'};
-    return null;
-  }
   function tradeMessage(items,id) {
     const numbers=items.map(o=>o.order_number).join(', ');
     const prefix=`SkinQuest ${items.length===1?'order':'orders'} ${numbers}`;
@@ -134,70 +116,7 @@
   function steamNote(items,id) {
     return `<div class="sq15-steam-copy"><label>Message to paste into Steam<textarea class="sq15-steam-note" rows="2" readonly>${safe(tradeMessage(items,id))}</textarea></label><button type="button" class="admin-secondary-button" data-copy-note>Copy Steam message</button></div>`;
   }
-  function tradeAddress(item) {
-    const url=item.steam_trade_url;
-    return `<div class="sq15-trade-address"><span>Saved trade link</span><code>${safe(url||'Missing — ask the customer to add one')}</code>${url?'<button class="admin-secondary-button" type="button" data-copy-url>Copy trade link</button>':''}</div>`;
-  }
-  function actionForm(items,grouped,id,complete) {
-    const step=deliveryStep(items);
-    if(!complete)return '<p class="sq15-next-step">Load all orders in this delivery before applying a shared step.</p>';
-    if(!step)return `<p class="sq15-next-step">${items.every(o=>o.status==='trade_locked')?'Wait for the recorded Steam locks to end. You can open an order to inspect its exact time.':'These items are at different steps. Open individual orders to bring them to the same step.'}</p>`;
-    const stale=step.target==='trade_sent'&&items.some(o=>o.trade_url_needs_review);
-    const missing=step.target==='trade_sent'&&items.some(o=>!o.steam_trade_url);
-    return `<form class="sq15-guided-action" ${grouped?`data-delivery-update="${safe(id)}"`:`data-single-update="${items[0].id}"`} data-target="${step.target}"><div><span class="admin-eyebrow">Next step for ${items.length} order${items.length===1?'':'s'}</span><h3>${safe(step.label)}</h3><p>${safe(step.help)}</p></div>
-      ${step.target==='trade_locked'?`<label>Steam tradable time<input name="until" type="datetime-local" value="${toLocal(Date.now()+192*3600000)}" required /><small>Check the exact time in Steam before saving.</small></label>`:''}
-      ${step.target==='trade_sent'?`<label>Sent offer URL (optional)<input name="offer" maxlength="500" placeholder="https://steamcommunity.com/tradeoffer/123456789/" /></label>`:''}
-      ${stale||missing?'<p class="sq15-next-step">Review the changed trade link and save a valid one before marking sent.</p>':''}
-      <button class="admin-primary-button" type="submit" ${stale||missing?'disabled':''}>${safe(step.label)}</button></form>`;
-  }
-  function renderDeliveryCard(key,items) {
-    const first=items[0],grouped=!!first.delivery_id;
-    const canGroup=items.filter(o=>o.status!=='trade_sent');
-    const complete=!grouped||items.length===Number(first.delivery_total||items.length);
-    return `<section class="admin-card sq15-admin-delivery" data-delivery-group="${safe(key)}"><header><div><span class="admin-eyebrow">${grouped?'Shared Steam delivery':'Individual orders · one customer'}</span><h2>${safe(first.steam_name||first.username||first.user_id)}</h2><p>${safe(first.contact_email||'Contact email not recorded')} · ${items.length} order${items.length===1?'':'s'}</p>${grouped?`<small>Delivery #${safe(first.delivery_id.slice(0,8))} · All listed items travel together</small>`:''}</div>${!grouped&&canGroup.length>1?'<label class="sq15-check"><input type="checkbox" data-select-group />Select all unsent</label>':''}</header>
-    ${grouped?`<div class="sq15-group-summary">${items.map(o=>`<div class="sq15-admin-order"><button class="sq15-order-open" type="button" data-open-fulfilment-order="${o.id}"><strong>${safe(o.reward_name)}</strong><small>${safe(o.order_number)} · ${n(o.points_coins||o.points_cost)} coins</small></button><div>${badge(o.status)}${o.status==='trade_locked'&&o.trade_locked_until?`<small>${safe(formatTradeLockRemaining(o.trade_locked_until))} · ${date(o.trade_locked_until)}</small>`:''}</div></div>`).join('')}</div>
-      <div class="sq15-fulfil-controls">${tradeAddress(first)}${complete?steamNote(items,first.delivery_id):'<p class="sq15-next-step">Load every item in this delivery before copying the Steam message.</p>'}
-      ${items.some(o=>o.trade_url_needs_review)?`<div class="sq15-notice"><strong>Customer changed their trade link</strong><p>Check the Steam account before sending any unsent item.</p><code>${safe(first.current_trade_url||'Missing trade link')}</code><button class="admin-secondary-button" type="button" data-review-delivery="${safe(first.delivery_id)}" data-expected-trade="${safe(first.current_trade_url||'')}" ${!first.current_trade_url?'disabled':''}>Review and use new link</button></div>`:''}
-      ${actionForm(items,true,first.delivery_id,complete)}</div>`:
-      `<div class="sq15-individual-list">${items.map(o=>`<div class="sq15-individual-order"><div class="sq15-individual-heading">${o.status!=='trade_sent'?`<label class="sq15-check"><input aria-label="Select ${safe(o.order_number)} for a shared delivery" type="checkbox" value="${o.id}" data-group-order /></label>`:''}<button class="sq15-order-open" type="button" data-open-fulfilment-order="${o.id}"><strong>${safe(o.reward_name)}</strong><small>${safe(o.order_number)} · ${n(o.points_coins||o.points_cost)} coins</small></button>${badge(o.status)}</div><div class="sq15-fulfil-controls">${tradeAddress(o)}${steamNote([o],null)}${o.trade_url_needs_review?'<p class="sq15-next-step">Customer changed the trade link. Open this order to review it before sending.</p>':''}${actionForm([o],false,null,true)}</div></div>`).join('')}</div>
-      ${canGroup.length>1?'<div class="sq15-group-create"><button class="admin-secondary-button" type="button" data-create-delivery>Send selected orders together</button><small>Choose only orders intended for one Steam offer. The same customer is already selected.</small></div>':''}`}</section>`;
-  }
-  async function adminDeliveries(append=false) {
-    const root=$('#adminDeliveries');if(!root)return;
-    const seq=++adminSeq;if(!append)root.innerHTML='<div class="admin-empty">Loading deliveries…</div>';
-    try {
-      const data=await rpc('sq_admin_delivery_orders',{p_limit:250,p_offset:append?adminOrders.length:0});if(seq!==adminSeq)return;
-      adminOrders=append?[...adminOrders,...data.items]:data.items;
-      const groups=new Map();for(const o of adminOrders){const key=o.delivery_id||`user:${o.user_id}`;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(o);}
-      root.innerHTML=[...groups.entries()].map(([key,items])=>renderDeliveryCard(key,items)).join('')||'<div class="admin-empty"><strong>All caught up</strong>No active orders or deliveries.</div>';
-      if(adminOrders.length<Number(data.total))root.insertAdjacentHTML('beforeend','<button class="admin-load-more" data-deliveries-more>Load more orders</button>');
-    }catch(e){if(seq===adminSeq)root.innerHTML=errorBox('Deliveries unavailable',e)+'<button class="admin-secondary-button" data-deliveries-retry>Retry</button>';}
-  }
-  async function createDelivery(button) {
-    const root=button.closest('[data-delivery-group]'),ids=$$('[data-group-order]:checked',root).map(i=>Number(i.value));
-    if(ids.length<2)return message('Select at least two unsent orders for this customer.','error');
-    if(!await confirmAction(`Send these ${ids.length} orders together in one Steam offer?`,{title:'Create shared delivery?',confirmText:'Group orders'}))return;
-    button.disabled=true;
-    try{await rpc('sq_admin_create_delivery',{p_order_ids:ids});await adminDeliveries();message('Shared delivery created. Copy its Steam message when you send the offer.','success');}
-    catch(e){message(e.message,'error');}finally{button.disabled=false;}
-  }
-  async function updateDelivery(form) {
-    const target=form.dataset.target,until=$('[name=until]',form)?.value||null,offer=$('[name=offer]',form)?.value.trim()||null;
-    if(until&&(Number.isNaN(new Date(until).getTime())||new Date(until)<=new Date()))return message('Choose a future Steam unlock time.','error');
-    if(offer&&!isValidSteamTradeOfferUrl(offer))return message('Use a valid Steam offer URL.','error');
-    const grouped=!!form.dataset.deliveryUpdate;
-    const items=grouped?adminOrders.filter(o=>o.delivery_id===form.dataset.deliveryUpdate):adminOrders.filter(o=>String(o.id)===form.dataset.singleUpdate);
-    if(items.some(o=>o.status==='trade_locked')&&target==='ready_to_trade'&&items.some(o=>new Date(o.trade_locked_until)>new Date()))return message('Wait for the recorded trade lock to expire.','error');
-    const warning=target==='trade_locked'?'Confirm the item was purchased and check Steam’s actual tradable time.':target==='trade_sent'?'Confirm the Steam offer was actually sent. The normal refund flow is then unavailable.':target==='completed'?'Confirm the customer accepted the Steam offer. This closes the order.':`Apply ${status(target)} to ${items.length} order${items.length===1?'':'s'}?`;
-    if(!await confirmAction(warning,{title:grouped?'Update shared delivery?':'Update order?',confirmText:'Confirm step'}))return;
-    const b=$('[type=submit]',form);b.disabled=true;
-    try {
-      if(grouped)await rpc('sq_admin_delivery_update',{p_delivery_id:form.dataset.deliveryUpdate,p_status:target,p_lock_until:until?new Date(until).toISOString():null,p_trade_offer_url:offer,p_note:null});
-      else await rpc('sq_admin_update_order',{p_request_id:Number(form.dataset.singleUpdate),p_status:target,p_admin_note:items[0]?.admin_note||null,p_trade_offer_url:offer,p_trade_locked_until:until?new Date(until).toISOString():null});
-      if(items[0])sb.functions.invoke('reward-order-status-notify',{body:{request_id:items[0].id}}).then(({error})=>{if(error)message('Status saved; customer email needs a retry.','info');}).catch(()=>{});
-      await Promise.allSettled([adminDeliveries(),window.SQ15Admin?.refresh()]);message(grouped?'Delivery updated.':'Order updated.','success');
-    }catch(e){message(e.message,'error');}finally{b.disabled=false;}
-  }
+  async function adminDeliveries(append=false) { return window.SQDeliveries?.load(append); }
   async function mountOrderTools(item) {
     const root=$('#adminOrderUpdateForm');if(!root)return;
     function lockDefault(){const select=$('#drawerOrderStatus'),input=$('#drawerOrderLockUntil');
@@ -246,7 +165,6 @@
       if(b.matches('[data-orders-filter]')){customer.filter=b.dataset.ordersFilter;$$('[data-orders-filter]').forEach(x=>{x.classList.toggle('active',x===b);x.setAttribute('aria-pressed',String(x===b));});await myOrders();}
       if(b.matches('[data-orders-more]'))await myOrders(true);
       if(b.matches('[data-orders-retry]'))await myOrders();
-      if(b.matches('[data-create-delivery]'))await createDelivery(b);
       if(b.matches('[data-deliveries-retry]'))await adminDeliveries();
       if(b.matches('[data-deliveries-more]'))await adminDeliveries(true);
       if(b.matches('[data-open-fulfilment-order]'))window.SQ15Admin?.openOrder(Number(b.dataset.openFulfilmentOrder));
@@ -257,8 +175,7 @@
       if(b.matches('[data-earning-refresh]'))await ownerEarnings();
       if(b.matches('[data-timewall-check]'))await timewallHealth();
     });
-    document.addEventListener('change',e=>{if(e.target.matches('[data-select-group]'))$$('[data-group-order]',e.target.closest('[data-delivery-group]')).forEach(c=>c.checked=e.target.checked);if(e.target.id==='earningStatsPeriod')ownerEarnings();});
-    document.addEventListener('submit',e=>{if(e.target.matches('[data-delivery-update],[data-single-update]')){e.preventDefault();updateDelivery(e.target).catch(err=>message(err.message,'error'));}});
+    document.addEventListener('change',e=>{if(e.target.id==='earningStatsPeriod')ownerEarnings();});
     // The safe-area belongs to the entire interactive header, including PWA cutouts.
     document.addEventListener('focusin',e=>{if(e.target.matches('input,textarea'))document.body.classList.add('sq15-keyboard');});
     document.addEventListener('focusout',()=>setTimeout(()=>{if(!document.activeElement?.matches('input,textarea'))document.body.classList.remove('sq15-keyboard');},50));

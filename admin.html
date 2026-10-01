@@ -33,7 +33,8 @@
   <link rel="stylesheet" href="skinquest-v153.css?v=1505" />
   <link rel="stylesheet" href="skinquest-v154.css?v=1505" />
   <link rel="stylesheet" href="skinquest-v155.css?v=1505" />
-  <link rel="stylesheet" href="skinquest-v1511.css?v=1511" />
+  <link rel="stylesheet" href="skinquest-v1511.css?v=1520" />
+  <link rel="stylesheet" href="skinquest-v1520.css?v=1520" />
 </head>
 <body class="admin-ops-body">
 <div id="pageLoader" class="page-loader">
@@ -98,7 +99,7 @@
       <div><strong id="adminAccountName">Admin</strong><span id="adminAccountRole">Verifying…</span></div>
       <button class="admin-icon-button" id="adminSignOutButton" type="button" aria-label="Sign out" title="Sign out"><svg viewBox="0 0 24 24"><path d="M10 5H5v14h5M14 8l4 4-4 4M18 12H9"/></svg></button>
     </div>
-    <div class="admin-sidebar-footer"><a href="/">Open customer site</a><span>v15.1.1</span></div>
+    <div class="admin-sidebar-footer"><a href="/">Open customer site</a><span>v15.2.0</span></div>
   </aside>
 
   <div class="admin-main-shell">
@@ -134,7 +135,9 @@
       </section>
 
       <section class="admin-view hidden" data-admin-view-panel="deliveries">
-        <div class="admin-page-head"><div><p class="admin-eyebrow">Steam fulfilment</p><h1>Deliveries</h1><p>Handle a single order or select orders from one customer to send together. Each card shows the next valid step and the Steam message to copy.</p></div><button class="admin-secondary-button" data-deliveries-retry>Refresh deliveries</button></div>
+        <div class="admin-page-head"><div><p class="admin-eyebrow">Steam fulfilment</p><h1>Deliveries</h1><p>Work through one customer at a time. Select their items, open Steam, then record the whole offer in one step.</p></div><button class="admin-secondary-button" type="button" data-dq-refresh>Refresh queue</button></div>
+        <div id="deliveryQueueStats" class="dq-stats"></div>
+        <div class="admin-toolbar"><label class="admin-filter-search"><input id="deliveryQueueSearch" type="search" maxlength="120" placeholder="Customer, email, order number or reward" aria-label="Search delivery customers" /></label><button type="button" class="admin-secondary-button active" data-dq-filter="all" aria-pressed="true">All active</button><div id="deliveryQueueStatus" class="admin-toolbar-count" aria-live="polite">Loading…</div></div>
         <div id="adminDeliveries" aria-live="polite"></div>
       </section>
       <section class="admin-view hidden" data-admin-view-panel="giveaways">
@@ -240,20 +243,26 @@
       </section>
 
       <section class="admin-view hidden" data-admin-view-panel="finance">
-        <div class="admin-page-head"><div><p class="admin-eyebrow">Company money records · SEK</p><h1>Finance &amp; funding</h1><p>Track actual money that has moved in or out of SkinQuest. No forecasts, expected payments or coin balances are mixed into the cash total.</p></div><button class="admin-secondary-button" type="button" id="financeRefresh">Refresh records</button></div>
+        <div class="admin-page-head"><div><p class="admin-eyebrow">Company money records · SEK</p><h1>Finance &amp; funding</h1><p>Record reward costs now, including purchases paid personally. Track what SkinQuest owes and mark it reimbursed when the money is paid.</p></div><button class="admin-secondary-button" type="button" id="financeRefresh">Refresh records</button></div>
         <div id="financeStats" class="admin-finance-grid"><div class="admin-skeleton-card"></div></div>
-        <div class="admin-finance-layout"><section class="admin-card"><div class="admin-card-head admin-card-head-padded"><div><p class="admin-eyebrow">Manual entry</p><h2 id="financeFormTitle">Add payment</h2><p id="financeFormHelp">Record a real payment, purchase or owner funding event.</p></div></div><form id="financeRecordForm" class="admin-finance-form">
-          <label>Type<select id="financeKind"><option value="income">Income</option><option value="expense">Expense</option><option value="funding">Owner funding / opening funds</option></select></label>
-          <label>Category<select id="financeCategory"><option value="provider">Provider income</option><option value="item_purchase">Reward / skin purchase</option><option value="hosting">Hosting &amp; software</option><option value="marketing">Marketing</option><option value="fees">Fees</option><option value="other">Other</option></select></label>
-          <label>Amount in SEK<input id="financeAmount" type="text" inputmode="decimal" maxlength="13" required placeholder="e.g. 249.00" /></label>
+        <section id="financePayees" class="admin-card finance-owed" aria-live="polite"></section>
+        <div class="admin-finance-layout"><section class="admin-card"><div class="admin-card-head admin-card-head-padded"><div><p class="admin-eyebrow">Manual entry</p><h2 id="financeFormTitle">Record a cost or payment</h2><p id="financeFormHelp">Paid personally? Choose Awaiting reimbursement to record what SkinQuest owes you.</p></div></div><form id="financeRecordForm" class="admin-finance-form">
+          <label>Type<select id="financeKind"><option value="expense">Expense</option><option value="income">Income</option><option value="funding">Owner funding / opening funds</option></select></label>
+          <label>Category<select id="financeCategory"><option value="item_purchase">Reward / skin purchase</option><option value="provider">Provider income</option><option value="hosting">Hosting &amp; software</option><option value="marketing">Marketing</option><option value="fees">Fees</option><option value="other">Other</option></select></label>
+          <label class="admin-form-wide">Payment status<select id="financePayment"><option value="company_paid">Paid by SkinQuest</option><option value="personal_pending">Paid personally — awaiting reimbursement</option><option value="company_pending">Unpaid invoice — SkinQuest will pay</option><option value="personal_paid">Paid personally — already reimbursed</option></select></label>
+          <label id="financePaidByField" class="admin-form-wide hidden">Who paid personally?<input id="financePaidBy" maxlength="120" placeholder="e.g. Harry" /><small>SkinQuest owes this person until the purchase is marked reimbursed.</small></label>
+          <label>Purchase currency<select id="financeCurrency"><option value="SEK">SEK</option><option value="EUR">EUR</option><option value="USD">USD</option></select></label>
+          <label><span id="financeAmountLabel">Amount in SEK</span><input id="financeAmount" type="text" inputmode="decimal" maxlength="13" required placeholder="e.g. 10.00" /></label>
+          <label id="financeExchangeField" class="admin-form-wide hidden"><span id="financeExchangeLabel">SEK per EUR</span><input id="financeExchangeRate" type="text" inputmode="decimal" value="1" maxlength="14" placeholder="Actual rate from your purchase" /><small>Use the rate on your receipt or bank transaction. The saved rate stays with this purchase.</small></label>
+          <p id="financeConversion" class="admin-form-wide finance-conversion">Company totals are in SEK.</p>
           <label>Date<input id="financeDate" type="date" required /></label>
-          <label>Reference / who bought it<input id="financeReference" maxlength="120" required placeholder="e.g. Harry, SkinQuest, CPX" /></label>
+          <label>Reference<input id="financeReference" maxlength="120" required placeholder="e.g. Reward purchase, CPX payout" /></label>
           <label>Order / invoice ID<input id="financeExternalOrder" maxlength="120" placeholder="Order number from the store or service" /></label>
           <label class="admin-form-wide">Note<textarea id="financeNote" maxlength="1000" placeholder="Optional context about the payment"></textarea></label>
           <input id="financeLinkedOrder" type="hidden" />
-          <div class="admin-form-actions admin-form-wide"><button class="admin-primary-button" id="financeSubmit" type="submit">Add payment</button><button class="admin-secondary-button hidden" id="financeCancelEdit" type="button">Cancel edit</button></div>
+          <div class="admin-form-actions admin-form-wide"><button class="admin-primary-button" id="financeSubmit" type="submit">Save record</button><button class="admin-secondary-button hidden" id="financeCancelEdit" type="button">Cancel edit</button></div>
         </form><p class="admin-finance-note" id="financePermissionNote">Admins can add finance records. Owners can edit or delete any record; admins can only edit or delete records they created themselves.</p></section>
-        <section class="admin-card"><div class="admin-card-head admin-card-head-padded"><div><p class="admin-eyebrow">History</p><h2>Payments &amp; invoices</h2><p id="financeCount">Loading records…</p></div></div><div id="financeEntries" class="admin-finance-list"><div class="admin-empty">Loading money records…</div></div><button id="financeMore" class="admin-load-more hidden" type="button">Load older records</button></section></div>
+        <section class="admin-card"><div class="admin-card-head admin-card-head-padded"><div><p class="admin-eyebrow">History</p><h2>Payments &amp; invoices</h2><p id="financeCount">Loading records…</p></div></div><div class="finance-history-filters"><button type="button" class="admin-secondary-button active" data-finance-filter="all">All</button><button type="button" class="admin-secondary-button" data-finance-filter="pending">Unpaid</button><button type="button" class="admin-secondary-button" data-finance-filter="paid">Paid</button></div><div id="financeEntries" class="admin-finance-list"><div class="admin-empty">Loading money records…</div></div><button id="financeMore" class="admin-load-more hidden" type="button">Load older records</button></section></div>
         <section class="admin-card"><div class="admin-card-head admin-card-head-padded"><div><p class="admin-eyebrow">Delivery exposure</p><h2>Orders and unspent coins</h2></div></div><div id="financeExposure" class="admin-finance-note">Loading recorded costs and current estimates…</div><div id="financeOpenOrders" class="admin-finance-list"></div><p class="admin-finance-note">Open reward orders are shown as an operational aid. Market estimates are not cash movements and are not included in the cash balance above.</p></section>
       </section>
 
@@ -292,10 +301,11 @@
 </div>
 
 <script src="assets/vendor/supabase-js-2.45.4.js"></script>
-<script src="admin.js?v=1511"></script>
+<script src="admin.js?v=1520"></script>
 <script src="skinquest-v146.js?v=1505"></script>
-<script src="skinquest-v15.js?v=1511"></script>
-<script src="skinquest-giveaways.js?v=1511"></script>
-<script src="app.js?v=1511"></script>
+<script src="skinquest-v15.js?v=1520"></script>
+<script src="skinquest-deliveries.js?v=1520"></script>
+<script src="skinquest-giveaways.js?v=1520"></script>
+<script src="app.js?v=1520"></script>
 </body>
 </html>

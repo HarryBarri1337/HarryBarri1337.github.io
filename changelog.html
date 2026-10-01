@@ -38,7 +38,7 @@
   <link rel="stylesheet" href="skinquest-v153.css?v=1505" />
   <link rel="stylesheet" href="skinquest-v154.css?v=1505" />
   <link rel="stylesheet" href="skinquest-v155.css?v=1505" />
-  <link rel="stylesheet" href="skinquest-v1511.css?v=1511" />
+  <link rel="stylesheet" href="skinquest-v1511.css?v=1520" />
 </head>
 <body>
 <div id="pageLoader" class="page-loader">
@@ -75,6 +75,16 @@
   <section class="panel changelog-list">
     <article class="changelog-entry current">
       <span class="pill">Current</span>
+      <h2>v15.2.0 - Faster deliveries and purchase reimbursements</h2>
+      <ul>
+        <li>Rebuilt admin Deliveries as a searchable customer queue with compact checklists, grouped item quantities, one Steam message and bulk fulfilment actions.</li>
+        <li>Shared deliveries can be regrouped or separated before sending. Mixed-stage items progress together without overwriting existing locks or ready items.</li>
+        <li>Finance records unpaid reward costs and personally paid purchases, shows who SkinQuest owes, and settles reimbursements without counting the purchase twice.</li>
+        <li>EUR and USD purchases retain their original amount and the manually entered SEK exchange rate. Company cash and unpaid costs have separate totals.</li>
+        <li>Updated existing-site and full-setup SQL, including the delivery trade-link query and server-side bulk validation.</li>
+      </ul>
+    </article>
+    <article class="changelog-entry">
       <h2>v15.1.1 - Giveaway and navigation fixes</h2>
       <ul>
         <li>Giveaways now load automatically, show a clear empty state when no prize is live, and show entry instructions only when a prize is available.</li>
@@ -611,7 +621,7 @@
     <a href="/install">Install app</a>
     <a href="/support">Support</a>
   </div>
-  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v15.1.1</a></p>
+  <p class="fine-print">Not affiliated with Valve, Steam, or Counter-Strike. <a class="site-version" href="/changelog">v15.2.0</a></p>
 </footer>
 <div class="modal-backdrop hidden" id="authModal">
   <div class="auth-modal" role="dialog" aria-modal="true">
@@ -654,8 +664,8 @@
 </div>
 <script src="assets/vendor/supabase-js-2.45.4.js"></script>
 <script src="skinquest-v146.js?v=1505"></script>
-<script src="skinquest-v15.js?v=1511"></script>
-<script src="app.js?v=1511"></script>
-<script src="skinquest-v14.js?v=1511"></script>
+<script src="skinquest-v15.js?v=1520"></script>
+<script src="app.js?v=1520"></script>
+<script src="skinquest-v14.js?v=1520"></script>
 </body>
 </html>

@@ -1,0 +1,51 @@
+SkinQuest v15.2.0 verification
+=============================
+
+Automated PostgreSQL checks - 16 regression groups passed
+- Runs the actual upgrade and previous order-transition/update functions on
+  an isolated PostgreSQL engine with fixture tables and test authentication.
+- Upgrade can be reapplied safely.
+- EUR 10 personal purchase at an explicitly entered 11.2 SEK/EUR rate records
+  SEK 112 of cost and reimbursement owed, while company cash stays unchanged.
+- Marking reimbursed, including a repeated request, deducts cash once and
+  leaves the same single cost record in place.
+- Cached admin pages cannot silently settle a new unpaid record.
+- Unpaid invoices stay outside company cash; Unpaid history filters globally.
+- Admin creator / owner permissions, owner-only funding, positive amounts,
+  currency rates and required personal payer fields are enforced by SQL.
+- Mixed-stage shared orders advance only the items awaiting that step.
+- Unexpired locks block a sent offer and the transaction rolls back.
+- Mixed customers, duplicate order IDs and partial shared offers are rejected.
+- Expired locks can progress; stale admin snapshots are rejected.
+- Changed Steam links must be reviewed before sending.
+- A shared accepted offer releases prepared stock once; a repeated completion
+  cannot release stock again. Customer wallet balances remain unchanged.
+- Seven prepared orders can be grouped and marked sent in one transaction.
+- Pagination and searching by an individual order return every active order
+  for the matching customer; the compatibility trade-link query executes.
+- Customer and anonymous access cannot use finance/delivery admin operations.
+
+Chromium browser checks - passed
+- Uses the real admin HTML, CSS and JavaScript with the isolated SQL engine.
+- Selects seven prepared orders by default, groups them, selects a whole shared
+  delivery with one checkbox, marks sent, then records accepted completion.
+- Searches an individual order, fulfils it, and handles an empty filtered queue.
+- Records a future purchase lock and verifies that the sent action is hidden.
+- Enters a EUR 10 personal purchase, records the manual SEK rate, checks cost/
+  cash/owed totals, and marks it reimbursed without creating another expense.
+- Unpaid history filter works. Editing preserves source currency, rate and
+  reimbursement status. Income cannot be given an unpaid expense status.
+- Desktop (1440 px) and mobile (390 px) layouts inspected. No horizontal
+  overflow and no JavaScript page errors were observed in these workflows.
+
+Archive checks - passed
+- Updated JavaScript passes node --check.
+- All local script and stylesheet references resolve; HTML IDs are unique.
+- Public footers/admin sidebar and cache version are v15.2.0.
+- Updated full setup ends with the identical v15.2.0 existing-site upgrade.
+- Website and existing Edge Function assets from v15.1.1 are retained.
+
+Live deployment checks
+Apply the new upgrade SQL, upload the site, then verify your own real Steam
+offer and the existing customer notification delivery. Tests used isolated
+accounts and data; no live database, bank payment or Steam offer was changed.

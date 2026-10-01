@@ -66,6 +66,8 @@
     financeEntries: [],
     financeLoading: false,
     financeKey: null,
+    financeFilter: "all",
+    financeExpectedUpdatedAt: null,
     profileMap: new Map(),
     globalOrders: [],
     globalSupport: [],
@@ -425,11 +427,14 @@
     $("#financeRecordForm")?.addEventListener("submit", saveFinanceRecord);
     $("#financeKind")?.addEventListener("change", normalizeFinanceFields);
     $("#financeCategory")?.addEventListener("change", normalizeFinanceFields);
+    $("#financePayment")?.addEventListener("change", normalizeFinanceFields);
+    $("#financeCurrency")?.addEventListener("change", () => { $("#financeExchangeRate").value = $("#financeCurrency").value === "SEK" ? "1" : ""; normalizeFinanceFields(); });
+    ["financeAmount", "financeExchangeRate"].forEach(id => $("#" + id)?.addEventListener("input", updateFinanceConversion));
     normalizeFinanceFields();
     $("#financeMore")?.addEventListener("click", () => loadFinance(true).catch(error => notify(error.message, "error")));
     $("#financeRefresh")?.addEventListener("click", () => loadFinance().catch(error => notify(error.message, "error")));
     $("#financeCancelEdit")?.addEventListener("click", resetFinanceForm);
-    if ($("#financeDate")) $("#financeDate").value = new Date().toISOString().slice(0,10);
+    if ($("#financeDate")) $("#financeDate").value = financeToday();
 
     $("#adminGlobalSearchForm")?.addEventListener("submit", (event) => {
       event.preventDefault();
@@ -571,161 +576,153 @@
   }
 
   const financeMoney = (value, currency = "SEK") => new Intl.NumberFormat(currency === "SEK" ? "sv-SE" : undefined, { style: "currency", currency }).format(Number(value || 0) / 100);
-  const sek = (value) => financeMoney(value, "SEK");
+  const sek = value => financeMoney(value, "SEK");
+  const financeToday = () => { const now = new Date(); return new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,10); };
+  const financePayment = e => `${e.payment_origin === "personal" ? "personal" : "company"}_${e.settlement === "pending" ? "pending" : "paid"}`;
 
   async function loadFinance(append = false) {
     if (!state.user || state.financeLoading) return;
     state.financeLoading = true;
     try {
-      const data = await rpc("sq_admin_finance_dashboard", { p_limit: 50, p_offset: append ? state.financeEntries.length : 0 });
+      const data = await rpc("sq_admin_finance_dashboard_v1520", { p_limit: 50, p_offset: append ? state.financeEntries.length : 0, p_filter: state.financeFilter });
       state.finance = data;
       state.financeEntries = append ? [...state.financeEntries, ...(data.entries || [])] : data.entries || [];
-      await hydrateProfiles(state.financeEntries.map((entry) => entry.created_by));
+      await hydrateProfiles(state.financeEntries.map(entry => entry.created_by));
       renderFinance();
     } catch (error) {
-      if ($("#financeEntries")) $("#financeEntries").innerHTML = `<div class="admin-empty"><strong>Finance data unavailable</strong>${safe(error.message)}<span>Run the v15.0.5 finance SQL upgrade, then refresh this page.</span></div>`;
+      if ($("#financeEntries")) $("#financeEntries").innerHTML = `<div class="admin-empty"><strong>Finance data unavailable</strong>${safe(error.message)}<span>Run skinquest_upgrade_existing_to_v15_2_0.sql, then refresh.</span></div>`;
       throw error;
     } finally { state.financeLoading = false; }
   }
-
-  function financeCanManage(entry) {
-    return !!entry && (state.owner || String(entry.created_by || "") === String(state.user?.id || ""));
-  }
-
+  function financeCanManage(entry) { return !!entry && (state.owner || String(entry.created_by || "") === String(state.user?.id || "")); }
   function resetFinanceForm() {
-    const form = $("#financeRecordForm");
-    form?.reset();
-    state.financeKey = null;
-    if ($("#financeDate")) $("#financeDate").value = new Date().toISOString().slice(0,10);
-    if ($("#financeLinkedOrder")) $("#financeLinkedOrder").value = "";
-    if ($("#financeFormTitle")) $("#financeFormTitle").textContent = "Add payment";
-    if ($("#financeFormHelp")) $("#financeFormHelp").textContent = "Record a real payment, purchase or owner funding event.";
-    if ($("#financeSubmit")) $("#financeSubmit").textContent = "Add payment";
+    $("#financeRecordForm")?.reset();
+    state.financeKey = null; state.financeExpectedUpdatedAt = null;
+    $("#financeDate").value = financeToday();
+    $("#financeLinkedOrder").value = "";
+    $("#financeFormTitle").textContent = "Record a cost or payment";
+    $("#financeFormHelp").textContent = "Paid personally? Choose Awaiting reimbursement to keep track of what SkinQuest owes you.";
+    $("#financeSubmit").textContent = "Save record";
     $("#financeCancelEdit")?.classList.add("hidden");
     normalizeFinanceFields();
   }
-
   function startFinanceEdit(entryId) {
-    const entry = state.financeEntries.find((item) => String(item.id) === String(entryId));
-    if (!entry || !financeCanManage(entry)) return notify("You can only edit finance records you are allowed to manage.", "error");
-    state.financeKey = entry.id;
-    $("#financeKind").value = entry.kind;
-    $("#financeCategory").value = entry.category || "other";
-    $("#financeAmount").value = (Number(entry.amount_minor || 0) / 100).toFixed(2);
-    $("#financeDate").value = entry.occurred_on || "";
-    $("#financeReference").value = entry.reference || "";
-    $("#financeExternalOrder").value = entry.external_order_id || "";
-    $("#financeNote").value = entry.note || "";
-    $("#financeLinkedOrder").value = entry.order_id || "";
-    if ($("#financeFormTitle")) $("#financeFormTitle").textContent = "Edit payment";
-    if ($("#financeFormHelp")) $("#financeFormHelp").textContent = state.owner ? "Owners can edit any finance record." : "You can edit this record because you created it.";
-    if ($("#financeSubmit")) $("#financeSubmit").textContent = "Save changes";
-    $("#financeCancelEdit")?.classList.remove("hidden");
-    normalizeFinanceFields();
-    $("#financeRecordForm")?.scrollIntoView({ block: "center", behavior: "smooth" });
-    $("#financeAmount")?.focus();
+    const e = state.financeEntries.find(item => String(item.id) === String(entryId));
+    if (!e || !financeCanManage(e)) return notify("You can only edit finance records you are allowed to manage.", "error");
+    state.financeKey = e.id; state.financeExpectedUpdatedAt = e.updated_at;
+    $("#financeKind").value = e.kind; $("#financeCategory").value = e.category || "other";
+    $("#financeCurrency").value = e.source_currency || "SEK";
+    $("#financeAmount").value = (Number(e.source_amount_minor || e.amount_minor || 0)/100).toFixed(2);
+    $("#financeExchangeRate").value = String(e.fx_rate || 1);
+    $("#financePayment").value = financePayment(e); $("#financePaidBy").value = e.paid_by || "";
+    $("#financeDate").value = e.occurred_on || ""; $("#financeReference").value = e.reference || "";
+    $("#financeExternalOrder").value = e.external_order_id || ""; $("#financeNote").value = e.note || "";
+    $("#financeLinkedOrder").value = e.order_id || "";
+    $("#financeFormTitle").textContent = "Edit finance record";
+    $("#financeFormHelp").textContent = state.owner ? "Owners can edit any finance record." : "You can edit this record because you created it.";
+    $("#financeSubmit").textContent = "Save changes"; $("#financeCancelEdit")?.classList.remove("hidden");
+    normalizeFinanceFields(); $("#financeRecordForm")?.scrollIntoView({block:"center",behavior:"smooth"}); $("#financeAmount")?.focus();
   }
-
   function renderFinance() {
-    const data = state.finance;
-    if (!data) return;
-    const t = data.totals || {};
-    const cash = Number(t.funding || 0) + Number(t.income || 0) - Number(t.expenses || 0);
+    const data = state.finance; if (!data) return;
+    const t = data.totals || {}, cash = Number(t.funding || 0)+Number(t.income || 0)-Number(t.cash_expenses || 0);
     const stats = [
-      ["Money available", sek(cash), "Owner funding + recorded income − recorded expenses."],
-      ["Income", sek(t.income), "Actual income recorded in SkinQuest."],
-      ["Expenses", sek(t.expenses), "Actual purchases, fees, hosting, marketing and other costs."],
-      ["Owner funding", sek(t.funding), "Money added by owners; kept separate from operating income."]
+      ["Company cash",sek(cash),"Funding + received income − costs paid by SkinQuest."],
+      ["Unpaid costs",sek(t.unpaid),`${Number(t.unpaid_count || 0)} outstanding records · includes ${sek(t.reimbursements)} owed for personal purchases.`],
+      ["After unpaid costs",sek(cash-Number(t.unpaid || 0)),"Cash left after paying every outstanding cost."],
+      ["Income received",sek(t.income),"Provider and other actual income."],
+      ["Total costs",sek(t.expenses),"Paid and unpaid purchases, fees and other costs, counted once."],
+      ["Owner funding",sek(t.funding),"Money added to SkinQuest, separate from income."]
     ];
-    if ($("#financeStats")) $("#financeStats").innerHTML = stats.map(([label,value,note]) => `<section class="admin-card admin-finance-stat"><span>${safe(label)}</span><strong>${safe(value)}</strong><small>${safe(note)}</small></section>`).join("");
+    $("#financeStats").innerHTML = stats.map(([title,value,note]) => `<section class="admin-card admin-finance-stat"><span>${safe(title)}</span><strong>${safe(value)}</strong><small>${safe(note)}</small></section>`).join("");
+    $("#financePayees").innerHTML = data.payees?.length ? `<div class="finance-owed-head"><div><span class="admin-eyebrow">Personally paid purchases</span><h2>SkinQuest owes ${safe(sek(t.reimbursements))}</h2></div><button type="button" class="admin-secondary-button" data-finance-filter="pending">Show unpaid records</button></div><div class="finance-payees">${data.payees.map(p => `<div><strong>${safe(p.paid_by)}</strong><span>${p.count} purchase${Number(p.count) === 1 ? "" : "s"}</span><b>${safe(sek(p.amount_minor))}</b></div>`).join("")}</div>` : '<p>No personal purchases are awaiting reimbursement.</p>';
     const rows = state.financeEntries;
-    if ($("#financeEntries")) $("#financeEntries").innerHTML = rows.length ? rows.map((e) => {
-      const canManage = financeCanManage(e);
-      const legacyCurrency = String(e.currency || "SEK") !== "SEK";
-      const by = adminLabel(e.created_by);
-      const orderText = e.external_order_id ? ` · Order ${safe(e.external_order_id)}` : "";
-      const actionHtml = canManage ? `<div class="admin-row-actions">${legacyCurrency ? "" : `<button class="admin-row-action" type="button" data-finance-edit="${e.id}">Edit</button>`}<button class="admin-row-action is-danger" type="button" data-finance-delete="${e.id}">Delete</button></div>` : `<small class="admin-finance-locked">Only the creator or an owner can change this record.</small>`;
-      return `<article class="admin-finance-row"><div><strong>${safe(e.reference)}</strong><span>${safe(e.kind)} · ${safe(textValue(e.category || "other").replaceAll("_"," "))} · ${safe(e.occurred_on)}${orderText}</span><small>Added by ${safe(by)}${e.order_snapshot ? ` · SkinQuest order ${safe(e.order_snapshot)}` : ""}</small>${legacyCurrency ? `<small>Legacy ${safe(e.currency)} record · excluded from SEK totals. Delete and re-add it in SEK if needed.</small>` : ""}${e.note ? `<small>${safe(e.note)}</small>` : ""}</div><strong>${e.kind === "expense" ? "−" : "+"}${safe(financeMoney(e.amount_minor, e.currency || "SEK"))}</strong>${actionHtml}</article>`;
-    }).join("") : '<div class="admin-empty"><strong>No money records yet</strong>Add actual income, expenses or owner funding. Forecasts and expected payments are intentionally not tracked here.</div>';
-    if ($("#financeCount")) $("#financeCount").textContent = `Showing ${rows.length} of ${formatNumber(data.total)} records · SEK cash totals${Number(data.legacy_currency_count || 0) ? ` · ${formatNumber(data.legacy_currency_count)} legacy non-SEK record(s) excluded from totals` : ""}`;
+    $("#financeEntries").innerHTML = rows.length ? rows.map(e => {
+      const canManage = financeCanManage(e), legacy = e.currency !== "SEK", pending = e.settlement === "pending", personal = e.payment_origin === "personal";
+      const payment = pending ? (personal ? `Owed to ${e.paid_by}` : "Unpaid invoice") : (personal ? `Reimbursed ${e.paid_by}` : "Paid");
+      const actions = canManage ? `<div class="admin-row-actions">${!legacy && pending ? `<button class="admin-row-action" type="button" data-finance-settle="${e.id}">${personal ? "Mark reimbursed" : "Mark paid"}</button>` : ""}${!legacy ? `<button class="admin-row-action" type="button" data-finance-edit="${e.id}">Edit</button>` : ""}<button class="admin-row-action is-danger" type="button" data-finance-delete="${e.id}">Delete</button></div>` : '<small class="admin-finance-locked">Only the creator or an owner can change this record.</small>';
+      return `<article class="admin-finance-row ${pending ? "finance-pending-row" : ""}"><div><strong>${safe(e.reference)}</strong><span>${safe(textValue(e.category || "other").replaceAll("_"," "))} · ${safe(e.occurred_on)}${e.external_order_id ? ` · Invoice ${safe(e.external_order_id)}` : ""}</span><span class="finance-payment-badge ${pending ? "pending" : "paid"}">${safe(payment)}</span>${e.source_currency && e.source_currency !== "SEK" && !legacy ? `<small>${safe(financeMoney(e.source_amount_minor,e.source_currency))} × ${safe(e.fx_rate)} SEK/${safe(e.source_currency)}</small>` : ""}<small>Added by ${safe(adminLabel(e.created_by))}${e.order_snapshot ? ` · Order ${safe(e.order_snapshot)}` : ""}${!pending && e.settled_at ? ` · Paid ${safe(formatShortDate(e.settled_at))}` : ""}</small>${legacy ? `<small>Legacy ${safe(e.currency)} record · excluded from SEK totals.</small>` : ""}${e.note ? `<small>${safe(e.note)}</small>` : ""}</div><strong>${e.kind === "expense" ? "−" : "+"}${safe(financeMoney(e.amount_minor,e.currency || "SEK"))}</strong>${actions}</article>`;
+    }).join("") : '<div class="admin-empty"><strong>No records in this view</strong>Record a reward purchase, unpaid invoice, reimbursement or company payment.</div>';
+    $("#financeCount").textContent = `Showing ${rows.length} of ${formatNumber(data.total)} records${Number(data.legacy_currency_count || 0) ? ` · ${data.legacy_currency_count} legacy non-SEK records excluded from totals` : ""}`;
     $("#financeMore")?.classList.toggle("hidden", rows.length >= Number(data.total || 0));
-    if ($("#financeExposure")) $("#financeExposure").innerHTML = `<p><strong>${formatNumber(data.customer_coin_balance)} customer wallet coins</strong> remain unspent. Coins are not counted as cash.</p><p><strong>${formatNumber(data.open_order_count)} open reward orders</strong> · ${formatNumber(data.unrecorded_purchase_count)} do not yet have a linked recorded purchase cost.</p>`;
-    if ($("#financeOpenOrders")) $("#financeOpenOrders").innerHTML = (data.open_orders || []).map(o => `<div class="admin-finance-row"><div><strong>${safe(o.order_number)} · ${safe(o.reward_name)}</strong><span>${formatNumber(o.points_coins)} saved coins · ${safe(statusLabel(o.status))}</span><small>${o.recorded_purchase_minor != null ? `Purchase cost recorded: ${safe(sek(o.recorded_purchase_minor))}` : "Purchase cost not recorded yet"}</small></div><button class="admin-row-action" type="button" data-finance-order="${o.id}">Record cost</button></div>`).join("") || '<div class="admin-empty">No open reward orders.</div>';
-    $$("[data-finance-order]").forEach(b => b.addEventListener("click", () => {
-      resetFinanceForm();
-      $("#financeKind").value = "expense"; $("#financeCategory").value = "item_purchase"; normalizeFinanceFields();
+    $$('[data-finance-filter]').forEach(b => { b.classList.toggle("active",b.dataset.financeFilter === state.financeFilter);b.setAttribute("aria-pressed",String(b.dataset.financeFilter === state.financeFilter));b.onclick = async () => {if(state.financeLoading) return;state.financeFilter = b.dataset.financeFilter;try{await loadFinance();}catch(e){notify(e.message,"error");}}; });
+    $("#financeExposure").innerHTML = `<p><strong>${formatNumber(data.customer_coin_balance)} customer wallet coins</strong> remain unspent.</p><p><strong>${formatNumber(data.open_order_count)} open reward orders</strong> · ${formatNumber(data.unrecorded_purchase_count)} need a linked purchase cost.</p>`;
+    $("#financeOpenOrders").innerHTML = (data.open_orders || []).map(o => `<div class="admin-finance-row"><div><strong>${safe(o.order_number)} · ${safe(o.reward_name)}</strong><span>${safe(statusLabel(o.status))}</span><small>${o.recorded_purchase_minor != null ? `Recorded cost: ${safe(sek(o.recorded_purchase_minor))}` : "Purchase cost not recorded"}</small></div><button class="admin-row-action" type="button" data-finance-order="${o.id}">${o.recorded_purchase_minor != null ? "Add another cost" : "Record cost"}</button></div>`).join("") || '<div class="admin-empty">No open reward orders.</div>';
+    $$('[data-finance-order]').forEach(b => b.addEventListener("click", () => {
+      resetFinanceForm(); $("#financeKind").value = "expense"; $("#financeCategory").value = "item_purchase"; normalizeFinanceFields();
       $("#financeLinkedOrder").value = b.dataset.financeOrder;
-      const linked = state.finance.open_orders.find(o => String(o.id) === b.dataset.financeOrder);
-      $("#financeReference").value = "SkinQuest";
-      $("#financeNote").value = linked ? `Reward purchase for SkinQuest order ${linked.order_number} · ${linked.reward_name}` : "Reward purchase";
-      $("#financeAmount").focus(); $("#financeRecordForm").scrollIntoView({ block: "center", behavior: "smooth" });
+      const o = state.finance.open_orders.find(x => String(x.id) === b.dataset.financeOrder);
+      $("#financeReference").value = "Reward purchase";
+      $("#financeNote").value = o ? `Purchase for SkinQuest order ${o.order_number} · ${o.reward_name}` : "Reward purchase";
+      $("#financeAmount").focus(); $("#financeRecordForm").scrollIntoView({block:"center",behavior:"smooth"});
     }));
-    $$("[data-finance-edit]").forEach(b => b.addEventListener("click", () => startFinanceEdit(b.dataset.financeEdit)));
-    $$("[data-finance-delete]").forEach(b => b.addEventListener("click", () => deleteFinanceRecord(b.dataset.financeDelete, b)));
+    $$('[data-finance-edit]').forEach(b => b.addEventListener("click", () => startFinanceEdit(b.dataset.financeEdit)));
+    $$('[data-finance-delete]').forEach(b => b.addEventListener("click", () => deleteFinanceRecord(b.dataset.financeDelete,b)));
+    $$('[data-finance-settle]').forEach(b => b.addEventListener("click", () => settleFinanceRecord(b.dataset.financeSettle,b)));
   }
-
   function normalizeFinanceFields() {
     let kind = $("#financeKind")?.value;
-    const kindSelect = $("#financeKind");
-    const category = $("#financeCategory");
-    if (!kind || !category) return;
-    const fundingOption = kindSelect?.querySelector('option[value="funding"]');
-    if (fundingOption) fundingOption.disabled = !state.owner;
-    if (!state.owner && kind === "funding") { kindSelect.value = "expense"; kind = "expense"; }
-    const allowed = kind === "income" ? new Set(["provider", "other"])
-      : kind === "expense" ? new Set(["item_purchase", "hosting", "marketing", "fees", "other"])
-      : new Set(["other"]);
-    Array.from(category.options).forEach((option) => {
-      option.hidden = !allowed.has(option.value);
-      option.disabled = !allowed.has(option.value);
-    });
+    const category = $("#financeCategory"); if (!kind || !category) return;
+    const funding = $("#financeKind").querySelector('option[value="funding"]'); funding.disabled = !state.owner;
+    if (!state.owner && kind === "funding") {$("#financeKind").value = "expense";kind = "expense";}
+    const allowed = kind === "income" ? new Set(["provider","other"]) : kind === "expense" ? new Set(["item_purchase","hosting","marketing","fees","other"]) : new Set(["other"]);
+    Array.from(category.options).forEach(o => {o.hidden = !allowed.has(o.value);o.disabled = !allowed.has(o.value);});
     if (!allowed.has(category.value)) category.value = kind === "income" ? "provider" : kind === "expense" ? "item_purchase" : "other";
-    window.refreshSkinQuestSelects?.();
+    const payment = $("#financePayment"); Array.from(payment.options).forEach(o => o.disabled = kind !== "expense" && o.value !== "company_paid");
+    if (kind !== "expense") payment.value = "company_paid";
+    const personal = payment.value.startsWith("personal");
+    $("#financePaidByField").classList.toggle("hidden",!personal); $("#financePaidBy").required = personal;
+    const currency = $("#financeCurrency").value;
+    $("#financeAmountLabel").textContent = `Amount in ${currency}`;
+    $("#financeExchangeField").classList.toggle("hidden",currency === "SEK"); $("#financeExchangeRate").required = currency !== "SEK";
+    $("#financeExchangeLabel").textContent = `SEK per ${currency}`;
+    if (currency === "SEK") $("#financeExchangeRate").value = "1";
+    if (kind !== "expense" || category.value !== "item_purchase") $("#financeLinkedOrder").value = "";
+    updateFinanceConversion(); window.refreshSkinQuestSelects?.();
   }
-
+  function updateFinanceConversion() {
+    const amount = Number($("#financeAmount")?.value.replace(",",".")), rate = Number($("#financeExchangeRate")?.value.replace(",","."));
+    $("#financeConversion").textContent = amount>0 && rate>0 ? `Recorded company cost/value: ${sek(Math.round(amount*100*rate))}` : "Company totals are in SEK. For EUR/USD, enter the actual rate from your purchase.";
+  }
   async function saveFinanceRecord(event) {
-    event.preventDefault();
-    const form = event.currentTarget;
+    event.preventDefault(); const form = event.currentTarget;
     if (!state.user || form.dataset.submitting) return;
-    const value = textValue($("#financeAmount")?.value).replace(",", ".");
-    if (!/^\d{1,9}(\.\d{1,2})?$/.test(value)) return notify("Enter a positive SEK amount, with at most two decimals.", "error");
-    const [whole, fraction=""] = value.split(".");
-    const amount = Number(whole)*100 + Number(fraction.padEnd(2,"0"));
-    if (!Number.isSafeInteger(amount) || amount <= 0) return notify("Enter a positive SEK amount.", "error");
-    const payload = {
-      p_id: state.financeKey || crypto.randomUUID(), p_kind: $("#financeKind").value,
-      p_category: $("#financeCategory").value, p_amount_minor: amount,
-      p_occurred_on: $("#financeDate").value, p_reference: textValue($("#financeReference").value),
-      p_external_order_id: textValue($("#financeExternalOrder").value) || null,
-      p_order_id: textValue($("#financeLinkedOrder").value) || null,
-      p_note: textValue($("#financeNote").value) || null
-    };
+    const raw = textValue($("#financeAmount").value).replace(",",".");
+    if (!/^\d{1,9}(\.\d{1,2})?$/.test(raw)) return notify("Enter a positive amount with at most two decimals.","error");
+    const [whole,fraction=""] = raw.split("."), amount = Number(whole)*100+Number(fraction.padEnd(2,"0"));
+    if (!Number.isSafeInteger(amount) || amount<=0) return notify("Enter a positive amount.","error");
+    const currency = $("#financeCurrency").value, rate = currency === "SEK" ? "1" : textValue($("#financeExchangeRate").value).replace(",",".");
+    if (!/^\d{1,6}(\.\d{1,6})?$/.test(rate) || Number(rate)<=0 || Number(rate)>100000) return notify("Enter a positive SEK exchange rate, up to six decimals.","error");
+    const payment = $("#financePayment").value;
+    const payload = {p_id:state.financeKey || crypto.randomUUID(),p_kind:$("#financeKind").value,p_category:$("#financeCategory").value,
+      p_amount_minor:amount,p_occurred_on:$("#financeDate").value,p_reference:textValue($("#financeReference").value),
+      p_external_order_id:textValue($("#financeExternalOrder").value) || null,p_order_id:$("#financeLinkedOrder").value || null,
+      p_note:textValue($("#financeNote").value) || null,p_settlement:payment.endsWith("pending") ? "pending" : "paid",
+      p_payment_origin:payment.startsWith("personal") ? "personal" : "company",p_paid_by:textValue($("#financePaidBy").value) || null,
+      p_source_currency:currency,p_fx_rate:rate,p_expected_updated_at:state.financeExpectedUpdatedAt || null};
     state.financeKey = payload.p_id; form.dataset.submitting = "true";
-    const restore = buttonBusy($("button[type=submit]", form), state.financeEntries.some((e) => String(e.id) === String(payload.p_id)) ? "Saving…" : "Adding…");
-    const fields = $$("input,select,textarea", form).map(field => ({ field, disabled: field.disabled }));
-    fields.forEach(({ field }) => { field.disabled = true; }); window.refreshSkinQuestSelects?.();
+    const restore = buttonBusy($("button[type=submit]",form),"Saving…");
+    $$('input,select,textarea',form).forEach(f => f.disabled = true); window.refreshSkinQuestSelects?.();
     try {
-      await rpc("sq_admin_finance_save", payload);
-      notify("Finance record saved.", "success");
-      resetFinanceForm();
-      await loadFinance();
-    } catch(error) { notify(error.message || "Could not save the finance record.", "error"); }
-    finally { fields.forEach(({ field, disabled }) => { field.disabled = disabled; }); window.refreshSkinQuestSelects?.(); restore(); delete form.dataset.submitting; }
+      await rpc("sq_admin_finance_save_v1520",payload); notify("Finance record saved.","success"); resetFinanceForm(); await loadFinance();
+    } catch(e) {notify(e.message || "Could not save this record.","error");}
+    finally {$$('input,select,textarea',form).forEach(f => f.disabled = false);restore();delete form.dataset.submitting;normalizeFinanceFields();}
   }
-
-  async function deleteFinanceRecord(entryId, button) {
-    const entry = state.financeEntries.find((item) => String(item.id) === String(entryId));
-    if (!entry || !financeCanManage(entry) || button.dataset.busy) return notify("You cannot delete this finance record.", "error");
-    const confirmed = await confirmAction(`Delete this ${entry.kind} record for ${sek(entry.amount_minor)}? It will disappear from Finance totals and history. The deletion itself is still written to the admin audit log.`, { title: "Delete finance record", confirmText: "Delete permanently", cancelText: "Cancel" });
-    if (!confirmed) return;
-    const restore = buttonBusy(button, "Deleting…");
-    try {
-      await rpc("sq_admin_finance_delete", { p_id: entryId });
-      if (String(state.financeKey) === String(entryId)) resetFinanceForm();
-      await loadFinance();
-      notify("Finance record deleted.", "success");
-    } catch(error) { notify(error.message || "Could not delete the finance record.", "error"); }
-    finally { restore(); }
+  async function settleFinanceRecord(id,button) {
+    const e = state.financeEntries.find(x => String(x.id) === String(id)); if (!e || !financeCanManage(e) || button.dataset.busy) return;
+    const personal = e.payment_origin === "personal";
+    if (!await confirmAction(personal ? `Confirm SkinQuest has reimbursed ${e.paid_by} ${sek(e.amount_minor)} for this purchase.` : `Confirm SkinQuest paid this ${sek(e.amount_minor)} invoice.`,{title:personal ? "Reimbursement paid?" : "Invoice paid?",confirmText:personal ? "Mark reimbursed" : "Mark paid"})) return;
+    const restore = buttonBusy(button,"Saving…");
+    try {await rpc("sq_admin_finance_settle",{p_id:id,p_expected_updated_at:e.updated_at});if(String(state.financeKey) === String(id)) resetFinanceForm();await loadFinance();notify(personal ? "Reimbursement recorded." : "Payment recorded.","success");}
+    catch(error) {notify(error.message,"error");} finally {restore();}
+  }
+  async function deleteFinanceRecord(id,button) {
+    const e = state.financeEntries.find(x => String(x.id) === String(id));
+    if (!e || !financeCanManage(e) || button.dataset.busy) return;
+    if (!await confirmAction(`Delete this ${e.kind} record for ${financeMoney(e.amount_minor,e.currency || "SEK")}? It will be removed from cost, cash and unpaid totals.`,{title:"Delete finance record",confirmText:"Delete record"})) return;
+    const restore = buttonBusy(button,"Deleting…");
+    try {await rpc("sq_admin_finance_delete",{p_id:id});if(String(state.financeKey) === String(id)) resetFinanceForm();await loadFinance();notify("Record deleted.","success");}
+    catch(error) {notify(error.message,"error");} finally {restore();}
   }
 
   async function loadAll({ trigger = null } = {}) {
